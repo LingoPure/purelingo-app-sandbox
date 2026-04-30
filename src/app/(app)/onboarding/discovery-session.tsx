@@ -1,6 +1,6 @@
 "use client";
 
-import { useConversation } from "@elevenlabs/react";
+import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { useState } from "react";
 
 type Props = {
@@ -9,7 +9,21 @@ type Props = {
   studentName?: string | null;
 };
 
-export function DiscoverySession({ agentId, userId, studentName }: Props) {
+/**
+ * @elevenlabs/react ≥1.3 splits state into a ConversationProvider + hooks.
+ * `useConversation()` MUST be called inside a `<ConversationProvider>` —
+ * the page component wraps the inner widget so the provider is mounted
+ * exactly once around the SDK consumer.
+ */
+export function DiscoverySession(props: Props) {
+  return (
+    <ConversationProvider>
+      <DiscoverySessionInner {...props} />
+    </ConversationProvider>
+  );
+}
+
+function DiscoverySessionInner({ agentId, userId, studentName }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const conversation = useConversation({
@@ -70,8 +84,8 @@ export function DiscoverySession({ agentId, userId, studentName }: Props) {
           End session
         </button>
         <p className="max-w-md text-center text-xs text-mute">
-          Speak naturally. There's nothing to type or click — Aria will guide you
-          through six dimensions over about twenty minutes.
+          Speak naturally. There&apos;s nothing to type or click — Aria will guide
+          you through six dimensions over about twenty minutes.
         </p>
       </div>
     );

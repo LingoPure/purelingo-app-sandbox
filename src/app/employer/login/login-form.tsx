@@ -35,10 +35,15 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+      <label
+        htmlFor="employer-access-password"
+        className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute"
+      >
         Access password
       </label>
       <input
+        id="employer-access-password"
+        name="access_password"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}

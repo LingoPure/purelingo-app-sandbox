@@ -53,6 +53,11 @@ next-env.d.ts
 /qa-transcript-*.json
 .gstack/
 
+# Playwright e2e — keep test sources, ignore artefacts
+/tests/e2e/results/
+/playwright-report/
+/test-results/
+
 .vercel
 .env*.local
 
