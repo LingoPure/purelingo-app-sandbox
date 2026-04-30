@@ -65,7 +65,7 @@ async function main() {
       agentName: "LingoPure Discovery Agent",
       // Rachel — warm, professional female voice (default ElevenLabs)
       voiceId: "21m00Tcm4TlvDq8ikWAM",
-      voiceModel: "eleven_turbo_v2_5",
+      voiceModel: "eleven_turbo_v2",
       llmModel: "gemini-2.5-flash",
       temperature: 0.5,
       webhookUrl,
