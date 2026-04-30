@@ -50,6 +50,7 @@ next-env.d.ts
 
 # Internal artefacts (kept out of source control)
 /briefing-extracted.txt
+/qa-transcript-*.json
 .gstack/
 
 .vercel
