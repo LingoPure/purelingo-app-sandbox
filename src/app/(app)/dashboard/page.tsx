@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { RescoreButton } from "@/components/dashboard/rescore-button";
+import { ScheduleClassButton } from "@/components/dashboard/schedule-class-button";
 
 const SKILLS = [
   { key: "speaking_fluency", label: "Speaking" },
@@ -21,6 +22,13 @@ type SubScoreEvidence = {
   score: number;
   cefr_band: CefrBand;
   evidence: string;
+};
+
+type NextClass = {
+  id: string;
+  scheduled_at: string | null;
+  teacher_name: string | null;
+  status: string | null;
 };
 
 type ProfileJson = {
@@ -43,29 +51,39 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [studentResult, scoresResult, sessionResult] = await Promise.all([
-    supabase
-      .from("students")
-      .select("id, name, discovery_status, target_level")
-      .eq("id", user!.id)
-      .maybeSingle(),
-    supabase
-      .from("gap_scores")
-      .select("skill, score, target")
-      .eq("student_id", user!.id),
-    supabase
-      .from("discovery_sessions")
-      .select("profile_json, completed_at, status")
-      .eq("student_id", user!.id)
-      .eq("status", "complete")
-      .order("completed_at", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  const [studentResult, scoresResult, sessionResult, nextClassResult] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("id, name, discovery_status, target_level")
+        .eq("id", user!.id)
+        .maybeSingle(),
+      supabase
+        .from("gap_scores")
+        .select("skill, score, target")
+        .eq("student_id", user!.id),
+      supabase
+        .from("discovery_sessions")
+        .select("profile_json, completed_at, status")
+        .eq("student_id", user!.id)
+        .eq("status", "complete")
+        .order("completed_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("classin_sessions")
+        .select("id, scheduled_at, teacher_name, status")
+        .eq("student_id", user!.id)
+        .in("status", ["scheduled", "live"])
+        .order("scheduled_at", { ascending: true, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   const student = studentResult.data;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
+  const nextClass = nextClassResult.data as NextClass | null;
 
   const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
   const radarSkills = SKILLS.map((s) => {
@@ -186,7 +204,7 @@ export default async function DashboardPage() {
       )}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <NextClassCard />
+        <NextClassCard nextClass={nextClass} />
         <ActivityLogCard />
       </section>
     </div>
@@ -296,13 +314,44 @@ function ProfileCard({
   );
 }
 
-function NextClassCard() {
+function NextClassCard({ nextClass }: { nextClass: NextClass | null }) {
+  if (!nextClass) {
+    return (
+      <div className="flex flex-col gap-3 rounded-lg border border-cream bg-paper p-6">
+        <h3 className="font-serif text-lg text-navy">Next class</h3>
+        <p className="text-sm text-mute">
+          No class scheduled — your coordinator will assign a teacher and slot. For demo
+          purposes you can schedule one yourself below.
+        </p>
+        <ScheduleClassButton />
+      </div>
+    );
+  }
+
+  const when = nextClass.scheduled_at
+    ? new Date(nextClass.scheduled_at).toLocaleString("en-AU", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "Time TBC";
+
   return (
-    <div className="rounded-lg border border-cream bg-paper p-6">
-      <h3 className="mb-2 font-serif text-lg text-navy">Next class</h3>
-      <p className="text-sm text-mute">
-        No class scheduled — contact your coordinator to be assigned a teacher and slot.
-      </p>
+    <div className="flex flex-col gap-3 rounded-lg border border-cream bg-paper p-6">
+      <h3 className="font-serif text-lg text-navy">Next class</h3>
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          {when}
+        </p>
+        <p className="mt-1 text-sm text-ink">
+          With {nextClass.teacher_name ?? "your coach"}
+        </p>
+      </div>
+      <Link
+        href={`/classroom/${nextClass.id}`}
+        className="inline-block rounded-md bg-navy px-4 py-2 text-center text-sm font-medium text-paper hover:bg-navy-deep"
+      >
+        Enter class →
+      </Link>
     </div>
   );
 }

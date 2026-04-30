@@ -1,4 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { readClassinCredentials } from "@/lib/classin/token";
+import { buildEmbedUrl } from "@/lib/classin/embed";
+import { ClassroomFrame } from "./classroom-frame";
+
+type SessionRow = {
+  id: string;
+  classin_class_id: string;
+  teacher_name: string | null;
+  scheduled_at: string | null;
+  status: string | null;
+};
 
 export default async function ClassroomPage({
   params,
@@ -7,48 +20,129 @@ export default async function ClassroomPage({
 }) {
   const { sessionId } = await params;
 
-  const credsPresent = Boolean(
-    process.env.CLASSIN_APP_ID && process.env.CLASSIN_APP_SECRET
-  );
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?next=/classroom/${sessionId}`);
 
-  if (!credsPresent) {
+  // RLS scopes this to student_id = auth.uid() — we don't need an extra
+  // ownership check.
+  const { data: session } = await supabase
+    .from("classin_sessions")
+    .select("id, classin_class_id, teacher_name, scheduled_at, status")
+    .eq("id", sessionId)
+    .maybeSingle<SessionRow>();
+
+  if (!session) return <NotFoundShell sessionId={sessionId} />;
+
+  const { data: student } = await supabase
+    .from("students")
+    .select("classin_user_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  // No EEO credentials yet — show a structural placeholder. Don't mock the
+  // ClassIn UI (briefing §10 risk register).
+  const creds = readClassinCredentials();
+  if (!creds) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-gold">
-          Session {sessionId}
-        </p>
-        <h1 className="mb-4 font-serif text-4xl text-paper">
-          ClassIn integration pending
-        </h1>
-        <p className="mb-1 max-w-xl text-mute">
-          Live classroom credentials must be obtained from EEO Technology before this
-          embed can connect to a real ClassIn session.
-        </p>
-        <p className="mb-8 max-w-xl text-mute">
-          Set <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">CLASSIN_APP_ID</code> and{" "}
-          <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">CLASSIN_APP_SECRET</code> in{" "}
-          <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">.env.local</code> when
-          available — this page renders the SDK iframe automatically.
-        </p>
-        <Link
-          href="/dashboard"
-          className="rounded-md border border-paper/20 px-4 py-2 text-sm font-medium text-paper hover:bg-paper/10"
-        >
-          ← Back to dashboard
-        </Link>
-      </div>
+      <PendingShell
+        sessionId={session.id}
+        teacherName={session.teacher_name}
+        scheduledAt={session.scheduled_at}
+      />
     );
   }
 
-  // TODO(build sequence step 3): generate ClassIn SSO token server-side using
-  // CLASSIN_APP_ID + CLASSIN_APP_SECRET + student.classin_user_id + sessionId,
-  // then render the SDK iframe with the token. See briefing §7.2.
+  // No classin_user_id on file means this student has not yet been linked
+  // to ClassIn LTI identity. Real flow: provision on first login.
+  const classinUserId = student?.classin_user_id ?? `lp-${user.id.slice(0, 12)}`;
+
+  const embedUrl = buildEmbedUrl(creds, {
+    classinUserId,
+    classinClassId: session.classin_class_id,
+  });
+
   return (
-    <iframe
-      src={`/api/classin/embed?session=${encodeURIComponent(sessionId)}`}
-      title={`ClassIn session ${sessionId}`}
-      className="flex-1 border-0"
-      allow="camera; microphone; display-capture; fullscreen"
+    <ClassroomFrame
+      sessionId={session.id}
+      embedUrl={embedUrl}
+      teacherName={session.teacher_name}
     />
+  );
+}
+
+function PendingShell({
+  sessionId,
+  teacherName,
+  scheduledAt,
+}: {
+  sessionId: string;
+  teacherName: string | null;
+  scheduledAt: string | null;
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+      <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-gold">
+        Session {sessionId.slice(0, 8)}
+      </p>
+      <h1 className="mb-4 font-serif text-4xl text-paper">
+        ClassIn integration pending
+      </h1>
+      <p className="mb-2 max-w-xl text-mute">
+        {teacherName ? `Class with ${teacherName}` : "Class"}
+        {scheduledAt
+          ? ` · ${new Date(scheduledAt).toLocaleString("en-AU", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}`
+          : ""}
+      </p>
+      <p className="mb-1 max-w-xl text-mute">
+        Live classroom credentials must be obtained from EEO Technology before this embed
+        can connect to a real ClassIn session.
+      </p>
+      <p className="mb-8 max-w-xl text-mute">
+        Set{" "}
+        <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">
+          CLASSIN_APP_ID
+        </code>{" "}
+        and{" "}
+        <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">
+          CLASSIN_APP_SECRET
+        </code>{" "}
+        — this page renders the SDK iframe automatically.
+      </p>
+      <Link
+        href="/dashboard"
+        className="rounded-md border border-paper/20 px-4 py-2 text-sm font-medium text-paper hover:bg-paper/10"
+      >
+        ← Back to dashboard
+      </Link>
+    </div>
+  );
+}
+
+function NotFoundShell({ sessionId }: { sessionId: string }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+      <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-coral">
+        Not found
+      </p>
+      <h1 className="mb-4 font-serif text-3xl text-paper">
+        No session matches that ID
+      </h1>
+      <p className="mb-8 max-w-xl text-mute">
+        Session <code className="font-mono text-xs">{sessionId}</code> isn&apos;t scheduled
+        for your account, or it has been cancelled.
+      </p>
+      <Link
+        href="/dashboard"
+        className="rounded-md border border-paper/20 px-4 py-2 text-sm font-medium text-paper hover:bg-paper/10"
+      >
+        ← Back to dashboard
+      </Link>
+    </div>
   );
 }
