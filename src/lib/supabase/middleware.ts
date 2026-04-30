@@ -1,9 +1,34 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  EMPLOYER_COOKIE_NAME,
+  cookieIsValid,
+} from "@/lib/employer/auth";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/classroom", "/profile"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/onboarding",
+  "/classroom",
+  "/profile",
+  "/lessons",
+];
 
 export async function updateSession(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // ── Employer-side auth gate (separate from Supabase student auth) ──
+  // Everything under /employer/* requires the shared cookie except the
+  // login page itself.
+  if (path.startsWith("/employer") && path !== "/employer/login") {
+    const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
+    if (!cookieIsValid(cookie)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/employer/login";
+      url.searchParams.set("redirectTo", path);
+      return NextResponse.redirect(url);
+    }
+  }
+
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -11,7 +36,6 @@ export async function updateSession(request: NextRequest) {
   // Without Supabase env vars: let public traffic through; bounce protected
   // routes to /login so the page render never tries to talk to a null client.
   if (!supabaseUrl || !supabaseAnonKey) {
-    const path = request.nextUrl.pathname;
     if (PROTECTED_PREFIXES.some((p) => path.startsWith(p))) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
@@ -52,7 +76,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const path = request.nextUrl.pathname;
   const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
 
   if (!user && isProtected) {
