@@ -3,12 +3,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  // If Supabase env vars are missing the createClient() call throws — fall back
+  // to a demo-mode header so the placeholder pages still render in dev.
+  let user: { email?: string | null } | null = null;
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const supabase = await createClient();
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
+    if (!user) redirect("/login");
+  }
 
   return (
     <div className="flex min-h-screen flex-1 flex-col bg-mist">
@@ -18,7 +21,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             LingoPure<span className="text-gold">.</span>
           </Link>
           <div className="flex items-center gap-4">
-            <span className="hidden text-xs text-mute sm:inline">{user.email}</span>
+            <span className="hidden text-xs text-mute sm:inline">
+              {user?.email ?? "demo mode"}
+            </span>
             <form action="/auth/signout" method="post">
               <button
                 type="submit"
