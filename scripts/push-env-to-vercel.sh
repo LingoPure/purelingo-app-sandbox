@@ -37,13 +37,13 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   value="${value%\'}"; value="${value#\'}"
 
   [[ -z "$key" ]] && continue
-  [[ -z "$value" ]] && { echo "·  skip empty: $key"; ((skipped++)); continue; }
+  [[ -z "$value" ]] && { echo "·  skip empty: $key"; skipped=$((skipped+1)); continue; }
 
   # Skip Vercel-managed
   for s in "${SKIP[@]}"; do
     if [[ "$key" == "$s" ]]; then
       echo "·  skip managed: $key"
-      ((skipped++))
+      skipped=$((skipped+1))
       continue 2
     fi
   done
@@ -55,14 +55,13 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     [[ $match -eq 0 ]] && continue
   fi
 
-  # Remove existing (ignore errors if absent), then add fresh.
-  vercel env rm "$key" production --yes >/dev/null 2>&1 || true
-  vercel env rm "$key" preview --yes    >/dev/null 2>&1 || true
-  vercel env rm "$key" development --yes >/dev/null 2>&1 || true
-
-  printf '%s' "$value" | vercel env add "$key" production preview development >/dev/null
+  # Remove existing (ignore errors if absent), then add fresh per environment.
+  for env in production preview development; do
+    vercel env rm "$key" "$env" --yes >/dev/null 2>&1 || true
+    printf '%s' "$value" | vercel env add "$key" "$env" >/dev/null 2>&1 || true
+  done
   echo "✓  $key  →  production, preview, development"
-  ((pushed++))
+  pushed=$((pushed+1))
 done < "$ENV_FILE"
 
 echo

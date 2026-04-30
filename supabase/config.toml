@@ -1,0 +1,32 @@
+# LingoPure — Supabase project config (pushed to managed project via `supabase config push`).
+# Linked project: nbvprbaumwmfczsfcyrv (Northeast Asia / Tokyo).
+
+project_id = "nbvprbaumwmfczsfcyrv"
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/**",
+  "https://lingo-pure-ai.vercel.app",
+  "https://lingo-pure-ai.vercel.app/**",
+  "https://*.vercel.app/**",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+
+[auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@updates.corporateaisolutions.com"
+sender_name = "LingoPure"
