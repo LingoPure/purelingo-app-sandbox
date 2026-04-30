@@ -22,7 +22,8 @@ export default async function StudentDetailPage({
   const detail = await loadStudentDetail(id);
   if (!detail) notFound();
 
-  const { student, profile, recentLessons, recentClasses } = detail;
+  const { student, profile, recentLessons, recentClasses, certifications } =
+    detail;
 
   const radarSkills = SKILL_KEYS.map((k) => ({
     key: k,
@@ -108,6 +109,42 @@ export default async function StudentDetailPage({
         <StatTile label="Lessons completed" value={student.lessonsCompleted} />
         <StatTile label="Classes attended" value={student.classesCompleted} />
       </section>
+
+      {certifications.length > 0 && (
+        <section className="rounded-lg border border-cream bg-paper p-6">
+          <h3 className="mb-3 font-serif text-lg text-navy">Certifications</h3>
+          <ul className="flex flex-col divide-y divide-cream">
+            {certifications.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-3 py-2.5"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={
+                      c.status === "passed"
+                        ? "rounded-full border border-teal/30 bg-teal/5 px-3 py-0.5 font-serif text-base text-teal"
+                        : c.status === "failed"
+                        ? "rounded-full border border-coral/30 bg-coral/5 px-3 py-0.5 font-serif text-base text-coral"
+                        : "rounded-full border border-gold/30 bg-gold/5 px-3 py-0.5 font-serif text-base text-gold"
+                    }
+                  >
+                    {c.level}
+                  </span>
+                  <div>
+                    <p className="text-sm capitalize text-ink">{c.status}</p>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+                      {c.issued_at
+                        ? `Issued ${new Date(c.issued_at).toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" })}`
+                        : `Created ${new Date(c.created_at).toLocaleDateString("en-AU", { month: "short", day: "numeric" })}`}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ListCard

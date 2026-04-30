@@ -32,6 +32,7 @@ export default async function StudentsPage() {
                 <Th>Target</Th>
                 <Th>Discovery</Th>
                 <Th>Average</Th>
+                <Th>Cert</Th>
                 <Th>Lessons</Th>
                 <Th>Classes</Th>
                 <Th>XP</Th>
@@ -78,6 +79,12 @@ export default async function StudentsPage() {
                       {s.averageScore ?? "—"}
                     </span>
                   </Td>
+                  <Td>
+                    <CertCell
+                      passed={s.highestCert}
+                      pending={s.pendingCertLevel}
+                    />
+                  </Td>
                   <Td>{s.lessonsCompleted}</Td>
                   <Td>{s.classesCompleted}</Td>
                   <Td>{s.totalXp}</Td>
@@ -117,6 +124,30 @@ function Pill({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
+}
+
+function CertCell({
+  passed,
+  pending,
+}: {
+  passed: string | null;
+  pending: string | null;
+}) {
+  if (passed) {
+    return (
+      <span className="rounded-full border border-teal/30 bg-teal/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-teal">
+        {passed}
+      </span>
+    );
+  }
+  if (pending) {
+    return (
+      <span className="rounded-full border border-gold/30 bg-gold/5 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gold">
+        {pending} scheduled
+      </span>
+    );
+  }
+  return <span className="font-mono text-[10px] text-mute">—</span>;
 }
 
 function DiscoveryPill({ status }: { status: string | null }) {

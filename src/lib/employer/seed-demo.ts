@@ -33,6 +33,13 @@ type DemoClass = {
   scored: boolean;
 };
 
+type DemoCert = {
+  level: "A2" | "B1" | "B2" | "C1";
+  status: "passed" | "scheduled" | "failed";
+  daysAgo: number;
+  overallScore?: number;
+};
+
 type DemoStudent = {
   email: string;
   name: string;
@@ -46,6 +53,7 @@ type DemoStudent = {
   daysSinceDiscovery: number;
   lessons: DemoLesson[];
   classes: DemoClass[];
+  certs?: DemoCert[];
 };
 
 const DEMO_COHORT: DemoStudent[] = [
@@ -130,6 +138,9 @@ const DEMO_COHORT: DemoStudent[] = [
     classes: [
       { daysAgo: 12, teacherName: "Coach Anh", attended: true, durationMins: 50, scored: true },
     ],
+    certs: [
+      { level: "B2", status: "scheduled", daysAgo: 1 },
+    ],
   },
   {
     email: "anh.le@bizdev-sg.demo",
@@ -202,6 +213,9 @@ const DEMO_COHORT: DemoStudent[] = [
     classes: [
       { daysAgo: 19, teacherName: "Coach Anh", attended: true, durationMins: 50, scored: true },
     ],
+    certs: [
+      { level: "B2", status: "passed", daysAgo: 9, overallScore: 84 },
+    ],
   },
   {
     email: "viet.doan@industrial-eq.demo",
@@ -242,6 +256,7 @@ type SeedResult = {
   scoresWritten: number;
   lessonsWritten: number;
   classesWritten: number;
+  certsWritten: number;
 };
 
 export async function seedDemoCohort(
@@ -253,6 +268,7 @@ export async function seedDemoCohort(
     scoresWritten: 0,
     lessonsWritten: 0,
     classesWritten: 0,
+    certsWritten: 0,
   };
 
   // 1. Build email → existing-userId map (paginate, but cohort is small).
@@ -404,6 +420,48 @@ export async function seedDemoCohort(
         throw new Error(`classin_sessions insert failed for ${demo.email}: ${classesErr.message}`);
       }
       result.classesWritten += classRows.length;
+    }
+
+    // 7. Certifications — wipe and re-insert demo certs.
+    await supabase.from("certifications").delete().eq("student_id", userId);
+    if (demo.certs && demo.certs.length > 0) {
+      const certRows = demo.certs.map((c) => {
+        const issuedAt = c.status === "passed" ? daysAgo(c.daysAgo) : null;
+        return {
+          student_id: userId,
+          level: c.level,
+          status: c.status,
+          tracktest_exam_id:
+            c.status === "passed" ? `sim-seed-${userId}-${c.level}` : null,
+          result_json:
+            c.status === "passed"
+              ? {
+                  overall_score: c.overallScore ?? 80,
+                  floor:
+                    c.level === "C1"
+                      ? 80
+                      : c.level === "B2"
+                      ? 60
+                      : c.level === "B1"
+                      ? 40
+                      : 20,
+                  passed: true,
+                  note: `Passed ${c.level}.`,
+                  simulated: true,
+                }
+              : null,
+          issued_at: issuedAt?.toISOString() ?? null,
+        };
+      });
+      const { error: certsErr } = await supabase
+        .from("certifications")
+        .insert(certRows);
+      if (certsErr) {
+        throw new Error(
+          `certifications insert failed for ${demo.email}: ${certsErr.message}`
+        );
+      }
+      result.certsWritten += certRows.length;
     }
   }
 

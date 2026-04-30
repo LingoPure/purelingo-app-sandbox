@@ -53,15 +53,20 @@ export default async function EmployerOverviewPage() {
         {summary.studentCount < 5 && <SeedButton />}
       </div>
 
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <MetricTile label="Active students" value={summary.studentCount} />
         <MetricTile
           label="Lessons completed"
           value={summary.totalLessonsCompleted}
         />
         <MetricTile
-          label="Live classes attended"
+          label="Live classes"
           value={summary.totalClassesCompleted}
+        />
+        <MetricTile
+          label="Certified"
+          value={summary.certifiedCount}
+          accent
         />
         <MetricTile
           label="At target (≥80)"

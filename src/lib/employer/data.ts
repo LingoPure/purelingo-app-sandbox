@@ -32,6 +32,8 @@ export type CohortStudent = {
   lessonsCompleted: number;
   classesCompleted: number;
   lastActivityAt: string | null;
+  highestCert: string | null;
+  pendingCertLevel: string | null;
 };
 
 export type CohortSummary = {
@@ -41,6 +43,7 @@ export type CohortSummary = {
   totalClassesCompleted: number;
   averageBySkill: Record<SkillKey, number | null>;
   pctAtTarget: number;
+  certifiedCount: number;
 };
 
 export type ActivityEvent = {
@@ -81,32 +84,54 @@ type DiscoveryRow = {
   status: string | null;
 };
 
+type CertRow = {
+  student_id: string;
+  level: string;
+  status: string;
+  issued_at: string | null;
+};
+
+const CERT_RANK: Record<string, number> = {
+  A1: 1,
+  A2: 2,
+  B1: 3,
+  B2: 4,
+  C1: 5,
+  C2: 6,
+};
+
 export async function loadCohortStudents(): Promise<CohortStudent[]> {
   const supabase = adminSupabase();
-  const [studentsRes, scoresRes, lessonsRes, classesRes] = await Promise.all([
-    supabase
-      .from("students")
-      .select("id, name, email, target_level, discovery_status, created_at")
-      .order("created_at", { ascending: false })
-      .returns<StudentRow[]>(),
-    supabase
-      .from("gap_scores")
-      .select("student_id, skill, score")
-      .returns<ScoreRow[]>(),
-    supabase
-      .from("micro_lessons")
-      .select("student_id, status, xp_awarded, type, completed_at")
-      .returns<LessonAggRow[]>(),
-    supabase
-      .from("classin_sessions")
-      .select("student_id, status, scheduled_at, teacher_name, transcribed_at")
-      .returns<ClassAggRow[]>(),
-  ]);
+  const [studentsRes, scoresRes, lessonsRes, classesRes, certsRes] =
+    await Promise.all([
+      supabase
+        .from("students")
+        .select("id, name, email, target_level, discovery_status, created_at")
+        .order("created_at", { ascending: false })
+        .returns<StudentRow[]>(),
+      supabase
+        .from("gap_scores")
+        .select("student_id, skill, score")
+        .returns<ScoreRow[]>(),
+      supabase
+        .from("micro_lessons")
+        .select("student_id, status, xp_awarded, type, completed_at")
+        .returns<LessonAggRow[]>(),
+      supabase
+        .from("classin_sessions")
+        .select("student_id, status, scheduled_at, teacher_name, transcribed_at")
+        .returns<ClassAggRow[]>(),
+      supabase
+        .from("certifications")
+        .select("student_id, level, status, issued_at")
+        .returns<CertRow[]>(),
+    ]);
 
   const students = studentsRes.data ?? [];
   const scores = scoresRes.data ?? [];
   const lessons = lessonsRes.data ?? [];
   const classes = classesRes.data ?? [];
+  const certs = certsRes.data ?? [];
 
   return students.map((s) => {
     const subScores: Record<SkillKey, number | null> = Object.fromEntries(
@@ -157,6 +182,21 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
         ? Math.round(present.reduce((a, b) => a + b, 0) / present.length)
         : null;
 
+    const studentCerts = certs.filter((c) => c.student_id === s.id);
+    const passedLevels = studentCerts
+      .filter((c) => c.status === "passed")
+      .map((c) => c.level);
+    const highestCert =
+      passedLevels.length > 0
+        ? passedLevels.sort(
+            (a, b) => (CERT_RANK[b] ?? 0) - (CERT_RANK[a] ?? 0)
+          )[0]
+        : null;
+    const pendingCert = studentCerts.find(
+      (c) => c.status === "scheduled" || c.status === "in_progress"
+    );
+    const pendingCertLevel = pendingCert?.level ?? null;
+
     return {
       id: s.id,
       name: s.name,
@@ -169,6 +209,8 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
       lessonsCompleted,
       classesCompleted,
       lastActivityAt,
+      highestCert,
+      pendingCertLevel,
     };
   });
 }
@@ -208,6 +250,8 @@ export function summariseCohort(students: CohortStudent[]): CohortSummary {
       ? Math.round((atTarget / studentsWithAverage.length) * 100)
       : 0;
 
+  const certifiedCount = students.filter((s) => s.highestCert !== null).length;
+
   return {
     studentCount,
     totalXp,
@@ -215,6 +259,7 @@ export function summariseCohort(students: CohortStudent[]): CohortSummary {
     totalClassesCompleted,
     averageBySkill,
     pctAtTarget,
+    certifiedCount,
   };
 }
 
@@ -314,6 +359,13 @@ export type StudentDetail = {
     scheduled_at: string | null;
     transcribed_at: string | null;
   }[];
+  certifications: {
+    id: string;
+    level: string;
+    status: string;
+    issued_at: string | null;
+    created_at: string;
+  }[];
 };
 
 export async function loadStudentDetail(
@@ -325,7 +377,7 @@ export async function loadStudentDetail(
   const student = cohort.find((s) => s.id === studentId);
   if (!student) return null;
 
-  const [profileRes, lessonsRes, classesRes] = await Promise.all([
+  const [profileRes, lessonsRes, classesRes, certsRes] = await Promise.all([
     supabase
       .from("discovery_sessions")
       .select("profile_json")
@@ -346,6 +398,11 @@ export async function loadStudentDetail(
       .eq("student_id", studentId)
       .order("scheduled_at", { ascending: false, nullsFirst: false })
       .limit(5),
+    supabase
+      .from("certifications")
+      .select("id, level, status, issued_at, created_at")
+      .eq("student_id", studentId)
+      .order("created_at", { ascending: false }),
   ]);
 
   return {
@@ -355,5 +412,6 @@ export async function loadStudentDetail(
       | null,
     recentLessons: (lessonsRes.data ?? []) as StudentDetail["recentLessons"],
     recentClasses: (classesRes.data ?? []) as StudentDetail["recentClasses"],
+    certifications: (certsRes.data ?? []) as StudentDetail["certifications"],
   };
 }

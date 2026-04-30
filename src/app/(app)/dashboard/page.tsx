@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { RescoreButton } from "@/components/dashboard/rescore-button";
 import { ScheduleClassButton } from "@/components/dashboard/schedule-class-button";
+import {
+  CertificationCard,
+  type LatestCert,
+} from "@/components/dashboard/certification-card";
+import { computeEligibility } from "@/lib/tracktest/eligibility";
+import { SKILL_KEYS } from "@/lib/scoring/rubric";
 
 const SKILLS = [
   { key: "speaking_fluency", label: "Speaking" },
@@ -66,6 +72,7 @@ export default async function DashboardPage() {
     nextClassResult,
     recentClassesResult,
     lessonsResult,
+    certsResult,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -103,6 +110,11 @@ export default async function DashboardPage() {
       .from("micro_lessons")
       .select("xp_awarded, status")
       .eq("student_id", user!.id),
+    supabase
+      .from("certifications")
+      .select("id, level, status, issued_at, created_at")
+      .eq("student_id", user!.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const student = studentResult.data;
@@ -113,6 +125,32 @@ export default async function DashboardPage() {
   const lessons = (lessonsResult.data ?? []) as { xp_awarded: number | null; status: string | null }[];
   const totalXp = lessons.reduce((sum, l) => sum + (l.xp_awarded ?? 0), 0);
   const completedLessons = lessons.filter((l) => l.status === "completed").length;
+
+  const certs = (certsResult.data ?? []) as {
+    id: string;
+    level: string;
+    status: string;
+    issued_at: string | null;
+    created_at: string;
+  }[];
+  const latestPassed = certs.find((c) => c.status === "passed") ?? null;
+  const pending = certs.find(
+    (c) => c.status === "scheduled" || c.status === "in_progress"
+  );
+  const latestCert: LatestCert = latestPassed ?? null;
+  const pendingCertId = pending?.id ?? null;
+
+  const eligibilityScores = Object.fromEntries(
+    SKILL_KEYS.map((k) => [k, null as number | null])
+  );
+  for (const s of scores) {
+    if ((SKILL_KEYS as readonly string[]).includes(s.skill)) {
+      eligibilityScores[s.skill] = s.score;
+    }
+  }
+  const eligibility = computeEligibility(
+    eligibilityScores as Parameters<typeof computeEligibility>[0]
+  );
 
   const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
   const radarSkills = SKILLS.map((s) => {
@@ -231,6 +269,12 @@ export default async function DashboardPage() {
           />
         </section>
       )}
+
+      <CertificationCard
+        eligibility={eligibility}
+        latestCert={latestCert}
+        pendingCertId={pendingCertId}
+      />
 
       <PracticeCard totalXp={totalXp} completedLessons={completedLessons} />
 
