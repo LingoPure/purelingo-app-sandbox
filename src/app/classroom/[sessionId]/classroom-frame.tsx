@@ -51,7 +51,10 @@ export function ClassroomFrame({ sessionId, embedUrl, teacherName }: Props) {
       })
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          router.push("/dashboard");
+          // Demo path: route to the transcribe page so the tester can paste
+          // a transcript and exercise the post-session scoring loop. When
+          // ClassIn analytics are wired, swap this to "/dashboard".
+          router.push(`/classroom/${sessionId}/transcribe`);
         })
         .catch((err: unknown) => {
           setError(err instanceof Error ? err.message : "Failed to end session");

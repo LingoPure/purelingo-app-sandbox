@@ -22,7 +22,10 @@ export const SKILL_KEYS = [
 
 export type SkillKey = (typeof SKILL_KEYS)[number];
 
-const SubScore = z.object({
+export const CEFR_BANDS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+export type CefrBand = (typeof CEFR_BANDS)[number];
+
+export const SubScore = z.object({
   score: z
     .number()
     .int()
@@ -32,7 +35,7 @@ const SubScore = z.object({
       "0–100 estimate of the student's current ability for this sub-skill, where 80 is the LingoPure target floor for B2."
     ),
   cefr_band: z
-    .enum(["A1", "A2", "B1", "B2", "C1", "C2"])
+    .enum(CEFR_BANDS)
     .describe("CEFR band the score maps to."),
   evidence: z
     .string()
@@ -43,6 +46,8 @@ const SubScore = z.object({
     ),
 });
 
+export type SubScoreOutput = z.infer<typeof SubScore>;
+
 export const GapScoresSchema = z.object({
   speaking_fluency: SubScore,
   listening_comprehension: SubScore,
@@ -51,10 +56,10 @@ export const GapScoresSchema = z.object({
   business_vocabulary: SubScore,
   presentation_delivery: SubScore,
   overall_cefr: z
-    .enum(["A1", "A2", "B1", "B2", "C1", "C2"])
+    .enum(CEFR_BANDS)
     .describe("Best-fit overall CEFR band across the six sub-skills."),
   target_level: z
-    .enum(["A1", "A2", "B1", "B2", "C1", "C2"])
+    .enum(CEFR_BANDS)
     .describe(
       "Level the student needs to reach (from dimension 5 in the discovery protocol). Default B2 if unclear."
     ),

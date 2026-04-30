@@ -31,6 +31,14 @@ type NextClass = {
   status: string | null;
 };
 
+type RecentClass = {
+  id: string;
+  scheduled_at: string | null;
+  teacher_name: string | null;
+  status: string | null;
+  transcribed_at: string | null;
+};
+
 type ProfileJson = {
   speaking_fluency: SubScoreEvidence;
   listening_comprehension: SubScoreEvidence;
@@ -51,39 +59,52 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [studentResult, scoresResult, sessionResult, nextClassResult] =
-    await Promise.all([
-      supabase
-        .from("students")
-        .select("id, name, discovery_status, target_level")
-        .eq("id", user!.id)
-        .maybeSingle(),
-      supabase
-        .from("gap_scores")
-        .select("skill, score, target")
-        .eq("student_id", user!.id),
-      supabase
-        .from("discovery_sessions")
-        .select("profile_json, completed_at, status")
-        .eq("student_id", user!.id)
-        .eq("status", "complete")
-        .order("completed_at", { ascending: false, nullsFirst: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("classin_sessions")
-        .select("id, scheduled_at, teacher_name, status")
-        .eq("student_id", user!.id)
-        .in("status", ["scheduled", "live"])
-        .order("scheduled_at", { ascending: true, nullsFirst: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+  const [
+    studentResult,
+    scoresResult,
+    sessionResult,
+    nextClassResult,
+    recentClassesResult,
+  ] = await Promise.all([
+    supabase
+      .from("students")
+      .select("id, name, discovery_status, target_level")
+      .eq("id", user!.id)
+      .maybeSingle(),
+    supabase
+      .from("gap_scores")
+      .select("skill, score, target")
+      .eq("student_id", user!.id),
+    supabase
+      .from("discovery_sessions")
+      .select("profile_json, completed_at, status")
+      .eq("student_id", user!.id)
+      .eq("status", "complete")
+      .order("completed_at", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("classin_sessions")
+      .select("id, scheduled_at, teacher_name, status")
+      .eq("student_id", user!.id)
+      .in("status", ["scheduled", "live"])
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("classin_sessions")
+      .select("id, scheduled_at, teacher_name, status, transcribed_at")
+      .eq("student_id", user!.id)
+      .eq("status", "completed")
+      .order("updated_at", { ascending: false })
+      .limit(3),
+  ]);
 
   const student = studentResult.data;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
   const nextClass = nextClassResult.data as NextClass | null;
+  const recentClasses = (recentClassesResult.data ?? []) as RecentClass[];
 
   const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
   const radarSkills = SKILLS.map((s) => {
@@ -205,7 +226,7 @@ export default async function DashboardPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <NextClassCard nextClass={nextClass} />
-        <ActivityLogCard />
+        <ActivityLogCard recentClasses={recentClasses} />
       </section>
     </div>
   );
@@ -356,14 +377,53 @@ function NextClassCard({ nextClass }: { nextClass: NextClass | null }) {
   );
 }
 
-function ActivityLogCard() {
+function ActivityLogCard({ recentClasses }: { recentClasses: RecentClass[] }) {
+  if (recentClasses.length === 0) {
+    return (
+      <div className="rounded-lg border border-cream bg-paper p-6">
+        <h3 className="mb-2 font-serif text-lg text-navy">Recent activity</h3>
+        <p className="text-sm text-mute">
+          Activity will appear here as you complete your discovery, attend classes, and finish
+          micro-lessons.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-cream bg-paper p-6">
-      <h3 className="mb-2 font-serif text-lg text-navy">Recent activity</h3>
-      <p className="text-sm text-mute">
-        Activity will appear here as you complete your discovery, attend classes, and finish
-        micro-lessons.
-      </p>
+      <h3 className="mb-3 font-serif text-lg text-navy">Recent classes</h3>
+      <ul className="flex flex-col gap-3">
+        {recentClasses.map((c) => {
+          const when = c.scheduled_at
+            ? new Date(c.scheduled_at).toLocaleDateString("en-AU", {
+                month: "short",
+                day: "numeric",
+              })
+            : "—";
+          const scored = Boolean(c.transcribed_at);
+          return (
+            <li key={c.id} className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm text-ink">
+                  {c.teacher_name ?? "Coach"} · {when}
+                </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+                  {scored ? "Scored" : "Awaiting score"}
+                </p>
+              </div>
+              {!scored && (
+                <Link
+                  href={`/classroom/${c.id}/transcribe`}
+                  className="shrink-0 rounded-md border border-navy/20 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-navy hover:bg-mist"
+                >
+                  Score session
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
