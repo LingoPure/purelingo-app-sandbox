@@ -21,7 +21,7 @@ export async function updateSession(request: NextRequest) {
   // login page itself.
   if (path.startsWith("/employer") && path !== "/employer/login") {
     const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-    if (!cookieIsValid(cookie)) {
+    if (!(await cookieIsValid(cookie))) {
       const url = request.nextUrl.clone();
       url.pathname = "/employer/login";
       url.searchParams.set("redirectTo", path);

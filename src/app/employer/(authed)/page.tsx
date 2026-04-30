@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GapRadar } from "@/components/dashboard/gap-radar";
+import { SeedButton } from "./seed-button";
 
 export const dynamic = "force-dynamic";
 import {
@@ -38,15 +39,18 @@ export default async function EmployerOverviewPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-          Pilot cohort
-        </p>
-        <h1 className="font-serif text-3xl text-navy">Overview</h1>
-        <p className="mt-2 max-w-2xl text-sm text-mute">
-          Aggregate progress across the cohort. Numbers update in real time as
-          students complete discovery, attend live classes, and finish micro-lessons.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
+            Pilot cohort
+          </p>
+          <h1 className="font-serif text-3xl text-navy">Overview</h1>
+          <p className="mt-2 max-w-2xl text-sm text-mute">
+            Aggregate progress across the cohort. Numbers update in real time as
+            students complete discovery, attend live classes, and finish micro-lessons.
+          </p>
+        </div>
+        {summary.studentCount < 5 && <SeedButton />}
       </div>
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4">

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   const res = NextResponse.json({ ok: true });
   res.cookies.set({
     name: EMPLOYER_COOKIE_NAME,
-    value: expectedCookieValue(),
+    value: await expectedCookieValue(),
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
