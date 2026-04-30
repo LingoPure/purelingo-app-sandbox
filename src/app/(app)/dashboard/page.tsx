@@ -65,6 +65,7 @@ export default async function DashboardPage() {
     sessionResult,
     nextClassResult,
     recentClassesResult,
+    lessonsResult,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -98,6 +99,10 @@ export default async function DashboardPage() {
       .eq("status", "completed")
       .order("updated_at", { ascending: false })
       .limit(3),
+    supabase
+      .from("micro_lessons")
+      .select("xp_awarded, status")
+      .eq("student_id", user!.id),
   ]);
 
   const student = studentResult.data;
@@ -105,6 +110,9 @@ export default async function DashboardPage() {
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
   const nextClass = nextClassResult.data as NextClass | null;
   const recentClasses = (recentClassesResult.data ?? []) as RecentClass[];
+  const lessons = (lessonsResult.data ?? []) as { xp_awarded: number | null; status: string | null }[];
+  const totalXp = lessons.reduce((sum, l) => sum + (l.xp_awarded ?? 0), 0);
+  const completedLessons = lessons.filter((l) => l.status === "completed").length;
 
   const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
   const radarSkills = SKILLS.map((s) => {
@@ -224,11 +232,45 @@ export default async function DashboardPage() {
         </section>
       )}
 
+      <PracticeCard totalXp={totalXp} completedLessons={completedLessons} />
+
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <NextClassCard nextClass={nextClass} />
         <ActivityLogCard recentClasses={recentClasses} />
       </section>
     </div>
+  );
+}
+
+function PracticeCard({
+  totalXp,
+  completedLessons,
+}: {
+  totalXp: number;
+  completedLessons: number;
+}) {
+  return (
+    <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-cream bg-paper p-6">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          Practice
+        </p>
+        <h3 className="font-serif text-lg text-navy">
+          {completedLessons === 0
+            ? "Try a five-minute lesson"
+            : `${completedLessons} lesson${completedLessons === 1 ? "" : "s"} done · ${totalXp} XP`}
+        </h3>
+        <p className="mt-1 max-w-xl text-sm text-mute">
+          Email sprints calibrated to your gap profile. Each one updates your scores in real time.
+        </p>
+      </div>
+      <Link
+        href="/lessons"
+        className="inline-block rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
+      >
+        {completedLessons === 0 ? "Start a lesson →" : "Continue practicing →"}
+      </Link>
+    </section>
   );
 }
 

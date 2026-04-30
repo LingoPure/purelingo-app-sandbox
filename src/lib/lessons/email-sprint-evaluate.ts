@@ -1,0 +1,162 @@
+/**
+ * Email-sprint evaluator.
+ *
+ * Reads the student's submitted email + the original prompt, runs Claude
+ * scoring, upserts gap_scores (source='lesson') for the 3 sub-skills the
+ * email exercises, awards XP, marks the lesson complete with score_after.
+ */
+
+import Anthropic from "@anthropic-ai/sdk";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  EVALUATOR_SYSTEM_PROMPT,
+  EmailSprintEvaluationSchema,
+  type EmailSprintEvaluation,
+  type EmailSprintPrompt,
+} from "./email-sprint-rubric";
+
+const MODEL = "claude-sonnet-4-6";
+
+export type SubmitInput = {
+  lessonId: string;
+  studentId: string;
+  submission: string;
+};
+
+export type SubmitResult = {
+  evaluation: EmailSprintEvaluation;
+  xpAwarded: number;
+  scoreAfter: number;
+};
+
+function client() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+  return new Anthropic({ apiKey });
+}
+
+export async function submitEmailSprint(
+  supabase: SupabaseClient,
+  input: SubmitInput
+): Promise<SubmitResult> {
+  // 1. Load the lesson + the original prompt the generator produced.
+  const { data: lesson, error: lessonErr } = await supabase
+    .from("micro_lessons")
+    .select("id, student_id, type, content_json, status, score_before")
+    .eq("id", input.lessonId)
+    .maybeSingle();
+
+  if (lessonErr) throw new Error(`micro_lessons lookup failed: ${lessonErr.message}`);
+  if (!lesson) throw new Error("Lesson not found");
+  if ((lesson as { student_id: string }).student_id !== input.studentId) {
+    throw new Error("Lesson does not belong to this student");
+  }
+  if ((lesson as { type: string }).type !== "email_sprint") {
+    throw new Error(`Cannot evaluate non-email-sprint lesson (${(lesson as { type: string }).type})`);
+  }
+  if ((lesson as { status: string }).status === "completed") {
+    throw new Error("Lesson already completed");
+  }
+
+  const content = (lesson as { content_json: { prompt?: EmailSprintPrompt } })
+    .content_json;
+  const prompt = content?.prompt;
+  if (!prompt) throw new Error("Lesson has no prompt — corrupted state");
+
+  // 2. Run Claude evaluator.
+  const evaluation = await evaluateEmail(prompt, input.submission);
+
+  // 3. Upsert gap_scores for the 3 sub-skills the email exercises.
+  const subSkills = [
+    { skill: "writing_formal", sub: evaluation.writing_formal },
+    { skill: "business_vocabulary", sub: evaluation.business_vocabulary },
+    { skill: "reading_intent", sub: evaluation.reading_intent },
+  ] as const;
+
+  const rows = subSkills.map(({ skill, sub }) => ({
+    student_id: input.studentId,
+    skill,
+    score: sub.score,
+    target: 80,
+    source: "lesson" as const,
+  }));
+
+  const { error: gapErr } = await supabase
+    .from("gap_scores")
+    .upsert(rows, { onConflict: "student_id,skill" });
+  if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
+
+  // 4. Compute the post-lesson average for score_after tracking.
+  const scoreAfter = Math.round(
+    (evaluation.writing_formal.score +
+      evaluation.business_vocabulary.score +
+      evaluation.reading_intent.score) /
+      3
+  );
+
+  // 5. Mark lesson complete + persist submission + evaluation.
+  const { error: lessonUpdateErr } = await supabase
+    .from("micro_lessons")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      content_json: { prompt, submission: input.submission, evaluation },
+      xp_awarded: evaluation.xp_awarded,
+      score_after: scoreAfter,
+    })
+    .eq("id", input.lessonId)
+    .eq("student_id", input.studentId);
+  if (lessonUpdateErr) {
+    throw new Error(`micro_lessons update failed: ${lessonUpdateErr.message}`);
+  }
+
+  return {
+    evaluation,
+    xpAwarded: evaluation.xp_awarded,
+    scoreAfter,
+  };
+}
+
+async function evaluateEmail(
+  prompt: EmailSprintPrompt,
+  submission: string
+): Promise<EmailSprintEvaluation> {
+  const anthropic = client();
+
+  const userMessage = [
+    "## PROMPT given to the student",
+    "",
+    `Scenario: ${prompt.scenario}`,
+    `Task: ${prompt.task}`,
+    `Recipient: ${prompt.recipient}`,
+    `Difficulty band: ${prompt.difficulty_band}`,
+    `Expected length: ~${prompt.expected_word_count} words`,
+    "",
+    "Success criteria the prompt expected:",
+    ...prompt.success_criteria.map((c, i) => `  ${i + 1}. ${c}`),
+    "",
+    "## STUDENT'S SUBMISSION",
+    "",
+    submission,
+  ].join("\n");
+
+  const response = await anthropic.messages.parse({
+    model: MODEL,
+    max_tokens: 2000,
+    temperature: 0,
+    system: [
+      {
+        type: "text",
+        text: EVALUATOR_SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [{ role: "user", content: userMessage }],
+    output_config: { format: zodOutputFormat(EmailSprintEvaluationSchema) },
+  });
+
+  const parsed = response.parsed_output;
+  if (!parsed) throw new Error("Evaluator returned no parsed output");
+  return parsed;
+}
