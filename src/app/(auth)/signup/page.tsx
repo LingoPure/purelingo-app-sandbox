@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signup } from "./actions";
+import { getDict } from "@/lib/i18n";
 
 export default async function SignupPage({
   searchParams,
@@ -7,13 +8,12 @@ export default async function SignupPage({
   searchParams: Promise<{ error?: string; message?: string }>;
 }) {
   const { error, message } = await searchParams;
+  const { t } = await getDict();
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl text-navy">Create your account</h1>
-      <p className="mb-6 text-sm text-mute">
-        Start with a 20-minute AI discovery session — no manual placement test.
-      </p>
+      <h1 className="mb-1 font-serif text-3xl text-navy">{t("signup.heading")}</h1>
+      <p className="mb-6 text-sm text-mute">{t("signup.lead")}</p>
 
       {error && (
         <div className="mb-4 rounded-md border border-coral/30 bg-coral/10 px-3 py-2 text-sm text-coral">
@@ -27,21 +27,27 @@ export default async function SignupPage({
       )}
 
       <form action={signup} className="flex flex-col gap-4">
-        <Field label="Full name" name="fullName" type="text" required />
-        <Field label="Work email" name="email" type="email" required />
-        <Field label="Password" name="password" type="password" required minLength={8} />
+        <Field label={t("signup.fieldFullName")} name="fullName" type="text" required />
+        <Field label={t("signup.fieldEmail")} name="email" type="email" required />
+        <Field
+          label={t("signup.fieldPassword")}
+          name="password"
+          type="password"
+          required
+          minLength={8}
+        />
         <button
           type="submit"
           className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
         >
-          Create account
+          {t("signup.submit")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-mute">
-        Already have an account?{" "}
+        {t("signup.loginPrompt")}{" "}
         <Link href="/login" className="font-medium text-navy hover:underline">
-          Sign in
+          {t("signup.loginLink")}
         </Link>
       </p>
     </div>

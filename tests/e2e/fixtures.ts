@@ -94,8 +94,27 @@ export async function ensureTestStudent(): Promise<{ id: string; email: string }
   return { id: userId, email: TEST_STUDENT.email };
 }
 
+/**
+ * Pin the UI language to English for the test session — without this the
+ * test student's persisted native_language (default 'vi' since migration
+ * 0007) renders the chrome in Vietnamese and breaks getByRole/getByText
+ * assertions that match English strings.
+ */
+async function pinLanguageEnglish(page: Page): Promise<void> {
+  const url = new URL(page.url() === "about:blank" ? "http://localhost:3000" : page.url());
+  await page.context().addCookies([
+    {
+      name: "lp_lang",
+      value: "en",
+      domain: url.hostname,
+      path: "/",
+    },
+  ]);
+}
+
 export async function loginAsTestStudent(page: Page): Promise<void> {
   await page.goto("/login");
+  await pinLanguageEnglish(page);
   await page.getByLabel(/email/i).fill(TEST_STUDENT.email);
   await page.getByLabel(/password/i).fill(TEST_STUDENT.password);
   await page.getByRole("button", { name: /sign in/i }).click();
@@ -110,6 +129,7 @@ export async function loginAsTestStudent(page: Page): Promise<void> {
 
 export async function loginAsEmployer(page: Page): Promise<void> {
   await page.goto("/employer/login");
+  await pinLanguageEnglish(page);
   await page.getByLabel(/access password/i).fill(EMPLOYER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
   // The naive regex /\/employer(\/|$)/ matches /employer/login itself, so

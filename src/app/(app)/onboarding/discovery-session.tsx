@@ -7,6 +7,10 @@ type Props = {
   agentId: string;
   userId: string;
   studentName?: string | null;
+  nativeLanguage: string;
+  startLabel: string;
+  connectingLabel: string;
+  headphonesNote: string;
 };
 
 /**
@@ -23,7 +27,15 @@ export function DiscoverySession(props: Props) {
   );
 }
 
-function DiscoverySessionInner({ agentId, userId, studentName }: Props) {
+function DiscoverySessionInner({
+  agentId,
+  userId,
+  studentName,
+  nativeLanguage,
+  startLabel,
+  connectingLabel,
+  headphonesNote,
+}: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const conversation = useConversation({
@@ -48,6 +60,7 @@ function DiscoverySessionInner({ agentId, userId, studentName }: Props) {
         dynamicVariables: {
           user_id: userId,
           student_name: studentName ?? "",
+          native_language: nativeLanguage,
         },
       });
     } catch (e) {
@@ -104,10 +117,10 @@ function DiscoverySessionInner({ agentId, userId, studentName }: Props) {
         disabled={status === "connecting"}
         className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-60"
       >
-        {status === "connecting" ? "Connecting…" : "Start discovery session"}
+        {status === "connecting" ? connectingLabel : startLabel}
       </button>
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-        Plug in headphones · ~25 minutes · English only
+        {headphonesNote}
       </p>
     </div>
   );

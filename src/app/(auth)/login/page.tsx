@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "./actions";
+import { getDict } from "@/lib/i18n";
 
 export default async function LoginPage({
   searchParams,
@@ -7,11 +8,12 @@ export default async function LoginPage({
   searchParams: Promise<{ redirectTo?: string; error?: string }>;
 }) {
   const { redirectTo, error } = await searchParams;
+  const { t } = await getDict();
 
   return (
     <div>
-      <h1 className="mb-1 font-serif text-3xl text-navy">Welcome back</h1>
-      <p className="mb-6 text-sm text-mute">Sign in to continue your learning journey.</p>
+      <h1 className="mb-1 font-serif text-3xl text-navy">{t("login.heading")}</h1>
+      <p className="mb-6 text-sm text-mute">{t("login.lead")}</p>
 
       {error && (
         <div className="mb-4 rounded-md border border-coral/30 bg-coral/10 px-3 py-2 text-sm text-coral">
@@ -21,20 +23,26 @@ export default async function LoginPage({
 
       <form action={login} className="flex flex-col gap-4">
         <input type="hidden" name="redirectTo" value={redirectTo ?? "/dashboard"} />
-        <Field label="Email" name="email" type="email" required />
-        <Field label="Password" name="password" type="password" required minLength={6} />
+        <Field label={t("login.fieldEmail")} name="email" type="email" required />
+        <Field
+          label={t("login.fieldPassword")}
+          name="password"
+          type="password"
+          required
+          minLength={6}
+        />
         <button
           type="submit"
           className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
         >
-          Sign in
+          {t("login.submit")}
         </button>
       </form>
 
       <p className="mt-6 text-center text-sm text-mute">
-        New to LingoPure?{" "}
+        {t("login.signupPrompt")}{" "}
         <Link href="/signup" className="font-medium text-navy hover:underline">
-          Create an account
+          {t("login.signupLink")}
         </Link>
       </p>
     </div>
