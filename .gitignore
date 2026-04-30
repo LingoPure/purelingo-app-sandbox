@@ -51,3 +51,6 @@ next-env.d.ts
 # Internal artefacts (kept out of source control)
 /briefing-extracted.txt
 .gstack/
+
+.vercel
+.env*.local
