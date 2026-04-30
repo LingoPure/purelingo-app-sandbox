@@ -6,6 +6,7 @@ import {
   type TableNames,
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
+import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
 
 // Map the package's generic table-name interface onto our public.convai_* schema.
 const TABLES: TableNames = {
@@ -128,9 +129,32 @@ export async function POST(request: NextRequest) {
       .eq("id", userId);
   }
 
-  // TODO(build sequence #5): trigger gap-scoring job.
-  // POST /api/scoring/discovery { student_id: userId, transcript: payload.data.transcript }
-  // — Claude rubric produces 6 sub-scores → INSERT INTO gap_scores ... source='discovery'.
+  // 4. Run gap-scoring (briefing build sequence #5). We call the lib directly
+  //    rather than self-POSTing — saves a round-trip and keeps the service-role
+  //    client in-process. Failures are logged but do NOT 5xx the webhook:
+  //    ElevenLabs would retry the whole post-call payload, which would re-
+  //    upsert the transcript pointlessly. /api/scoring/discovery is the
+  //    manual retry path if scoring fails here.
+  if (payload.data.status === "done") {
+    try {
+      const result = await scoreDiscoverySession(supabase, {
+        studentId: userId,
+        conversationId: payload.data.conversation_id,
+        transcript: payload.data.transcript,
+      });
+      console.log(
+        `[convai/webhook] scored ${userId} — overall ${result.scores.overall_cefr}, ` +
+          `target ${result.scores.target_level}, ` +
+          `tokens in/out/cache_read/cache_write = ${result.inputTokens}/${result.outputTokens}/` +
+          `${result.cacheReadTokens}/${result.cacheWriteTokens}`
+      );
+    } catch (err) {
+      console.error(
+        "[convai/webhook] gap scoring failed:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }
