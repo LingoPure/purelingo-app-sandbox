@@ -39,9 +39,13 @@ export function StartLessonButton({ type = "email_sprint" }: { type?: string }) 
         type="button"
         onClick={handleClick}
         disabled={pending}
-        className="inline-block rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:opacity-50"
+        className="inline-block self-start rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:opacity-50"
       >
-        {pending ? "Generating prompt…" : "Start an email sprint →"}
+        {pending
+          ? "Generating prompt…"
+          : type === "speak_score"
+          ? "Start a speak & score →"
+          : "Start an email sprint →"}
       </button>
       {error && <span className="text-xs text-coral">{error}</span>}
     </div>

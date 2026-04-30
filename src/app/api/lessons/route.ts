@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createEmailSprintLesson } from "@/lib/lessons/email-sprint-generate";
+import { createSpeakScoreLesson } from "@/lib/lessons/speak-score-generate";
 
 function adminSupabase() {
   const url =
@@ -38,18 +39,32 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as Body;
   const type = body.type ?? "email_sprint";
 
-  if (type !== "email_sprint") {
+  try {
+    const admin = adminSupabase();
+    if (type === "email_sprint") {
+      const result = await createEmailSprintLesson(admin, {
+        studentId: user.id,
+      });
+      return NextResponse.json({
+        ok: true,
+        id: result.id,
+        prompt: result.prompt,
+      });
+    }
+    if (type === "speak_score") {
+      const result = await createSpeakScoreLesson(admin, {
+        studentId: user.id,
+      });
+      return NextResponse.json({
+        ok: true,
+        id: result.id,
+        prompt: result.prompt,
+      });
+    }
     return NextResponse.json(
       { error: `Lesson type "${type}" not yet implemented` },
       { status: 400 }
     );
-  }
-
-  try {
-    const result = await createEmailSprintLesson(adminSupabase(), {
-      studentId: user.id,
-    });
-    return NextResponse.json({ ok: true, id: result.id, prompt: result.prompt });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Lesson creation failed";
     return NextResponse.json({ error: message }, { status: 500 });

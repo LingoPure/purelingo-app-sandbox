@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient as createUserClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { submitEmailSprint } from "@/lib/lessons/email-sprint-evaluate";
+import { submitSpeakScore } from "@/lib/lessons/speak-score-evaluate";
 
 function adminSupabase() {
   const url =
@@ -21,8 +22,6 @@ function adminSupabase() {
   }
   return createAdminClient(url, key, { auth: { persistSession: false } });
 }
-
-type Body = { submission?: string };
 
 export async function POST(
   request: NextRequest,
@@ -39,15 +38,6 @@ export async function POST(
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as Body;
-  if (!body.submission || !body.submission.trim()) {
-    return NextResponse.json(
-      { error: "submission required" },
-      { status: 400 }
-    );
-  }
-
-  // Look up the lesson type so we route to the right evaluator.
   const { data: lesson, error: lookupErr } = await userClient
     .from("micro_lessons")
     .select("type, status")
@@ -60,27 +50,62 @@ export async function POST(
     return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
   }
 
-  if ((lesson as { type: string }).type !== "email_sprint") {
-    return NextResponse.json(
-      {
-        error: `Submit handler for lesson type "${(lesson as { type: string }).type}" not yet implemented`,
-      },
-      { status: 400 }
-    );
-  }
+  const lessonType = (lesson as { type: string }).type;
 
   try {
-    const result = await submitEmailSprint(adminSupabase(), {
-      lessonId: id,
-      studentId: user.id,
-      submission: body.submission,
-    });
-    return NextResponse.json({
-      ok: true,
-      xp_awarded: result.xpAwarded,
-      score_after: result.scoreAfter,
-      evaluation: result.evaluation,
-    });
+    const admin = adminSupabase();
+
+    if (lessonType === "email_sprint") {
+      const body = (await request.json().catch(() => ({}))) as {
+        submission?: string;
+      };
+      if (!body.submission || !body.submission.trim()) {
+        return NextResponse.json(
+          { error: "submission required" },
+          { status: 400 }
+        );
+      }
+      const result = await submitEmailSprint(admin, {
+        lessonId: id,
+        studentId: user.id,
+        submission: body.submission,
+      });
+      return NextResponse.json({
+        ok: true,
+        xp_awarded: result.xpAwarded,
+        score_after: result.scoreAfter,
+        evaluation: result.evaluation,
+      });
+    }
+
+    if (lessonType === "speak_score") {
+      // Audio upload comes as multipart/form-data with a file field "audio".
+      const form = await request.formData();
+      const audio = form.get("audio");
+      if (!(audio instanceof Blob)) {
+        return NextResponse.json(
+          { error: "audio file required (multipart/form-data, field name 'audio')" },
+          { status: 400 }
+        );
+      }
+      const result = await submitSpeakScore(admin, {
+        lessonId: id,
+        studentId: user.id,
+        audio,
+      });
+      return NextResponse.json({
+        ok: true,
+        xp_awarded: result.xpAwarded,
+        score_after: result.scoreAfter,
+        transcript: result.transcript,
+        evaluation: result.evaluation,
+      });
+    }
+
+    return NextResponse.json(
+      { error: `Submit handler for lesson type "${lessonType}" not yet implemented` },
+      { status: 400 }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Submission failed";
     return NextResponse.json({ error: message }, { status: 500 });

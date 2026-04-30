@@ -30,9 +30,14 @@ export default async function LessonsPage() {
     0
   );
 
-  const activeLesson = (lessons ?? []).find(
-    (l) => (l as LessonRow).status === "active"
-  ) as LessonRow | undefined;
+  const activeByType = new Map<string, LessonRow>();
+  for (const l of (lessons ?? []) as LessonRow[]) {
+    if (l.status === "active" && !activeByType.has(l.type)) {
+      activeByType.set(l.type, l);
+    }
+  }
+  const activeEmailSprint = activeByType.get("email_sprint") ?? null;
+  const activeSpeakScore = activeByType.get("speak_score") ?? null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,31 +52,21 @@ export default async function LessonsPage() {
         </p>
       </div>
 
-      <section className="rounded-lg border border-cream bg-paper p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-              Email sprint
-            </p>
-            <h2 className="font-serif text-xl text-navy">
-              Write a business email under time pressure
-            </h2>
-            <p className="mt-1 max-w-xl text-sm text-mute">
-              We generate a fresh scenario based on your role and current writing score. You
-              have ~5 minutes to draft. Claude scores it and shows you a model rewrite.
-            </p>
-          </div>
-          {activeLesson ? (
-            <Link
-              href={`/lessons/${activeLesson.id}`}
-              className="inline-block rounded-md border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-medium text-navy hover:bg-gold/20"
-            >
-              Resume in progress →
-            </Link>
-          ) : (
-            <StartLessonButton />
-          )}
-        </div>
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <LessonTypeCard
+          kicker="Email sprint"
+          heading="Write a business email under time pressure"
+          body="We generate a fresh scenario based on your role and current writing score. You have ~5 minutes to draft. Claude scores it and shows you a model rewrite."
+          activeId={activeEmailSprint?.id}
+          startType="email_sprint"
+        />
+        <LessonTypeCard
+          kicker="Speak & score"
+          heading="Record a 60–90 second business response"
+          body="A scenario tailored to your speaking score and role. You record live in the browser — Whisper transcribes, Claude scores fluency, vocabulary and presentation."
+          activeId={activeSpeakScore?.id}
+          startType="speak_score"
+        />
       </section>
 
       {(lessons?.length ?? 0) > 0 && (
@@ -135,4 +130,40 @@ function humanizeType(t: string): string {
     .split("_")
     .map((p) => p[0].toUpperCase() + p.slice(1))
     .join(" ");
+}
+
+function LessonTypeCard({
+  kicker,
+  heading,
+  body,
+  activeId,
+  startType,
+}: {
+  kicker: string;
+  heading: string;
+  body: string;
+  activeId?: string;
+  startType: string;
+}) {
+  return (
+    <div className="flex flex-col justify-between gap-4 rounded-lg border border-cream bg-paper p-6">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          {kicker}
+        </p>
+        <h2 className="mt-1 font-serif text-xl text-navy">{heading}</h2>
+        <p className="mt-2 text-sm text-mute">{body}</p>
+      </div>
+      {activeId ? (
+        <Link
+          href={`/lessons/${activeId}`}
+          className="inline-block self-start rounded-md border border-gold/40 bg-gold/10 px-4 py-2 text-sm font-medium text-navy hover:bg-gold/20"
+        >
+          Resume in progress →
+        </Link>
+      ) : (
+        <StartLessonButton type={startType} />
+      )}
+    </div>
+  );
 }
