@@ -19,12 +19,20 @@ export default async function StudentsPage() {
             score, and recent activity. Click any row for the full gap profile.
           </p>
         </div>
-        <Link
-          href="/employer/staff/import"
-          className="rounded-full bg-navy px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-paper hover:bg-navy/90"
-        >
-          Bulk import →
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/employer/staff/invite"
+            className="rounded-full border border-navy bg-paper px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-navy hover:bg-mist/40"
+          >
+            Invite one
+          </Link>
+          <Link
+            href="/employer/staff/import"
+            className="rounded-full bg-navy px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-paper hover:bg-navy/90"
+          >
+            Bulk import →
+          </Link>
+        </div>
       </div>
 
       <section className="overflow-hidden rounded-lg border border-cream bg-paper">
