@@ -240,6 +240,49 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
   });
 }
 
+/**
+ * Lightweight picker rows for the invite form's "pick existing employee"
+ * dropdown. Only the fields the form needs to autofill — keeps the page
+ * payload small even on cohorts of 1k.
+ */
+export type StaffPick = {
+  id: string;
+  name: string | null;
+  email: string;
+  role_id: string | null;
+  target_level: string | null;
+};
+
+export async function loadEmployerStaffPicks(): Promise<StaffPick[]> {
+  const supabase = adminSupabase();
+  const { data, error } = await supabase
+    .from("students")
+    .select("id, name, email, role_id, target_level")
+    .order("name", { ascending: true })
+    .returns<
+      {
+        id: string;
+        name: string | null;
+        email: string | null;
+        role_id: string | null;
+        target_level: string | null;
+      }[]
+    >();
+  if (error) {
+    console.error("[employer] loadEmployerStaffPicks failed:", error.message);
+    return [];
+  }
+  return (data ?? [])
+    .filter((s): s is StaffPick => Boolean(s.email))
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      role_id: s.role_id,
+      target_level: s.target_level,
+    }));
+}
+
 export function summariseCohort(students: CohortStudent[]): CohortSummary {
   const studentCount = students.length;
   const totalXp = students.reduce((sum, s) => sum + s.totalXp, 0);

@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 type Role = { id: string; name: string };
+type StaffPick = {
+  id: string;
+  name: string | null;
+  email: string;
+  role_id: string | null;
+  target_level: string | null;
+};
 type Outcome =
   | {
       ok: true;
@@ -16,22 +23,70 @@ type Outcome =
   | { ok: false; error: string };
 
 const TARGETS = ["A2", "B1", "B2", "C1", "C2"] as const;
+type TargetLevel = (typeof TARGETS)[number];
 
-export function InviteClient({ roles }: { roles: Role[] }) {
+function isTargetLevel(value: string | null | undefined): value is TargetLevel {
+  return TARGETS.some((t) => t === value);
+}
+
+export function InviteClient({
+  roles,
+  existingStaff,
+}: {
+  roles: Role[];
+  existingStaff: StaffPick[];
+}) {
+  // "" = "Add new" (free-form). Anything else = id of an existing
+  // student → name/email lock to their record, role/target prefill but
+  // remain editable so admin can reassign before sending.
+  const [pickedStaffId, setPickedStaffId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
-  const [targetLevel, setTargetLevel] =
-    useState<(typeof TARGETS)[number]>("B2");
+  const [targetLevel, setTargetLevel] = useState<TargetLevel>("B2");
   const [isPending, startTransition] = useTransition();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const staffById = useMemo(
+    () => new Map(existingStaff.map((s) => [s.id, s] as const)),
+    [existingStaff]
+  );
+  const validRoleIds = useMemo(
+    () => new Set(roles.map((r) => r.id)),
+    [roles]
+  );
+  const isExistingPicked = pickedStaffId !== "";
+
   function reset() {
+    setPickedStaffId("");
     setName("");
     setEmail("");
     setRoleId(roles[0]?.id ?? "");
     setTargetLevel("B2");
+  }
+
+  function onPickStaff(id: string) {
+    setPickedStaffId(id);
+    setOutcome(null);
+    setCopied(false);
+    if (id === "") {
+      setName("");
+      setEmail("");
+      setRoleId(roles[0]?.id ?? "");
+      setTargetLevel("B2");
+      return;
+    }
+    const pick = staffById.get(id);
+    if (!pick) return;
+    setName(pick.name?.trim() ?? "");
+    setEmail(pick.email);
+    setRoleId(
+      pick.role_id && validRoleIds.has(pick.role_id)
+        ? pick.role_id
+        : roles[0]?.id ?? ""
+    );
+    setTargetLevel(isTargetLevel(pick.target_level) ? pick.target_level : "B2");
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -97,8 +152,41 @@ export function InviteClient({ roles }: { roles: Role[] }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <div className="rounded-lg border border-cream bg-paper p-6">
+        <div className="mb-4 grid grid-cols-1 gap-4">
+          <Field
+            label="Pick an existing employee"
+            hint={
+              existingStaff.length === 0
+                ? "Roster is empty — fill in the fields below to add someone new."
+                : "Select someone from your roster, or leave on “Add new…” to enter details manually."
+            }
+          >
+            <select
+              value={pickedStaffId}
+              onChange={(e) => onPickStaff(e.target.value)}
+              disabled={existingStaff.length === 0}
+              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none disabled:opacity-60"
+            >
+              <option value="">+ Add new…</option>
+              {existingStaff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {(s.name?.trim() || s.email) +
+                    (s.name?.trim() ? ` — ${s.email}` : "")}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Full name">
+          <Field
+            label="Full name"
+            hint={
+              isExistingPicked
+                ? "Locked — change on the student's profile."
+                : undefined
+            }
+          >
             <input
               type="text"
               value={name}
@@ -106,10 +194,22 @@ export function InviteClient({ roles }: { roles: Role[] }) {
               placeholder="Nguyễn Thị Hoa"
               maxLength={120}
               required
-              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+              readOnly={isExistingPicked}
+              className={`w-full rounded-md border border-cream px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none ${
+                isExistingPicked
+                  ? "bg-mist/60 text-mute"
+                  : "bg-mist/30"
+              }`}
             />
           </Field>
-          <Field label="Work email">
+          <Field
+            label="Work email"
+            hint={
+              isExistingPicked
+                ? "Locked — invite sends to this address."
+                : undefined
+            }
+          >
             <input
               type="email"
               value={email}
@@ -117,10 +217,22 @@ export function InviteClient({ roles }: { roles: Role[] }) {
               placeholder="hoa.nguyen@abc-manufacturer.demo"
               maxLength={254}
               required
-              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+              readOnly={isExistingPicked}
+              className={`w-full rounded-md border border-cream px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none ${
+                isExistingPicked
+                  ? "bg-mist/60 text-mute"
+                  : "bg-mist/30"
+              }`}
             />
           </Field>
-          <Field label="Role">
+          <Field
+            label="Role"
+            hint={
+              isExistingPicked
+                ? "Change to reassign this employee to a different role baseline."
+                : undefined
+            }
+          >
             <select
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
@@ -141,7 +253,7 @@ export function InviteClient({ roles }: { roles: Role[] }) {
             <select
               value={targetLevel}
               onChange={(e) =>
-                setTargetLevel(e.target.value as (typeof TARGETS)[number])
+                setTargetLevel(e.target.value as TargetLevel)
               }
               className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
             >
@@ -217,7 +329,11 @@ export function InviteClient({ roles }: { roles: Role[] }) {
           disabled={isPending}
           className="rounded-full bg-navy px-5 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-paper hover:bg-navy/90 disabled:opacity-50"
         >
-          {isPending ? "Sending…" : "Send magic-link invite"}
+          {isPending
+            ? "Sending…"
+            : isExistingPicked
+              ? "Send invite to selected"
+              : "Add and send invite"}
         </button>
       </div>
     </form>
