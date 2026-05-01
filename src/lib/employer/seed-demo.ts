@@ -40,6 +40,18 @@ type DemoCert = {
   overallScore?: number;
 };
 
+type DemoNudge = {
+  rule:
+    | "streak_at_risk"
+    | "streak_broken"
+    | "inactivity_5d"
+    | "cert_pushable"
+    | "class_tomorrow";
+  subject: string;
+  body: string;
+  daysAgo: number;
+};
+
 type DemoStudent = {
   email: string;
   name: string;
@@ -59,6 +71,7 @@ type DemoStudent = {
   xp: number;
   streakDays: number;
   lastActiveDaysAgo: number;
+  nudges?: DemoNudge[];
 };
 
 const DEMO_COHORT: DemoStudent[] = [
@@ -109,6 +122,20 @@ const DEMO_COHORT: DemoStudent[] = [
     xp: 613,
     streakDays: 4,
     lastActiveDaysAgo: 1,
+    nudges: [
+      {
+        rule: "class_tomorrow",
+        subject: "Your class is Wednesday, 7:30 PM",
+        body: "Quick reminder: your live class with Coach Linh is coming up. Headphones, quiet spot, and you're set.",
+        daysAgo: 7,
+      },
+      {
+        rule: "streak_at_risk",
+        subject: "Don't break your 3-day streak, Hà",
+        body: "One five-minute lesson keeps the fire burning. Open LingoPure → Lessons.",
+        daysAgo: 3,
+      },
+    ],
   },
   {
     email: "minh.tran@hanoi-manuf.demo",
@@ -155,6 +182,14 @@ const DEMO_COHORT: DemoStudent[] = [
     xp: 466,
     streakDays: 0,
     lastActiveDaysAgo: 4,
+    nudges: [
+      {
+        rule: "streak_broken",
+        subject: "Welcome back, Minh",
+        body: "Two days off is fine — start a fresh streak today. The first lesson is the hardest.",
+        daysAgo: 2,
+      },
+    ],
   },
   {
     email: "anh.le@bizdev-sg.demo",
@@ -196,6 +231,14 @@ const DEMO_COHORT: DemoStudent[] = [
     xp: 482,
     streakDays: 6,
     lastActiveDaysAgo: 1,
+    nudges: [
+      {
+        rule: "streak_at_risk",
+        subject: "Don't break your 6-day streak, Anh",
+        body: "One five-minute lesson keeps the fire burning. Open LingoPure → Lessons.",
+        daysAgo: 1,
+      },
+    ],
   },
   {
     email: "huong.pham@vingroup-hr.demo",
@@ -239,6 +282,20 @@ const DEMO_COHORT: DemoStudent[] = [
     xp: 902,
     streakDays: 0,
     lastActiveDaysAgo: 9,
+    nudges: [
+      {
+        rule: "cert_pushable",
+        subject: "Ready for C1?",
+        body: "Your B2 came in at 84 — well above floor. Want to schedule the C1 exam? Reply if you'd like a custom plan.",
+        daysAgo: 4,
+      },
+      {
+        rule: "inactivity_5d",
+        subject: "Aria misses you, Hương",
+        body: "It's been five days. A short session today resets your gap profile and gets you back on track. Five minutes is enough.",
+        daysAgo: 1,
+      },
+    ],
   },
   {
     email: "viet.doan@industrial-eq.demo",
@@ -284,6 +341,7 @@ type SeedResult = {
   lessonsWritten: number;
   classesWritten: number;
   certsWritten: number;
+  nudgesWritten: number;
 };
 
 export async function seedDemoCohort(
@@ -296,6 +354,7 @@ export async function seedDemoCohort(
     lessonsWritten: 0,
     classesWritten: 0,
     certsWritten: 0,
+    nudgesWritten: 0,
   };
 
   // 1. Build email → existing-userId map (paginate, but cohort is small).
@@ -453,6 +512,42 @@ export async function seedDemoCohort(
         throw new Error(`classin_sessions insert failed for ${demo.email}: ${classesErr.message}`);
       }
       result.classesWritten += classRows.length;
+    }
+
+    // 7a. Nudges — wipe + re-insert seeded nudges. The dedup index is on
+    //     (student_id, rule, created_on::date) so each rule can land at
+    //     most once per UTC day; we vary daysAgo across the seed to avoid
+    //     constraint violations.
+    await supabase.from("nudges").delete().eq("student_id", userId);
+    if (demo.nudges && demo.nudges.length > 0) {
+      const nudgeRows = demo.nudges.map((n) => {
+        const sentAt = daysAgo(n.daysAgo);
+        return {
+          student_id: userId,
+          rule: n.rule,
+          channel: "email",
+          type:
+            n.rule === "class_tomorrow"
+              ? "class_reminder"
+              : n.rule === "cert_pushable"
+              ? "milestone"
+              : "engagement",
+          subject: n.subject,
+          body: n.body,
+          delivery_status: "sent",
+          sent_at: sentAt.toISOString(),
+          created_at: sentAt.toISOString(),
+        };
+      });
+      const { error: nudgesErr } = await supabase
+        .from("nudges")
+        .insert(nudgeRows);
+      if (nudgesErr) {
+        throw new Error(
+          `nudges insert failed for ${demo.email}: ${nudgesErr.message}`
+        );
+      }
+      result.nudgesWritten += nudgeRows.length;
     }
 
     // 7. Certifications — wipe and re-insert demo certs.

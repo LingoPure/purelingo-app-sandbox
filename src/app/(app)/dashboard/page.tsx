@@ -76,6 +76,7 @@ export default async function DashboardPage() {
     recentClassesResult,
     lessonsResult,
     certsResult,
+    nudgesResult,
   ] = await Promise.all([
     supabase
       .from("students")
@@ -118,6 +119,12 @@ export default async function DashboardPage() {
       .select("id, level, status, issued_at, created_at")
       .eq("student_id", user!.id)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("nudges")
+      .select("id, rule, subject, body, sent_at, created_at, delivery_status")
+      .eq("student_id", user!.id)
+      .order("created_at", { ascending: false })
+      .limit(3),
   ]);
 
   const student = studentResult.data;
@@ -135,6 +142,15 @@ export default async function DashboardPage() {
     status: string;
     issued_at: string | null;
     created_at: string;
+  }[];
+  const nudges = (nudgesResult.data ?? []) as {
+    id: string;
+    rule: string | null;
+    subject: string | null;
+    body: string | null;
+    sent_at: string | null;
+    created_at: string;
+    delivery_status: string | null;
   }[];
   const latestPassed = certs.find((c) => c.status === "passed") ?? null;
   const pending = certs.find(
@@ -306,7 +322,53 @@ export default async function DashboardPage() {
         <NextClassCard nextClass={nextClass} />
         <ActivityLogCard recentClasses={recentClasses} />
       </section>
+
+      {nudges.length > 0 && <NudgesCard nudges={nudges} />}
     </div>
+  );
+}
+
+function NudgesCard({
+  nudges,
+}: {
+  nudges: {
+    id: string;
+    rule: string | null;
+    subject: string | null;
+    body: string | null;
+    sent_at: string | null;
+    created_at: string;
+    delivery_status: string | null;
+  }[];
+}) {
+  return (
+    <section className="rounded-lg border border-cream bg-paper p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="font-serif text-lg text-navy">From your coach</h3>
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+          Aria · automated
+        </span>
+      </div>
+      <ul className="flex flex-col gap-4">
+        {nudges.map((n) => {
+          const when = new Date(n.sent_at ?? n.created_at).toLocaleDateString(
+            "en-AU",
+            { month: "short", day: "numeric" }
+          );
+          return (
+            <li key={n.id} className="flex flex-col gap-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-medium text-ink">{n.subject ?? ""}</p>
+                <span className="font-mono text-[10px] text-mute">{when}</span>
+              </div>
+              {n.body && (
+                <p className="text-sm leading-relaxed text-mute">{n.body}</p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
