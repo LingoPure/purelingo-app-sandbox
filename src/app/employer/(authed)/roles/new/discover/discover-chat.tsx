@@ -93,10 +93,18 @@ export function DiscoverChat() {
   }
 
   function onFinalize() {
-    // Phase A.5/3 hooks the finalizer endpoint here. For now this just
-    // routes to a placeholder the next commit will replace.
-    const payload = encodeURIComponent(JSON.stringify(history));
-    router.push(`/employer/roles/new/discover/review?history=${payload}`);
+    // Stash the transcript in sessionStorage — the review page reads it
+    // and calls the finalizer. URL params would clip on long interviews.
+    try {
+      sessionStorage.setItem(
+        "lp_role_discovery_history",
+        JSON.stringify(history)
+      );
+    } catch {
+      setError("Browser storage unavailable — try a different browser.");
+      return;
+    }
+    router.push("/employer/roles/new/discover/review");
   }
 
   function onKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {

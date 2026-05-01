@@ -1,6 +1,9 @@
 /**
- * POST /api/employer/roles — create a role + 6 baselines.
- * Gated by the employer cookie (same gate as /employer/*).
+ * POST /api/employer/roles — create a role + 6 baselines + optional
+ * profile_json (the rich AI-discovery output: responsibilities, vocab
+ * domain, per-skill rationale, lesson-planner notes).
+ *
+ * Gated on employer-admin auth.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,6 +16,7 @@ const BodySchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).optional().nullable(),
   baselines: z.record(z.string(), z.number().int().min(0).max(1000)),
+  profileJson: z.unknown().optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -45,6 +49,7 @@ export async function POST(request: NextRequest) {
       employer_id: employerId,
       name: body.name,
       description: body.description ?? null,
+      profile_json: body.profileJson ?? null,
     })
     .select("id")
     .single();
