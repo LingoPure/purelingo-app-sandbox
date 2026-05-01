@@ -69,6 +69,18 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // If an employer admin lands here (any post-auth path that defaults
+  // to /dashboard — login, magic link, manual nav), bounce them to the
+  // admin dashboard. The /employer layout does the symmetric check.
+  if (user) {
+    const { loadEmployerAdmin } = await import("@/lib/employer/auth");
+    const admin = await loadEmployerAdmin(supabase, user.id);
+    if (admin) {
+      const { redirect } = await import("next/navigation");
+      redirect("/employer");
+    }
+  }
+
   const [
     studentResult,
     scoresResult,
