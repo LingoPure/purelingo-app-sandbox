@@ -113,7 +113,6 @@ export default async function OnboardingPage() {
               </span>
             </p>
             <DiscoverySession
-              agentId={agentId}
               userId={userId}
               studentName={studentName}
               nativeLanguage={ariaLangName}

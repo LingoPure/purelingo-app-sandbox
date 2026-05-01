@@ -4,7 +4,6 @@ import { ConversationProvider, useConversation } from "@elevenlabs/react";
 import { useEffect, useState } from "react";
 
 type Props = {
-  agentId: string;
   userId: string;
   studentName?: string | null;
   nativeLanguage: string;
@@ -29,7 +28,6 @@ export function DiscoverySession(props: Props) {
 }
 
 function DiscoverySessionInner({
-  agentId,
   userId,
   studentName,
   nativeLanguage,
@@ -64,7 +62,7 @@ function DiscoverySessionInner({
 
   const start = async () => {
     setError(null);
-    console.info("[discovery] start clicked", { agentId, userId, nativeLanguage });
+    console.info("[discovery] start clicked", { userId, nativeLanguage });
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (mErr) {
@@ -72,9 +70,40 @@ function DiscoverySessionInner({
       setError("Microphone access denied. Please allow it and try again.");
       return;
     }
+
+    // Fetch the WebRTC conversation token from our own backend. This keeps
+    // the ElevenLabs API key server-side and gives us one observable place
+    // to log connection failures (Vercel runtime). Pass the token to the
+    // SDK instead of an agentId — same WebRTC LiveKit transport, just
+    // pre-authorized.
+    let conversationToken: string;
+    try {
+      const r = await fetch("/api/convai/token");
+      if (!r.ok) {
+        const body = (await r.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        throw new Error(
+          body.detail
+            ? `${body.error ?? "token error"} — ${body.detail}`
+            : body.error ?? `HTTP ${r.status}`
+        );
+      }
+      const j = (await r.json()) as { token?: string };
+      if (!j.token) throw new Error("token missing in /api/convai/token response");
+      conversationToken = j.token;
+      console.info("[discovery] token fetched");
+    } catch (tErr) {
+      console.error("[discovery] token fetch failed", tErr);
+      const detail = tErr instanceof Error ? tErr.message : String(tErr);
+      setError(`Failed to authorise session — ${detail}`);
+      return;
+    }
+
     try {
       await conversation.startSession({
-        agentId,
+        conversationToken,
         dynamicVariables: {
           user_id: userId,
           student_name: studentName ?? "",
