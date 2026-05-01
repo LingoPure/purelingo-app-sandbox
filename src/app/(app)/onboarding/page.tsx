@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n";
@@ -7,16 +6,22 @@ import {
   languageNameOf,
   type LanguageCode,
 } from "@/lib/i18n/dictionary";
+import { RoleConfirmAndStart } from "./role-confirm";
 
 export default async function OnboardingPage() {
   const agentId = process.env.ELEVENLABS_AGENT_ID;
   const { lang, t } = await getDict();
 
-  // Pull the authenticated student's id + persisted native language.
-  // The session route does its own resolution server-side; we just need
-  // userId here to gate the CTA, and the language to render the pill.
+  // Pull the authenticated student's id, persisted native language,
+  // current role_id, and the employer's available roles. The discovery
+  // session needs role + native language locked in BEFORE Aria starts —
+  // otherwise the gap scorer can't calibrate against the role baseline.
   let userId: string | null = null;
   let studentNativeLang: LanguageCode | null = null;
+  let initialRoleId: string | null = null;
+  let employerId: string | null = null;
+  let roles: { id: string; name: string; description: string | null }[] = [];
+
   if (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) {
     const supabase = await createClient();
     const {
@@ -24,21 +29,36 @@ export default async function OnboardingPage() {
     } = await supabase.auth.getUser();
     if (user) {
       userId = user.id;
-      const { data } = await supabase
+      const { data: studentData } = await supabase
         .from("students")
-        .select("native_language")
+        .select("native_language, role_id, employer_id")
         .eq("id", user.id)
         .maybeSingle();
-      const persisted = (data as { native_language?: string } | null)
-        ?.native_language;
-      if (isLanguageCode(persisted)) studentNativeLang = persisted;
+      const studentRow = studentData as
+        | {
+            native_language?: string;
+            role_id?: string | null;
+            employer_id?: string | null;
+          }
+        | null;
+      if (isLanguageCode(studentRow?.native_language)) {
+        studentNativeLang = studentRow.native_language;
+      }
+      initialRoleId = studentRow?.role_id ?? null;
+      employerId = studentRow?.employer_id ?? null;
+
+      if (employerId) {
+        const { data: rolesData } = await supabase
+          .from("roles")
+          .select("id, name, description")
+          .eq("employer_id", employerId)
+          .eq("is_archived", false)
+          .order("name", { ascending: true });
+        roles = (rolesData ?? []) as typeof roles;
+      }
     }
   }
 
-  // Effective language for Aria's intro: prefer the persisted profile
-  // value, else the cookie/UI language. The session route (where Aria
-  // actually speaks) does the same resolution server-side; we just need
-  // the display name here for the language pill.
   const ariaLang: LanguageCode = studentNativeLang ?? lang;
   const ariaLangName = languageNameOf(ariaLang);
 
@@ -82,85 +102,57 @@ export default async function OnboardingPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-cream bg-paper p-8 text-center">
-        {agentId && userId ? (
-          <>
-            <div className="relative mx-auto mb-3 h-24 w-24 overflow-hidden rounded-full ring-2 ring-cream ring-offset-2 ring-offset-paper">
-              <Image
-                src="/kira-avatar.jpg"
-                alt="Aria, your discovery consultant"
-                fill
-                sizes="96px"
-                className="object-cover"
-                priority
-              />
-            </div>
-            <p className="mb-1 font-serif text-base text-navy">Meet Aria</p>
-            <h2 className="mb-2 font-serif text-2xl text-navy">
-              {t("onboarding.readyHeading")}
-            </h2>
-            <p className="mb-2 text-sm text-mute">
-              {t("onboarding.readyLead")}
-            </p>
-            <p className="mb-6 text-sm text-ink">
-              <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-                {t("onboarding.languagePickerLabel")}
-              </span>
-              <br />
-              <span className="font-serif text-lg text-navy">{ariaLangName}</span>
-              <br />
-              <span className="text-xs text-mute">
-                {t("onboarding.langExplain")}
-              </span>
-            </p>
+      {agentId && userId ? (
+        <RoleConfirmAndStart
+          roles={roles}
+          initialRoleId={initialRoleId}
+          copy={{
+            languageLabel: t("onboarding.languagePickerLabel"),
+            languageName: ariaLangName,
+            languageExplain: t("onboarding.langExplain"),
+            readyHeading: t("onboarding.readyHeading"),
+            readyLead: t("onboarding.readyLead"),
+            startButton: t("onboarding.startButton"),
+            headphonesNote: t("onboarding.headphonesNote"),
+          }}
+        />
+      ) : (
+        <section className="rounded-lg border border-cream bg-paper p-8 text-center">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-gold">
+            Discovery agent — not yet configured
+          </p>
+          <h2 className="mb-2 font-serif text-2xl text-navy">
+            Awaiting ElevenLabs ConvAI agent
+          </h2>
+          <p className="mx-auto mb-1 max-w-lg text-sm text-mute">
+            Run{" "}
+            <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
+              npx tsx scripts/provision-discovery-agent.ts
+            </code>{" "}
+            to create the agent, paste{" "}
+            <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
+              ELEVENLABS_AGENT_ID
+            </code>{" "}
+            and{" "}
+            <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
+              ELEVENLABS_WEBHOOK_SECRET
+            </code>{" "}
+            into{" "}
+            <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
+              .env.local
+            </code>
+            , then redeploy.
+          </p>
+          <p className="mt-6">
             <Link
-              href="/onboarding/session"
-              className="inline-block rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep"
+              href="/dashboard"
+              className="text-sm font-medium text-navy hover:underline"
             >
-              {t("onboarding.startButton")} →
+              ← Back to dashboard
             </Link>
-            <p className="mt-3 font-mono text-xs uppercase tracking-[0.2em] text-mute">
-              {t("onboarding.headphonesNote")}
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-              Discovery agent — not yet configured
-            </p>
-            <h2 className="mb-2 font-serif text-2xl text-navy">
-              Awaiting ElevenLabs ConvAI agent
-            </h2>
-            <p className="mx-auto mb-1 max-w-lg text-sm text-mute">
-              Run{" "}
-              <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
-                npx tsx scripts/provision-discovery-agent.ts
-              </code>{" "}
-              to create the agent, paste{" "}
-              <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
-                ELEVENLABS_AGENT_ID
-              </code>{" "}
-              and{" "}
-              <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
-                ELEVENLABS_WEBHOOK_SECRET
-              </code>{" "}
-              into{" "}
-              <code className="rounded bg-mist px-1.5 py-0.5 font-mono text-xs">
-                .env.local
-              </code>
-              , then redeploy.
-            </p>
-            <p className="mt-6">
-              <Link
-                href="/dashboard"
-                className="text-sm font-medium text-navy hover:underline"
-              >
-                ← Back to dashboard
-              </Link>
-            </p>
-          </>
-        )}
-      </section>
+          </p>
+        </section>
+      )}
     </div>
   );
 }
