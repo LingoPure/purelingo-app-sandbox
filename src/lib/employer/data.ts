@@ -47,6 +47,23 @@ export type CohortSummary = {
   certifiedCount: number;
 };
 
+export type RoleCoverage = {
+  roleId: string;
+  roleName: string;
+  description: string | null;
+  studentCount: number;
+  /** Students who clear EVERY skill's baseline (the whole-bar pass rate). */
+  meetingAllCount: number;
+  pctMeetingAll: number;
+  baselineBySkill: Record<SkillKey, number>;
+  /** Average of current scores across the role's students, per skill. */
+  averageBySkill: Record<SkillKey, number | null>;
+  /** Skill with the largest "baseline - average" gap (most under-covered). */
+  worstSkill: SkillKey | null;
+  /** baseline - average for the worst skill (positive = below baseline). */
+  worstSkillGap: number | null;
+};
+
 export type ActivityEvent = {
   kind: "discovery" | "class" | "lesson_email" | "lesson_speak";
   studentName: string;
@@ -269,6 +286,132 @@ export function summariseCohort(students: CohortStudent[]): CohortSummary {
     pctAtTarget,
     certifiedCount,
   };
+}
+
+/**
+ * Coverage rollup keyed by role. One row per non-archived role across all
+ * employers (the demo is single-tenant so we don't filter by employer here —
+ * when multi-tenant lands this becomes loadCoverageByRole(employerId)).
+ *
+ * The headline number is "% of students at this role meeting EVERY baseline" —
+ * a whole-bar pass rate. The worst-skill callout points the employer at the
+ * skill where their cohort is most under-covered for that role.
+ */
+export async function loadCoverageByRole(): Promise<RoleCoverage[]> {
+  const supabase = adminSupabase();
+
+  const [rolesRes, baselinesRes, studentsRes, scoresRes] = await Promise.all([
+    supabase
+      .from("roles")
+      .select("id, name, description")
+      .eq("is_archived", false)
+      .order("name", { ascending: true })
+      .returns<{ id: string; name: string; description: string | null }[]>(),
+    supabase
+      .from("role_baselines")
+      .select("role_id, skill, min_score")
+      .returns<{ role_id: string; skill: string; min_score: number }[]>(),
+    supabase
+      .from("students")
+      .select("id, role_id")
+      .not("role_id", "is", null)
+      .returns<{ id: string; role_id: string | null }[]>(),
+    supabase
+      .from("gap_scores")
+      .select("student_id, skill, score")
+      .returns<ScoreRow[]>(),
+  ]);
+
+  const roles = rolesRes.data ?? [];
+  const baselines = baselinesRes.data ?? [];
+  const students = studentsRes.data ?? [];
+  const scores = scoresRes.data ?? [];
+
+  const scoresByStudent = new Map<string, Record<SkillKey, number | null>>();
+  for (const s of students) {
+    scoresByStudent.set(
+      s.id,
+      Object.fromEntries(SKILL_KEYS.map((k) => [k, null])) as Record<
+        SkillKey,
+        number | null
+      >
+    );
+  }
+  for (const row of scores) {
+    const bucket = scoresByStudent.get(row.student_id);
+    if (!bucket) continue;
+    if (SKILL_KEYS.includes(row.skill as SkillKey)) {
+      bucket[row.skill as SkillKey] = row.score;
+    }
+  }
+
+  return roles.map((r) => {
+    const baselineBySkill = Object.fromEntries(
+      SKILL_KEYS.map((k) => [k, 80])
+    ) as Record<SkillKey, number>;
+    for (const b of baselines) {
+      if (b.role_id !== r.id) continue;
+      if (SKILL_KEYS.includes(b.skill as SkillKey)) {
+        baselineBySkill[b.skill as SkillKey] = b.min_score;
+      }
+    }
+
+    const roleStudents = students.filter((s) => s.role_id === r.id);
+    const studentCount = roleStudents.length;
+
+    const averageBySkill = Object.fromEntries(
+      SKILL_KEYS.map((k) => [k, null])
+    ) as Record<SkillKey, number | null>;
+    for (const skill of SKILL_KEYS) {
+      const present = roleStudents
+        .map((s) => scoresByStudent.get(s.id)?.[skill] ?? null)
+        .filter((n): n is number => typeof n === "number");
+      averageBySkill[skill] =
+        present.length > 0
+          ? Math.round(present.reduce((a, b) => a + b, 0) / present.length)
+          : null;
+    }
+
+    // Whole-bar pass: a student counts only if they have a score for every
+    // skill AND each one clears its baseline. Missing scores fail the bar.
+    const meetingAllCount = roleStudents.filter((s) => {
+      const bucket = scoresByStudent.get(s.id);
+      if (!bucket) return false;
+      return SKILL_KEYS.every((k) => {
+        const cur = bucket[k];
+        return typeof cur === "number" && cur >= baselineBySkill[k];
+      });
+    }).length;
+    const pctMeetingAll =
+      studentCount > 0
+        ? Math.round((meetingAllCount / studentCount) * 100)
+        : 0;
+
+    let worstSkill: SkillKey | null = null;
+    let worstSkillGap: number | null = null;
+    for (const skill of SKILL_KEYS) {
+      const avg = averageBySkill[skill];
+      if (avg === null) continue;
+      const gap = baselineBySkill[skill] - avg;
+      if (worstSkillGap === null || gap > worstSkillGap) {
+        worstSkillGap = gap;
+        worstSkill = skill;
+      }
+    }
+
+    return {
+      roleId: r.id,
+      roleName: r.name,
+      description: r.description,
+      studentCount,
+      meetingAllCount,
+      pctMeetingAll,
+      baselineBySkill,
+      averageBySkill,
+      worstSkill,
+      worstSkillGap,
+    };
+  });
 }
 
 export async function loadActivityFeed(limit = 12): Promise<ActivityEvent[]> {

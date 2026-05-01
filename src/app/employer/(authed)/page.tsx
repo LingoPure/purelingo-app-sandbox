@@ -7,6 +7,8 @@ import {
   loadCohortStudents,
   summariseCohort,
   loadActivityFeed,
+  loadCoverageByRole,
+  type RoleCoverage,
 } from "@/lib/employer/data";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 
@@ -20,9 +22,10 @@ const SKILL_LABEL: Record<string, string> = {
 };
 
 export default async function EmployerOverviewPage() {
-  const [students, activity] = await Promise.all([
+  const [students, activity, roleCoverage] = await Promise.all([
     loadCohortStudents(),
     loadActivityFeed(10),
+    loadCoverageByRole(),
   ]);
   const summary = summariseCohort(students);
 
@@ -74,6 +77,32 @@ export default async function EmployerOverviewPage() {
           accent
         />
       </section>
+
+      {roleCoverage.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+                Coverage by role
+              </p>
+              <h2 className="font-serif text-xl text-navy">
+                How the cohort tracks against each role&apos;s baseline
+              </h2>
+            </div>
+            <Link
+              href="/employer/roles"
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-navy hover:underline"
+            >
+              Manage roles →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {roleCoverage.map((r) => (
+              <RoleCoverageCard key={r.roleId} role={r} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
         <div className="rounded-lg border border-cream bg-paper p-6">
@@ -207,6 +236,71 @@ function MetricTile({
       </p>
       <p className="mt-1 font-serif text-3xl text-navy">{value}</p>
     </div>
+  );
+}
+
+function RoleCoverageCard({ role }: { role: RoleCoverage }) {
+  const pct = role.pctMeetingAll;
+  // Tone the headline number by how covered the cohort is.
+  const pctTone =
+    pct >= 80
+      ? "text-teal"
+      : pct >= 50
+      ? "text-navy"
+      : "text-gold";
+
+  const worstLabel = role.worstSkill ? SKILL_LABEL[role.worstSkill] : null;
+
+  return (
+    <Link
+      href={`/employer/roles/${role.roleId}`}
+      className="group flex flex-col gap-3 rounded-lg border border-cream bg-paper p-5 transition hover:border-navy/40 hover:shadow-sm"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-serif text-lg text-navy">
+            {role.roleName}
+          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+            {role.studentCount} student
+            {role.studentCount === 1 ? "" : "s"}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className={`font-serif text-2xl ${pctTone}`}>{pct}%</p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-mute">
+            meeting bar
+          </p>
+        </div>
+      </div>
+
+      {role.studentCount === 0 ? (
+        <p className="text-xs text-mute">
+          No students assigned to this role yet.
+        </p>
+      ) : worstLabel && role.worstSkillGap !== null && role.worstSkillGap > 0 ? (
+        <div className="rounded-md bg-cream/50 px-3 py-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+            Biggest gap
+          </p>
+          <p className="text-sm text-ink">
+            {worstLabel} —{" "}
+            <span className="font-medium text-navy">
+              {role.worstSkillGap} pts
+            </span>{" "}
+            below baseline
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-md bg-teal/5 px-3 py-2">
+          <p className="text-sm text-teal">All skills at or above baseline.</p>
+        </div>
+      )}
+
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-navy opacity-0 transition group-hover:opacity-100">
+        Open role →
+      </p>
+    </Link>
   );
 }
 
