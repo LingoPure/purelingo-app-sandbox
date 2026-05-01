@@ -14,6 +14,11 @@ import {
   type EmailSprintPrompt,
 } from "./email-sprint-rubric";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import {
+  loadBaselinesForRole,
+  FLAT_FALLBACK_TARGET,
+  type Baselines,
+} from "@/lib/scoring/baselines";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -24,6 +29,11 @@ export type GenerateInput = {
 export type StudentContext = {
   targetLevel: string;
   scoresByKey: Record<string, number | null>;
+  /** Per-skill baselines from the student's role (or flat 80 fallback). */
+  baselines: Baselines;
+  /** Role name + description (or null if unassigned). */
+  roleName: string | null;
+  roleDescription: string | null;
   /** Pulled from discovery_sessions.profile_json — the rich role context. */
   summary: string | null;
   recentScenario: string | null;
@@ -36,7 +46,7 @@ export async function loadStudentContext(
   const [studentRes, scoresRes, profileRes, lastLessonRes] = await Promise.all([
     supabase
       .from("students")
-      .select("target_level")
+      .select("target_level, role_id")
       .eq("id", studentId)
       .maybeSingle(),
     supabase
@@ -77,10 +87,42 @@ export async function loadStudentContext(
     | { prompt?: { scenario?: string } }
     | null;
 
+  const roleId = (studentRes.data as { role_id?: string | null } | null)
+    ?.role_id;
+
+  // Load role meta + baselines in parallel (only if assigned).
+  let roleName: string | null = null;
+  let roleDescription: string | null = null;
+  let baselines: Baselines;
+  if (roleId) {
+    const [roleRes, baselineRes] = await Promise.all([
+      supabase
+        .from("roles")
+        .select("name, description")
+        .eq("id", roleId)
+        .maybeSingle(),
+      loadBaselinesForRole(supabase, roleId),
+    ]);
+    roleName =
+      (roleRes.data as { name?: string } | null)?.name ?? null;
+    roleDescription =
+      (roleRes.data as { description?: string | null } | null)?.description ??
+      null;
+    baselines = baselineRes;
+  } else {
+    baselines = Object.fromEntries(
+      SKILL_KEYS.map((k) => [k, FLAT_FALLBACK_TARGET])
+    ) as Baselines;
+  }
+
   return {
     targetLevel:
-      (studentRes.data as { target_level?: string } | null)?.target_level ?? "B2",
+      (studentRes.data as { target_level?: string } | null)?.target_level ??
+      "B2",
     scoresByKey,
+    baselines,
+    roleName,
+    roleDescription,
     summary: profile?.summary ?? null,
     recentScenario: lastContent?.prompt?.scenario ?? null,
   };
@@ -100,10 +142,23 @@ export async function generateEmailSprintPrompt(
   const userMessage = [
     "Generate a calibrated email-sprint prompt for this student.",
     "",
-    `Target level: ${ctx.targetLevel}`,
+    ctx.roleName
+      ? `Role at employer: ${ctx.roleName}`
+      : "Role at employer: (unassigned — calibrate to a generic mid-career B2B Vietnamese context)",
+    ctx.roleDescription ? `Role description: ${ctx.roleDescription}` : null,
     "",
-    "Current sub-scores (0–100, null = not yet assessed):",
-    ...SKILL_KEYS.map((k) => `  - ${k}: ${ctx.scoresByKey[k] ?? "—"}`),
+    `Personal target level (aspiration): ${ctx.targetLevel}`,
+    "",
+    "Current sub-scores vs role baseline (the buyer's bar — what we calibrate against):",
+    ...SKILL_KEYS.map((k) => {
+      const cur = ctx.scoresByKey[k];
+      const base = ctx.baselines[k];
+      const gap = cur == null ? "—" : `gap ${base - cur}`;
+      return `  - ${k}: current ${cur ?? "—"} | baseline ${base} | ${gap}`;
+    }),
+    "",
+    "Email-sprint exercises: writing_formal, business_vocabulary, reading_intent.",
+    "Calibrate the prompt to close the LARGEST of those three gaps by ~5–10 points on a strong attempt.",
     "",
     "Role / discovery context:",
     ctx.summary
@@ -113,7 +168,9 @@ export async function generateEmailSprintPrompt(
     ctx.recentScenario
       ? `Their last email-sprint scenario was: "${ctx.recentScenario}". Pick a different one.`
       : "This is their first email sprint.",
-  ].join("\n");
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 
   const response = await anthropic.messages.parse({
     model: MODEL,

@@ -37,10 +37,23 @@ export async function generateSpeakScorePrompt(
   const userMessage = [
     "Generate a calibrated speak-score prompt for this student.",
     "",
-    `Target level: ${ctx.targetLevel}`,
+    ctx.roleName
+      ? `Role at employer: ${ctx.roleName}`
+      : "Role at employer: (unassigned — calibrate to a generic mid-career B2B Vietnamese context)",
+    ctx.roleDescription ? `Role description: ${ctx.roleDescription}` : null,
     "",
-    "Current sub-scores (0–100, null = not yet assessed):",
-    ...SKILL_KEYS.map((k) => `  - ${k}: ${ctx.scoresByKey[k] ?? "—"}`),
+    `Personal target level (aspiration): ${ctx.targetLevel}`,
+    "",
+    "Current sub-scores vs role baseline (the buyer's bar — what we calibrate against):",
+    ...SKILL_KEYS.map((k) => {
+      const cur = ctx.scoresByKey[k];
+      const base = ctx.baselines[k];
+      const gap = cur == null ? "—" : `gap ${base - cur}`;
+      return `  - ${k}: current ${cur ?? "—"} | baseline ${base} | ${gap}`;
+    }),
+    "",
+    "Speak-score exercises: speaking_fluency, business_vocabulary, presentation_delivery (last only when expects_structure=true).",
+    "Calibrate the prompt to close the LARGEST relevant gap by ~5–10 points on a strong attempt.",
     "",
     "Role / discovery context:",
     ctx.summary
@@ -50,7 +63,9 @@ export async function generateSpeakScorePrompt(
     ctx.recentScenario
       ? `Their last lesson scenario was: "${ctx.recentScenario}". Pick a different one.`
       : "This is their first lesson.",
-  ].join("\n");
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\n");
 
   const response = await anthropic.messages.parse({
     model: MODEL,
