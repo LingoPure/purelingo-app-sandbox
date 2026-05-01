@@ -32,9 +32,9 @@ const TranscriptSchema = z.object({
       })
     )
     .min(8)
-    .max(18)
+    .max(24)
     .describe(
-      "Realistic 8–18 turn discovery interview. Aria opens, the student answers, alternating. Cover the discovery protocol's six dimensions naturally; do NOT enumerate them."
+      "Realistic 10–14 turn discovery interview. Aria opens, the student answers, alternating. Cover the discovery protocol's six dimensions naturally; do NOT enumerate them. Hard cap of 24 turns."
     ),
 });
 
@@ -86,7 +86,7 @@ Then asks the student what they think Sarah is really asking for. Score the pers
 
 ## Style rules
 
-- 8–18 turns total. Don't pad.
+- 10–14 turns total. Hard ceiling of 24. Don't pad — if you've covered the dimensions cleanly in 12 turns, stop.
 - Aria's questions are open-ended but ONE question per turn.
 - Student turns vary in length — short A2 answers (15–40 words), longer C1 answers (60–120 words).
 - The transcript should naturally cover all 6 dimensions but not as a checklist — flow conversationally.
