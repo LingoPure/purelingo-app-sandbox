@@ -108,57 +108,64 @@ export function DiscoverySession({
       first_message_localized: firstMessageLocalized,
     };
 
+    // Schedules a switch to the WS transport if we haven't already
+    // tried it on this Start click. Used from BOTH onError and
+    // onDisconnect — the SDK fires only one of these depending on
+    // WHEN in the lifecycle the WebRTC connection dies, and we've
+    // observed both in the wild. For onDisconnect we trigger on
+    // reason === "error" alone (no message-text heuristic) because
+    // that flag is the SDK's own signal that this isn't a clean
+    // user- or agent-initiated disconnect.
+    const triggerFallback = (logHint: string): boolean => {
+      if (transport !== "webrtc" || triedWebSocketRef.current) return false;
+      triedWebSocketRef.current = true;
+      console.warn(
+        "[discovery] webrtc failed, retrying on websocket transport",
+        logHint
+      );
+      setError(
+        "Voice connection blocked by your network — falling back to backup mode…"
+      );
+      setStatus("connecting");
+      convRef.current = null;
+      setTimeout(() => {
+        startWithTransport("websocket").catch((retryErr) => {
+          const retryMsg =
+            retryErr instanceof Error ? retryErr.message : String(retryErr);
+          console.error("[discovery] websocket fallback failed", retryErr);
+          setError(friendlyError(retryMsg));
+          setStatus("idle");
+        });
+      }, 250);
+      return true;
+    };
+
     const callbacks = {
       onConnect: () => {
         console.info("[discovery] connected");
         setStatus("connected");
         setError(null);
       },
-      onDisconnect: () => {
-        console.info("[discovery] disconnected");
-        // If we're already in the middle of a fallback attempt the new
-        // session will overwrite status; don't fight it.
-        if (!triedWebSocketRef.current || transport === "websocket") {
-          setStatus("idle");
-          setIsSpeaking(false);
-          convRef.current = null;
+      onDisconnect: (details: { reason: string; message?: string }) => {
+        console.info("[discovery] disconnected", details);
+        // SDK self-disconnect (WebRTC failure / reconnection exhausted).
+        // This is the path we observed in prod — onError never fires;
+        // the SDK quietly tears down the room and reports reason: "error"
+        // here. Fallback even if onConnect briefly flickered earlier.
+        if (details?.reason === "error") {
+          if (triggerFallback(details.message ?? "disconnect:error")) return;
         }
+
+        // Normal disconnect (user clicked End, agent ended, or fallback
+        // already ran)
+        setStatus("idle");
+        setIsSpeaking(false);
+        convRef.current = null;
       },
       onError: (err: unknown) => {
         console.error("[discovery] error", err);
         const msg = err instanceof Error ? err.message : String(err);
-
-        // WebRTC-flavored failure on the first attempt → retry on WS.
-        // Fires even if onConnect briefly fired earlier — that flicker
-        // before the media plane dies is exactly the case we're catching.
-        if (
-          transport === "webrtc" &&
-          !triedWebSocketRef.current &&
-          looksLikeWebRTCFailure(msg)
-        ) {
-          triedWebSocketRef.current = true;
-          console.warn(
-            "[discovery] webrtc failed, retrying on websocket transport",
-            msg
-          );
-          setError(
-            "Voice connection blocked by your network — falling back to backup mode…"
-          );
-          setStatus("connecting");
-          convRef.current = null;
-          // Give the SDK a tick to finish tearing down the failed peer
-          // connection before we ask it to start a new session.
-          setTimeout(() => {
-            startWithTransport("websocket").catch((retryErr) => {
-              const retryMsg =
-                retryErr instanceof Error ? retryErr.message : String(retryErr);
-              console.error("[discovery] websocket fallback failed", retryErr);
-              setError(friendlyError(retryMsg));
-              setStatus("idle");
-            });
-          }, 250);
-          return;
-        }
+        if (looksLikeWebRTCFailure(msg) && triggerFallback(msg)) return;
 
         setError(friendlyError(msg));
         setStatus("idle");
