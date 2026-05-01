@@ -39,8 +39,15 @@ function DiscoverySessionInner({
   const [error, setError] = useState<string | null>(null);
 
   const conversation = useConversation({
-    onConnect: () => setError(null),
+    onConnect: () => {
+      console.info("[discovery] connected");
+      setError(null);
+    },
+    onDisconnect: () => {
+      console.info("[discovery] disconnected");
+    },
     onError: (err: unknown) => {
+      console.error("[discovery] error", err);
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
     },
@@ -48,9 +55,11 @@ function DiscoverySessionInner({
 
   const start = async () => {
     setError(null);
+    console.info("[discovery] start clicked", { agentId, userId, nativeLanguage });
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
+    } catch (mErr) {
+      console.error("[discovery] mic denied", mErr);
       setError("Microphone access denied. Please allow it and try again.");
       return;
     }
@@ -63,8 +72,16 @@ function DiscoverySessionInner({
           native_language: nativeLanguage,
         },
       });
+      console.info("[discovery] startSession resolved");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start session");
+      console.error("[discovery] startSession threw", e);
+      const detail =
+        e instanceof Error
+          ? `${e.name}: ${e.message}`
+          : typeof e === "object" && e !== null
+          ? JSON.stringify(e)
+          : String(e);
+      setError(`Failed to start session — ${detail}`);
     }
   };
 
@@ -119,6 +136,9 @@ function DiscoverySessionInner({
       >
         {status === "connecting" ? connectingLabel : startLabel}
       </button>
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute/70">
+        status: {status ?? "idle"}
+      </p>
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
         {headphonesNote}
       </p>
