@@ -3,7 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function LoginForm({ redirectTo }: { redirectTo: string }) {
+type Props = {
+  redirectTo: string;
+  fieldLabel: string;
+  submitLabel: string;
+  submittingLabel: string;
+};
+
+export function LoginForm({
+  redirectTo,
+  fieldLabel,
+  submitLabel,
+  submittingLabel,
+}: Props) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -39,7 +51,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         htmlFor="employer-access-password"
         className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute"
       >
-        Access password
+        {fieldLabel}
       </label>
       <input
         id="employer-access-password"
@@ -56,7 +68,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         disabled={pending}
         className="mt-2 rounded-md bg-paper px-5 py-2 text-sm font-medium text-navy hover:bg-cream disabled:opacity-50"
       >
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? submittingLabel : submitLabel}
       </button>
       {error && (
         <p className="text-sm text-coral">{error}</p>

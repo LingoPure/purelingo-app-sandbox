@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { EmployerSignOut } from "../sign-out-button";
+import { LanguagePill } from "@/components/i18n/language-pill";
+import { getDict } from "@/lib/i18n";
 
-export default function EmployerAuthedLayout({
+export default async function EmployerAuthedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { lang, t } = await getDict();
   return (
     <div className="flex min-h-screen flex-col bg-mist">
       <header className="border-b border-cream bg-navy text-paper">
@@ -14,15 +17,18 @@ export default function EmployerAuthedLayout({
             <Link href="/employer" className="font-serif text-xl text-paper">
               LingoPure<span className="text-gold">.</span>
               <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.25em] text-gold">
-                Employer
+                {t("emp.brandTag")}
               </span>
             </Link>
             <nav className="hidden items-center gap-5 sm:flex">
-              <NavLink href="/employer">Overview</NavLink>
-              <NavLink href="/employer/students">Students</NavLink>
+              <NavLink href="/employer">{t("emp.navOverview")}</NavLink>
+              <NavLink href="/employer/students">{t("emp.navStudents")}</NavLink>
             </nav>
           </div>
-          <EmployerSignOut />
+          <div className="flex items-center gap-3">
+            <LanguagePill current={lang} tone="light" />
+            <EmployerSignOut />
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">

@@ -165,6 +165,13 @@ const en: Dict = {
   "emp.brandTag": "Employer",
   "emp.navOverview": "Overview",
   "emp.navStudents": "Students",
+  "emp.loginKicker": "Employer access",
+  "emp.loginHeading": "LingoPure pilot dashboard",
+  "emp.loginLead":
+    "Single shared access for the pilot. Production will move to per-admin accounts.",
+  "emp.loginField": "Access password",
+  "emp.loginSubmit": "Sign in",
+  "emp.loginSubmitting": "Signing in…",
 };
 
 const vi: Dict = {
@@ -292,6 +299,13 @@ const vi: Dict = {
   "emp.brandTag": "Doanh nghiệp",
   "emp.navOverview": "Tổng quan",
   "emp.navStudents": "Học viên",
+  "emp.loginKicker": "Truy cập doanh nghiệp",
+  "emp.loginHeading": "Bảng điều khiển thí điểm LingoPure",
+  "emp.loginLead":
+    "Truy cập chung cho giai đoạn thí điểm. Bản chính thức sẽ chuyển sang tài khoản quản trị viên riêng.",
+  "emp.loginField": "Mật khẩu truy cập",
+  "emp.loginSubmit": "Đăng nhập",
+  "emp.loginSubmitting": "Đang đăng nhập…",
 };
 
 // The remaining 4 languages translate the highest-impact public surface
@@ -358,6 +372,17 @@ const tl: Dict = {
   "onboarding.languagePickerLabel": "Ang aking katutubong wika ay",
   "onboarding.langExplain":
     "Ba-batiin ka ni Aria sa iyong wika nang ~30 segundo, pagkatapos ay lilipat sa English para sa assessment.",
+
+  "emp.brandTag": "Employer",
+  "emp.navOverview": "Pangkalahatang-ideya",
+  "emp.navStudents": "Mga estudyante",
+  "emp.loginKicker": "Access ng employer",
+  "emp.loginHeading": "LingoPure pilot dashboard",
+  "emp.loginLead":
+    "Iisang shared access para sa pilot. Ang production ay lilipat sa per-admin na account.",
+  "emp.loginField": "Access password",
+  "emp.loginSubmit": "Mag-sign in",
+  "emp.loginSubmitting": "Nag-sa-sign in…",
 };
 
 const id: Dict = {
@@ -420,6 +445,17 @@ const id: Dict = {
   "onboarding.languagePickerLabel": "Bahasa ibu saya adalah",
   "onboarding.langExplain":
     "Aria akan menyapa Anda dalam bahasa Anda selama ~30 detik, lalu beralih ke Bahasa Inggris untuk penilaian.",
+
+  "emp.brandTag": "Perusahaan",
+  "emp.navOverview": "Ikhtisar",
+  "emp.navStudents": "Murid",
+  "emp.loginKicker": "Akses perusahaan",
+  "emp.loginHeading": "Dasbor pilot LingoPure",
+  "emp.loginLead":
+    "Akses bersama untuk masa pilot. Produksi akan beralih ke akun per-admin.",
+  "emp.loginField": "Kata sandi akses",
+  "emp.loginSubmit": "Masuk",
+  "emp.loginSubmitting": "Sedang masuk…",
 };
 
 const ms: Dict = {
@@ -482,6 +518,17 @@ const ms: Dict = {
   "onboarding.languagePickerLabel": "Bahasa ibunda saya ialah",
   "onboarding.langExplain":
     "Aria akan menyapa anda dalam bahasa anda selama ~30 saat, kemudian bertukar ke Bahasa Inggeris untuk penilaian.",
+
+  "emp.brandTag": "Majikan",
+  "emp.navOverview": "Gambaran keseluruhan",
+  "emp.navStudents": "Pelajar",
+  "emp.loginKicker": "Akses majikan",
+  "emp.loginHeading": "Papan pemuka perintis LingoPure",
+  "emp.loginLead":
+    "Akses dikongsi untuk perintis. Pengeluaran akan beralih ke akaun setiap pentadbir.",
+  "emp.loginField": "Kata laluan akses",
+  "emp.loginSubmit": "Log masuk",
+  "emp.loginSubmitting": "Sedang log masuk…",
 };
 
 const zh: Dict = {
@@ -542,6 +589,16 @@ const zh: Dict = {
   "onboarding.languagePickerLabel": "我的母语是",
   "onboarding.langExplain":
     "Aria 会用你的语言问候你大约 30 秒,然后切换到英语进行评估。",
+
+  "emp.brandTag": "雇主",
+  "emp.navOverview": "概览",
+  "emp.navStudents": "学员",
+  "emp.loginKicker": "雇主入口",
+  "emp.loginHeading": "LingoPure 试点仪表盘",
+  "emp.loginLead": "试点期间共用访问。正式版将切换为每位管理员独立账户。",
+  "emp.loginField": "访问密码",
+  "emp.loginSubmit": "登录",
+  "emp.loginSubmitting": "登录中…",
 };
 
 const DICTS: Record<LanguageCode, Dict> = { en, vi, tl, id, ms, zh };

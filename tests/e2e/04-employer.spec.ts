@@ -55,17 +55,16 @@ test.describe("employer dashboard", () => {
       .first()
       .click();
 
-    await page.waitForURL(/\/employer\/students\/[0-9a-f-]+/, {
-      timeout: 10_000,
-    });
-    // "Student profile" is a kicker paragraph; the H1 is the student's
-    // name. Anchor on the structural elements that reliably exist:
-    // the back-to-roster link + the Gap profile section heading.
+    // Skip waitForURL — fast client-side navigations can complete before
+    // the listener attaches. The structural assertions below have their
+    // own auto-wait timeout and only resolve once the detail page is up.
     await expect(
       page.getByRole("link", { name: /← roster/i })
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10_000 });
     await expect(
       page.getByRole("heading", { name: /gap profile/i })
     ).toBeVisible();
+    // Verify we ended up on the right URL shape.
+    await expect(page).toHaveURL(/\/employer\/students\/[0-9a-f-]+/);
   });
 });
