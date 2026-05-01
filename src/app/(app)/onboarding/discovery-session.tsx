@@ -81,10 +81,26 @@ export function DiscoverySession({
   // Per-Start budget: try webrtc → fall back to ws once. Reset on each
   // click of Start so a fresh attempt gets a fresh budget.
   const triedWebSocketRef = useRef(false);
+  // Tracks whether THIS attempt has reached onConnect. Used by the
+  // stuck-in-connecting watchdog to decide whether to force a fallback.
+  const attemptConnectedRef = useRef(false);
+  // Pending watchdog timer for the current attempt; cleared on connect,
+  // disconnect, error, or stop.
+  const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setHydrated(true);
+    return () => {
+      clearWatchdog();
+    };
   }, []);
+
+  const clearWatchdog = () => {
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+      watchdogTimerRef.current = null;
+    }
+  };
 
   const startWithTransport = async (transport: Transport): Promise<void> => {
     const r = await fetch(`/api/convai/token?transport=${transport}`);
@@ -109,16 +125,18 @@ export function DiscoverySession({
     };
 
     // Schedules a switch to the WS transport if we haven't already
-    // tried it on this Start click. Used from BOTH onError and
-    // onDisconnect — the SDK fires only one of these depending on
-    // WHEN in the lifecycle the WebRTC connection dies, and we've
-    // observed both in the wild. For onDisconnect we trigger on
-    // reason === "error" alone (no message-text heuristic) because
-    // that flag is the SDK's own signal that this isn't a clean
-    // user- or agent-initiated disconnect.
+    // tried it on this Start click. Used from THREE places:
+    //   - onError (early failure, message matches WebRTC heuristics)
+    //   - onDisconnect (SDK reports reason: "error")
+    //   - watchdog (SDK is stuck — onConnect didn't fire within 12s)
+    // The watchdog is the critical path: when the LiveKit server
+    // can't subscribe to the local track (UDP blocked), the SDK
+    // hangs without calling any callback. Without the watchdog the
+    // user sees "Connecting…" forever.
     const triggerFallback = (logHint: string): boolean => {
       if (transport !== "webrtc" || triedWebSocketRef.current) return false;
       triedWebSocketRef.current = true;
+      clearWatchdog();
       console.warn(
         "[discovery] webrtc failed, retrying on websocket transport",
         logHint
@@ -127,7 +145,15 @@ export function DiscoverySession({
         "Voice connection blocked by your network — falling back to backup mode…"
       );
       setStatus("connecting");
+      // Best-effort cleanup: tell the stuck SDK to give up so it
+      // doesn't keep trying in the background.
+      try {
+        void convRef.current?.endSession();
+      } catch {
+        /* SDK may be in a weird state — ignore */
+      }
       convRef.current = null;
+      attemptConnectedRef.current = false;
       setTimeout(() => {
         startWithTransport("websocket").catch((retryErr) => {
           const retryMsg =
@@ -143,15 +169,17 @@ export function DiscoverySession({
     const callbacks = {
       onConnect: () => {
         console.info("[discovery] connected");
+        clearWatchdog();
+        attemptConnectedRef.current = true;
         setStatus("connected");
         setError(null);
       },
       onDisconnect: (details: { reason: string; message?: string }) => {
         console.info("[discovery] disconnected", details);
+        clearWatchdog();
         // SDK self-disconnect (WebRTC failure / reconnection exhausted).
-        // This is the path we observed in prod — onError never fires;
-        // the SDK quietly tears down the room and reports reason: "error"
-        // here. Fallback even if onConnect briefly flickered earlier.
+        // The SDK reports reason: "error" — fall back even if onConnect
+        // briefly flickered earlier.
         if (details?.reason === "error") {
           if (triggerFallback(details.message ?? "disconnect:error")) return;
         }
@@ -164,6 +192,7 @@ export function DiscoverySession({
       },
       onError: (err: unknown) => {
         console.error("[discovery] error", err);
+        clearWatchdog();
         const msg = err instanceof Error ? err.message : String(err);
         if (looksLikeWebRTCFailure(msg) && triggerFallback(msg)) return;
 
@@ -175,6 +204,22 @@ export function DiscoverySession({
         setIsSpeaking(mode === "speaking");
       },
     };
+
+    // Arm the stuck-in-connecting watchdog before we kick off the
+    // session. Only WebRTC attempts get a watchdog — WS connections
+    // either succeed within 1-2s or fail with a real error.
+    if (transport === "webrtc") {
+      attemptConnectedRef.current = false;
+      clearWatchdog();
+      watchdogTimerRef.current = setTimeout(() => {
+        if (!attemptConnectedRef.current) {
+          console.warn(
+            "[discovery] webrtc stuck after 12s with no onConnect — forcing fallback"
+          );
+          triggerFallback("startup-timeout");
+        }
+      }, 12_000);
+    }
 
     if (transport === "websocket") {
       if (!j.signedUrl) throw new Error("signedUrl missing in token response");
@@ -203,6 +248,8 @@ export function DiscoverySession({
     setError(null);
     setStatus("connecting");
     triedWebSocketRef.current = false;
+    attemptConnectedRef.current = false;
+    clearWatchdog();
     console.info("[discovery] start clicked", { userId, nativeLanguage });
 
     try {
@@ -226,6 +273,7 @@ export function DiscoverySession({
   };
 
   const stop = () => {
+    clearWatchdog();
     void convRef.current?.endSession();
   };
 
