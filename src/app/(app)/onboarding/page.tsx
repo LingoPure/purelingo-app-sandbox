@@ -1,9 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { DiscoverySession } from "./discovery-session";
 import { getDict } from "@/lib/i18n";
 import {
-  dict,
   isLanguageCode,
   languageNameOf,
   type LanguageCode,
@@ -13,9 +12,10 @@ export default async function OnboardingPage() {
   const agentId = process.env.ELEVENLABS_AGENT_ID;
   const { lang, t } = await getDict();
 
-  // Pull the authenticated student's id + name + persisted native language.
+  // Pull the authenticated student's id + persisted native language.
+  // The session route does its own resolution server-side; we just need
+  // userId here to gate the CTA, and the language to render the pill.
   let userId: string | null = null;
-  let studentName: string | null = null;
   let studentNativeLang: LanguageCode | null = null;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) {
     const supabase = await createClient();
@@ -24,10 +24,6 @@ export default async function OnboardingPage() {
     } = await supabase.auth.getUser();
     if (user) {
       userId = user.id;
-      studentName =
-        (user.user_metadata?.full_name as string | undefined) ??
-        user.email ??
-        null;
       const { data } = await supabase
         .from("students")
         .select("native_language")
@@ -40,17 +36,11 @@ export default async function OnboardingPage() {
   }
 
   // Effective language for Aria's intro: prefer the persisted profile
-  // value, else the cookie/UI language. We pass the human-readable name
-  // because Aria's prompt receives it as a {{native_language}} variable.
+  // value, else the cookie/UI language. The session route (where Aria
+  // actually speaks) does the same resolution server-side; we just need
+  // the display name here for the language pill.
   const ariaLang: LanguageCode = studentNativeLang ?? lang;
   const ariaLangName = languageNameOf(ariaLang);
-  // The localized first message must match ariaLang, NOT the cookie
-  // language — otherwise Aria opens in (e.g.) English while the prompt
-  // claims her native language is Vietnamese. Pull straight from the
-  // dictionary instead of going through t() which is cookie-bound.
-  const ariaDict = dict(ariaLang);
-  const firstMessageLocalized =
-    ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
 
   const dimensions: { num: string; label: string; body: string }[] = [
     { num: "1", label: t("onboarding.dim1Label"), body: t("onboarding.dim1Body") },
@@ -95,6 +85,17 @@ export default async function OnboardingPage() {
       <section className="rounded-lg border border-cream bg-paper p-8 text-center">
         {agentId && userId ? (
           <>
+            <div className="relative mx-auto mb-3 h-24 w-24 overflow-hidden rounded-full ring-2 ring-cream ring-offset-2 ring-offset-paper">
+              <Image
+                src="/kira-avatar.jpg"
+                alt="Aria, your discovery consultant"
+                fill
+                sizes="96px"
+                className="object-cover"
+                priority
+              />
+            </div>
+            <p className="mb-1 font-serif text-base text-navy">Meet Aria</p>
             <h2 className="mb-2 font-serif text-2xl text-navy">
               {t("onboarding.readyHeading")}
             </h2>
@@ -112,15 +113,15 @@ export default async function OnboardingPage() {
                 {t("onboarding.langExplain")}
               </span>
             </p>
-            <DiscoverySession
-              userId={userId}
-              studentName={studentName}
-              nativeLanguage={ariaLangName}
-              firstMessageLocalized={firstMessageLocalized}
-              startLabel={t("onboarding.startButton")}
-              connectingLabel={t("onboarding.connecting")}
-              headphonesNote={t("onboarding.headphonesNote")}
-            />
+            <Link
+              href="/onboarding/session"
+              className="inline-block rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep"
+            >
+              {t("onboarding.startButton")} →
+            </Link>
+            <p className="mt-3 font-mono text-xs uppercase tracking-[0.2em] text-mute">
+              {t("onboarding.headphonesNote")}
+            </p>
           </>
         ) : (
           <>

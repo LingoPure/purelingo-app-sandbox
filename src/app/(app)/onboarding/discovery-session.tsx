@@ -2,6 +2,8 @@
 
 import { Conversation } from "@elevenlabs/client";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -9,19 +11,16 @@ type Props = {
   studentName?: string | null;
   nativeLanguage: string;
   firstMessageLocalized: string;
-  startLabel: string;
-  connectingLabel: string;
-  headphonesNote: string;
 };
 
-type Status = "idle" | "connecting" | "connected";
+type Status = "idle" | "connecting" | "connected" | "error";
 type Transport = "webrtc" | "websocket";
+type TranscriptEntry = {
+  id: number;
+  role: "user" | "agent";
+  text: string;
+};
 
-// Strings the SDK / underlying livekit-client surface when WebRTC media
-// negotiation fails — typically because the user's network is blocking
-// UDP/STUN/TURN. When we see one of these, we silently retry the session
-// over the WebSocket transport, which only needs a single TLS:443 socket
-// and survives almost any firewall.
 const WEBRTC_FAILURE_HINTS = [
   "negotiation",
   "negotiationerror",
@@ -37,12 +36,6 @@ function looksLikeWebRTCFailure(message: string): boolean {
   return WEBRTC_FAILURE_HINTS.some((hint) => m.includes(hint));
 }
 
-/**
- * Map raw SDK error messages to user-readable copy. The default SDK
- * message ("NegotiationError: negotiation timed out") is opaque and
- * indistinguishable from a real bug; users on restrictive networks need
- * to know the problem is environmental, not the app.
- */
 function friendlyError(message: string): string {
   if (looksLikeWebRTCFailure(message)) {
     return "Your network is blocking voice traffic. We'll try a slower backup connection — if that also fails, switch to a different WiFi or use mobile data.";
@@ -56,45 +49,40 @@ function friendlyError(message: string): string {
   return `Failed to start session — ${message}`;
 }
 
-// Bypasses @elevenlabs/react ConversationProvider whose React state never
-// syncs after startSession resolves (SDK issue #663, affects Chrome + Safari).
-// We drive status manually from the client-level callbacks instead.
-//
-// On top of that workaround we also automatically fall back from WebRTC to
-// the WebSocket transport when negotiation fails (UDP/STUN/TURN blocked,
-// ICE timeout, or media-plane subscribe times out). The WS path is a
-// single TLS:443 socket and survives almost any firewall.
+/**
+ * Full-page discovery-session experience.
+ *
+ *   - Auto-starts on mount (mic permission → token → startSession)
+ *   - Live scrolling transcript captured via the SDK's onMessage callback
+ *   - End button navigates to /dashboard?just-finished=1, where a banner
+ *     polls until scoring completes
+ *
+ * Bypasses @elevenlabs/react ConversationProvider whose React state never
+ * syncs after startSession resolves (SDK issue #663). We drive status
+ * manually from the client-level callbacks. WebRTC failures auto-fall-back
+ * to the WebSocket transport, with a 12-second watchdog catching the case
+ * where the SDK hangs without firing any callback.
+ */
 export function DiscoverySession({
   userId,
   studentName,
   nativeLanguage,
   firstMessageLocalized,
-  startLabel,
-  connectingLabel,
-  headphonesNote,
 }: Props) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
+
   const convRef = useRef<Conversation | null>(null);
-
-  // Per-Start budget: try webrtc → fall back to ws once. Reset on each
-  // click of Start so a fresh attempt gets a fresh budget.
   const triedWebSocketRef = useRef(false);
-  // Tracks whether THIS attempt has reached onConnect. Used by the
-  // stuck-in-connecting watchdog to decide whether to force a fallback.
   const attemptConnectedRef = useRef(false);
-  // Pending watchdog timer for the current attempt; cleared on connect,
-  // disconnect, error, or stop.
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setHydrated(true);
-    return () => {
-      clearWatchdog();
-    };
-  }, []);
+  const autoStartedRef = useRef(false);
+  const transcriptIdRef = useRef(0);
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
 
   const clearWatchdog = () => {
     if (watchdogTimerRef.current) {
@@ -102,6 +90,27 @@ export function DiscoverySession({
       watchdogTimerRef.current = null;
     }
   };
+
+  // Mount + cleanup. The cleanup endSession is a backstop for tab close
+  // or back-navigation — the SDK would otherwise leave the LiveKit room
+  // open until ElevenLabs reaps it.
+  useEffect(() => {
+    setHydrated(true);
+    return () => {
+      clearWatchdog();
+      try {
+        void convRef.current?.endSession();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
+  // Auto-scroll transcript to the latest turn whenever a new entry lands.
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [transcript]);
 
   const startWithTransport = async (transport: Transport): Promise<void> => {
     const r = await fetch(`/api/convai/token?transport=${transport}`);
@@ -125,15 +134,6 @@ export function DiscoverySession({
       first_message_localized: firstMessageLocalized,
     };
 
-    // Schedules a switch to the WS transport if we haven't already
-    // tried it on this Start click. Used from THREE places:
-    //   - onError (early failure, message matches WebRTC heuristics)
-    //   - onDisconnect (SDK reports reason: "error")
-    //   - watchdog (SDK is stuck — onConnect didn't fire within 12s)
-    // The watchdog is the critical path: when the LiveKit server
-    // can't subscribe to the local track (UDP blocked), the SDK
-    // hangs without calling any callback. Without the watchdog the
-    // user sees "Connecting…" forever.
     const triggerFallback = (logHint: string): boolean => {
       if (transport !== "webrtc" || triedWebSocketRef.current) return false;
       triedWebSocketRef.current = true;
@@ -146,12 +146,10 @@ export function DiscoverySession({
         "Voice connection blocked by your network — falling back to backup mode…"
       );
       setStatus("connecting");
-      // Best-effort cleanup: tell the stuck SDK to give up so it
-      // doesn't keep trying in the background.
       try {
         void convRef.current?.endSession();
       } catch {
-        /* SDK may be in a weird state — ignore */
+        /* ignore */
       }
       convRef.current = null;
       attemptConnectedRef.current = false;
@@ -161,7 +159,7 @@ export function DiscoverySession({
             retryErr instanceof Error ? retryErr.message : String(retryErr);
           console.error("[discovery] websocket fallback failed", retryErr);
           setError(friendlyError(retryMsg));
-          setStatus("idle");
+          setStatus("error");
         });
       }, 250);
       return true;
@@ -178,15 +176,12 @@ export function DiscoverySession({
       onDisconnect: (details: { reason: string; message?: string }) => {
         console.info("[discovery] disconnected", details);
         clearWatchdog();
-        // SDK self-disconnect (WebRTC failure / reconnection exhausted).
-        // The SDK reports reason: "error" — fall back even if onConnect
-        // briefly flickered earlier.
         if (details?.reason === "error") {
           if (triggerFallback(details.message ?? "disconnect:error")) return;
         }
-
-        // Normal disconnect (user clicked End, agent ended, or fallback
-        // already ran)
+        // Normal disconnect (user clicked End → we already navigated, or
+        // agent ended, or fallback already ran). If we're still on the
+        // page, drop back to idle.
         setStatus("idle");
         setIsSpeaking(false);
         convRef.current = null;
@@ -196,19 +191,25 @@ export function DiscoverySession({
         clearWatchdog();
         const msg = err instanceof Error ? err.message : String(err);
         if (looksLikeWebRTCFailure(msg) && triggerFallback(msg)) return;
-
         setError(friendlyError(msg));
-        setStatus("idle");
+        setStatus("error");
         convRef.current = null;
       },
       onModeChange: ({ mode }: { mode: string }) => {
         setIsSpeaking(mode === "speaking");
       },
+      onMessage: (props: { message?: string; source?: string }) => {
+        const msg = props?.message;
+        if (!msg) return;
+        const role: "user" | "agent" =
+          props.source === "user" ? "user" : "agent";
+        setTranscript((prev) => [
+          ...prev,
+          { id: ++transcriptIdRef.current, role, text: msg },
+        ]);
+      },
     };
 
-    // Arm the stuck-in-connecting watchdog before we kick off the
-    // session. Only WebRTC attempts get a watchdog — WS connections
-    // either succeed within 1-2s or fail with a real error.
     if (transport === "webrtc") {
       attemptConnectedRef.current = false;
       clearWatchdog();
@@ -232,12 +233,6 @@ export function DiscoverySession({
         ...callbacks,
       });
       convRef.current = conv;
-      // Backstop: once startSession's Promise resolves we have a live
-      // Conversation object — the room connection is established at
-      // the SDK level. If onConnect doesn't fire (we've seen this on
-      // Chrome / Safari, SDK issue #663), the React UI would otherwise
-      // stay in "connecting" forever and the user would have no End
-      // button. Force the state forward here.
       attemptConnectedRef.current = true;
       clearWatchdog();
       setStatus("connected");
@@ -252,9 +247,6 @@ export function DiscoverySession({
       dynamicVariables,
       ...callbacks,
     });
-    // If the watchdog already triggered WS fallback while this Promise
-    // was hanging, discard this stale resolution — the WS attempt owns
-    // the UI state now.
     if (triedWebSocketRef.current) {
       console.warn(
         "[discovery] webrtc startSession resolved after fallback fired — discarding"
@@ -279,128 +271,191 @@ export function DiscoverySession({
     triedWebSocketRef.current = false;
     attemptConnectedRef.current = false;
     clearWatchdog();
-    console.info("[discovery] start clicked", { userId, nativeLanguage });
+    console.info("[discovery] start", { userId, nativeLanguage });
 
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (mErr) {
       console.error("[discovery] mic denied", mErr);
       setError("Microphone access denied. Please allow it and try again.");
-      setStatus("idle");
+      setStatus("error");
       return;
     }
 
     try {
       await startWithTransport("webrtc");
-      console.info("[discovery] startSession resolved");
     } catch (e) {
       console.error("[discovery] startSession threw", e);
       const detail = e instanceof Error ? e.message : String(e);
       setError(friendlyError(detail));
-      setStatus("idle");
+      setStatus("error");
     }
   };
 
-  const stop = () => {
-    console.info("[discovery] stop clicked");
+  // Auto-start on mount once hydrated. Single fire — fence behind the ref.
+  useEffect(() => {
+    if (!hydrated || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
+
+  const tryAgain = () => {
+    autoStartedRef.current = true; // already mounted; just re-fire
+    setTranscript([]);
+    void start();
+  };
+
+  // End and exit. The webhook fires server-side as soon as ElevenLabs
+  // detects the disconnect, then runs scoreDiscoverySession() in-process.
+  // We don't wait for it — the dashboard banner polls until scores appear.
+  const endAndExit = () => {
+    console.info("[discovery] end and exit");
     clearWatchdog();
-    // Best-effort: tell the SDK to close. May be null if we're stopping
-    // mid-connect (SDK hasn't returned a Conversation yet) — that's OK,
-    // we still want to reset the UI immediately.
     try {
       void convRef.current?.endSession();
     } catch {
       /* ignore */
     }
     convRef.current = null;
-    attemptConnectedRef.current = false;
-    triedWebSocketRef.current = false;
-    setStatus("idle");
-    setIsSpeaking(false);
-    setError(null);
+    router.push("/dashboard?just-finished=1");
   };
 
-  // Show the End button as soon as ANY session is in flight — even
-  // during "connecting", because we've seen the SDK get into states
-  // where the connection is actually live but onConnect never fires
-  // and React state stays stuck at "connecting". Without this, the
-  // user can hear Aria but has no way to stop her.
-  if (status !== "idle") {
-    const showSpeakingIndicator = status === "connected";
-    const ringClass =
-      status === "connecting"
-        ? "ring-gold animate-pulse"
-        : isSpeaking
+  const ringClass =
+    status === "connected"
+      ? isSpeaking
         ? "ring-coral animate-pulse"
-        : "ring-ai-green";
-    return (
-      <div className="flex flex-col items-center gap-4">
+        : "ring-ai-green"
+      : status === "error"
+      ? "ring-coral/40"
+      : "ring-gold animate-pulse"; // idle / connecting
+
+  const statusText =
+    status === "connected"
+      ? isSpeaking
+        ? "Aria is speaking"
+        : "Listening to you"
+      : status === "error"
+      ? "Connection error"
+      : "Connecting…";
+
+  return (
+    <div className="flex h-[calc(100vh-160px)] min-h-[560px] flex-col gap-4">
+      {/* HEADER: avatar + status */}
+      <header className="flex flex-shrink-0 items-center gap-4 rounded-lg border border-cream bg-paper p-5">
         <div
-          className={`relative h-28 w-28 overflow-hidden rounded-full ring-4 ring-offset-2 ring-offset-paper ${ringClass}`}
+          className={`relative h-16 w-16 overflow-hidden rounded-full ring-4 ring-offset-2 ring-offset-paper ${ringClass}`}
         >
           <Image
             src="/kira-avatar.jpg"
             alt="Aria, your discovery consultant"
             fill
-            sizes="112px"
+            sizes="64px"
             className="object-cover"
             priority
           />
         </div>
-        <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-          {status === "connecting"
-            ? "Connecting..."
-            : showSpeakingIndicator && isSpeaking
-            ? "Aria is speaking"
-            : "Listening..."}
+        <div className="flex-1">
+          <h1 className="font-serif text-xl text-navy">Aria</h1>
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+            {statusText}
+          </p>
+        </div>
+        <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-mute/70 sm:inline">
+          status: {status}
         </span>
-        <button
-          type="button"
-          onClick={stop}
-          className="rounded-md border border-coral/40 bg-coral/10 px-6 py-2.5 text-sm font-medium text-coral hover:bg-coral/15"
-        >
-          End session
-        </button>
-        <p className="max-w-md text-center text-xs text-mute">
-          Speak naturally. There&apos;s nothing to type or click — Aria will guide
-          you through six dimensions over about twenty minutes.
-        </p>
-      </div>
-    );
-  }
+      </header>
 
-  return (
-    <div className="flex flex-col items-center gap-3">
-      {error && (
-        <p className="max-w-md rounded-md border border-coral/30 bg-coral/10 px-3 py-2 text-center text-sm text-coral">
-          {error}
-        </p>
-      )}
-      <div className="relative mb-1 h-20 w-20 overflow-hidden rounded-full ring-2 ring-cream ring-offset-2 ring-offset-paper">
-        <Image
-          src="/kira-avatar.jpg"
-          alt="Aria, your discovery consultant"
-          fill
-          sizes="80px"
-          className="object-cover"
-          priority
-        />
+      {/* TRANSCRIPT */}
+      <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-cream bg-paper">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-cream px-5 py-3">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+            Live transcript
+          </h2>
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute/70">
+            {transcript.length} {transcript.length === 1 ? "turn" : "turns"}
+          </span>
+        </div>
+        <div
+          ref={transcriptScrollRef}
+          className="flex-1 overflow-y-auto px-5 py-4"
+        >
+          {transcript.length === 0 ? (
+            <p className="mt-8 text-center text-sm text-mute">
+              {status === "connected"
+                ? "Aria is about to speak — make sure your headphones are on."
+                : status === "error"
+                ? "No conversation yet. Try again to start."
+                : "Connecting to Aria…"}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {transcript.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={`flex flex-col ${
+                    entry.role === "user" ? "items-end" : "items-start"
+                  }`}
+                >
+                  <span className="mb-1 font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
+                    {entry.role === "user" ? "You" : "Aria"}
+                  </span>
+                  <p
+                    className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+                      entry.role === "user"
+                        ? "bg-navy text-paper"
+                        : "bg-mist text-ink"
+                    }`}
+                  >
+                    {entry.text}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
-      <p className="font-serif text-sm text-navy">Meet Aria</p>
-      <button
-        type="button"
-        onClick={start}
-        disabled={!hydrated}
-        className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-60"
-      >
-        {hydrated ? startLabel : connectingLabel}
-      </button>
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute/70">
-        status: {status}
-      </p>
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-        {headphonesNote}
-      </p>
+
+      {/* FOOTER: error + actions */}
+      <footer className="flex flex-shrink-0 flex-col gap-3 rounded-lg border border-cream bg-paper p-5">
+        {error && (
+          <p className="rounded-md border border-coral/30 bg-coral/10 px-3 py-2 text-sm text-coral">
+            {error}
+          </p>
+        )}
+
+        {status === "error" ? (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={tryAgain}
+              className="flex-1 rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
+            >
+              Try again
+            </button>
+            <Link
+              href="/onboarding"
+              className="flex-1 rounded-md border border-navy/20 px-5 py-2.5 text-center text-sm font-medium text-navy hover:bg-mist"
+            >
+              Back to overview
+            </Link>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={endAndExit}
+            className="rounded-md border border-coral/40 bg-coral/10 px-6 py-3 text-sm font-medium text-coral hover:bg-coral/15"
+          >
+            End session
+          </button>
+        )}
+
+        <p className="text-center text-xs text-mute">
+          Speak naturally. Aria will guide you through six dimensions over
+          about twenty minutes. Click <span className="font-medium">End session</span> when you&apos;re done — your gap profile takes 30-60
+          seconds to compute.
+        </p>
+      </footer>
     </div>
   );
 }

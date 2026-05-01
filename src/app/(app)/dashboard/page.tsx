@@ -8,6 +8,7 @@ import {
   type LatestCert,
 } from "@/components/dashboard/certification-card";
 import { GamificationCard } from "@/components/dashboard/gamification-card";
+import { JustFinishedBanner } from "@/components/dashboard/just-finished-banner";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 import { tierForTarget } from "@/lib/gamification/rules";
@@ -202,6 +203,8 @@ export default async function DashboardPage() {
         </div>
         {hasScores && <RescoreButton />}
       </div>
+
+      <JustFinishedBanner hasScores={hasScores} />
 
       <GamificationCard
         xp={studentXp}
