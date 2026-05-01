@@ -11,6 +11,12 @@ type Props = {
   studentName?: string | null;
   nativeLanguage: string;
   firstMessageLocalized: string;
+  /** Pre-call context fed to Aria so she opens informed about who this
+   * person is and what role they're being assessed for. */
+  roleName?: string | null;
+  roleDescription?: string | null;
+  targetLevel?: string | null;
+  employerName?: string | null;
 };
 
 type Status = "idle" | "connecting" | "connected" | "error";
@@ -68,6 +74,10 @@ export function DiscoverySession({
   studentName,
   nativeLanguage,
   firstMessageLocalized,
+  roleName,
+  roleDescription,
+  targetLevel,
+  employerName,
 }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("idle");
@@ -134,6 +144,14 @@ export function DiscoverySession({
       student_name: studentName ?? "",
       native_language: nativeLanguage,
       first_message_localized: firstMessageLocalized,
+      // Pre-call context — Aria reads these via {{role_name}} etc in
+      // the system prompt so she knows who she's talking to before the
+      // first turn. Empty strings are safe substitutions; the prompt
+      // gracefully degrades when a value is missing.
+      role_name: roleName ?? "",
+      role_description: roleDescription ?? "",
+      target_level: targetLevel ?? "",
+      employer_name: employerName ?? "",
     };
 
     const triggerFallback = (logHint: string): boolean => {
@@ -310,58 +328,78 @@ export function DiscoverySession({
     void start();
   };
 
-  // End and exit. The webhook fires server-side as soon as ElevenLabs
-  // detects the disconnect, then runs scoreDiscoverySession() in-process.
-  // We don't wait for the webhook — the dashboard banner polls until
-  // scores appear. We DO await endSession() though: it tears down the
-  // LiveKit room which owns the audio playback, and skipping the await
-  // means navigation fires while the agent's audio element is still
-  // decoding — that's why the agent kept talking after End was clicked.
-  // Belt-and-suspenders: zero output volume + mute mic before awaiting,
-  // so any in-flight TTS goes silent immediately even if teardown takes
-  // a moment.
+  // End and exit. We await endSession() because that tears down the
+  // LiveKit room which owns the audio elements — skipping the await
+  // navigates while the agent's audio is still decoding. Belt-and-
+  // suspenders: zero output volume + mute mic before awaiting so any
+  // in-flight TTS goes silent immediately. Each SDK call is wrapped in
+  // its own try/catch — if one throws (e.g. the connection is in a
+  // half-open state) we still proceed to the next one and ultimately
+  // navigate, so the button can never appear "stuck".
   const endAndExit = async () => {
     if (isEnding) return;
-    console.info("[discovery] end and exit");
+    console.info("[discovery] end and exit clicked");
     setIsEnding(true);
     clearWatchdog();
     const conv = convRef.current;
     convRef.current = null;
-    try {
-      conv?.setVolume({ volume: 0 });
-      conv?.setMicMuted(true);
-      await conv?.endSession();
-    } catch (err) {
-      console.warn("[discovery] endSession threw", err);
+    if (conv) {
+      try {
+        conv.setVolume({ volume: 0 });
+      } catch (err) {
+        console.warn("[discovery] setVolume(0) threw", err);
+      }
+      try {
+        conv.setMicMuted(true);
+      } catch (err) {
+        console.warn("[discovery] setMicMuted(true) threw", err);
+      }
+      try {
+        await conv.endSession();
+        console.info("[discovery] endSession resolved");
+      } catch (err) {
+        console.warn("[discovery] endSession threw", err);
+      }
+    } else {
+      console.warn("[discovery] end clicked with no active conversation ref");
     }
     router.push("/dashboard?just-finished=1");
   };
 
   // Pause / resume — for "I need to step away" mid-discovery. The SDK
   // has no native pause, so we mute the mic (agent stops getting input)
-  // and zero the output volume (user hears nothing). We also send a
-  // contextual update so the agent waits quietly rather than
-  // monologuing into silence. Resume restores both and the user can
-  // pick the conversation back up where they left off.
+  // and zero output volume (user hears nothing). Each SDK call is in
+  // its own try/catch so a synchronous throw from one doesn't prevent
+  // the others or the React state update — the worst case is the
+  // contextual update fails to send, not a button that visually
+  // ignores the click.
   const togglePause = () => {
     const conv = convRef.current;
+    console.info("[discovery] pause clicked", {
+      hasConv: Boolean(conv),
+      status,
+      isPaused,
+    });
     if (!conv || status !== "connected") return;
     const next = !isPaused;
     try {
       conv.setMicMuted(next);
-      conv.setVolume({ volume: next ? 0 : 1 });
-      if (next) {
-        conv.sendContextualUpdate(
-          "The user has paused the session and stepped away. Stop speaking and wait quietly. They will resume shortly."
-        );
-      } else {
-        conv.sendContextualUpdate(
-          "The user is back. Briefly acknowledge their return, then continue from where you left off."
-        );
-      }
     } catch (err) {
-      console.warn("[discovery] toggle pause threw", err);
-      return;
+      console.warn("[discovery] setMicMuted threw", err);
+    }
+    try {
+      conv.setVolume({ volume: next ? 0 : 1 });
+    } catch (err) {
+      console.warn("[discovery] setVolume threw", err);
+    }
+    try {
+      conv.sendContextualUpdate(
+        next
+          ? "The user has paused the session and stepped away. Stop speaking and wait quietly. They will resume shortly."
+          : "The user is back. Briefly acknowledge their return, then continue from where you left off."
+      );
+    } catch (err) {
+      console.warn("[discovery] sendContextualUpdate threw", err);
     }
     setIsPaused(next);
   };
