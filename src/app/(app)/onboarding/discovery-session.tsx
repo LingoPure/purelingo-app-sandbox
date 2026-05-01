@@ -231,6 +231,16 @@ export function DiscoverySession({
         ...callbacks,
       });
       convRef.current = conv;
+      // Backstop: once startSession's Promise resolves we have a live
+      // Conversation object — the room connection is established at
+      // the SDK level. If onConnect doesn't fire (we've seen this on
+      // Chrome / Safari, SDK issue #663), the React UI would otherwise
+      // stay in "connecting" forever and the user would have no End
+      // button. Force the state forward here.
+      attemptConnectedRef.current = true;
+      clearWatchdog();
+      setStatus("connected");
+      setError(null);
       return;
     }
 
@@ -241,7 +251,25 @@ export function DiscoverySession({
       dynamicVariables,
       ...callbacks,
     });
+    // If the watchdog already triggered WS fallback while this Promise
+    // was hanging, discard this stale resolution — the WS attempt owns
+    // the UI state now.
+    if (triedWebSocketRef.current) {
+      console.warn(
+        "[discovery] webrtc startSession resolved after fallback fired — discarding"
+      );
+      try {
+        void conv.endSession();
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
     convRef.current = conv;
+    attemptConnectedRef.current = true;
+    clearWatchdog();
+    setStatus("connected");
+    setError(null);
   };
 
   const start = async () => {
@@ -273,22 +301,50 @@ export function DiscoverySession({
   };
 
   const stop = () => {
+    console.info("[discovery] stop clicked");
     clearWatchdog();
-    void convRef.current?.endSession();
+    // Best-effort: tell the SDK to close. May be null if we're stopping
+    // mid-connect (SDK hasn't returned a Conversation yet) — that's OK,
+    // we still want to reset the UI immediately.
+    try {
+      void convRef.current?.endSession();
+    } catch {
+      /* ignore */
+    }
+    convRef.current = null;
+    attemptConnectedRef.current = false;
+    triedWebSocketRef.current = false;
+    setStatus("idle");
+    setIsSpeaking(false);
+    setError(null);
   };
 
-  if (status === "connected") {
+  // Show the End button as soon as ANY session is in flight — even
+  // during "connecting", because we've seen the SDK get into states
+  // where the connection is actually live but onConnect never fires
+  // and React state stays stuck at "connecting". Without this, the
+  // user can hear Aria but has no way to stop her.
+  if (status !== "idle") {
+    const showSpeakingIndicator = status === "connected";
     return (
       <div className="flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
           <span
             className={`inline-block h-3 w-3 rounded-full ${
-              isSpeaking ? "bg-coral animate-pulse" : "bg-ai-green"
+              status === "connecting"
+                ? "bg-gold animate-pulse"
+                : isSpeaking
+                ? "bg-coral animate-pulse"
+                : "bg-ai-green"
             }`}
             aria-hidden
           />
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-            {isSpeaking ? "Aria is speaking" : "Listening..."}
+            {status === "connecting"
+              ? "Connecting..."
+              : showSpeakingIndicator && isSpeaking
+              ? "Aria is speaking"
+              : "Listening..."}
           </span>
         </div>
         <button
@@ -316,10 +372,10 @@ export function DiscoverySession({
       <button
         type="button"
         onClick={start}
-        disabled={!hydrated || status === "connecting"}
+        disabled={!hydrated}
         className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-60"
       >
-        {!hydrated || status === "connecting" ? connectingLabel : startLabel}
+        {hydrated ? startLabel : connectingLabel}
       </button>
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute/70">
         status: {status}
