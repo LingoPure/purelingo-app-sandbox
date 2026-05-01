@@ -200,8 +200,24 @@ async function main() {
   if (adminStudentErr) {
     console.warn(`  ⚠ admin students row update: ${adminStudentErr.message}`);
   }
+  // Mark them as the employer admin — this is what /employer/* gates on.
+  const { error: adminMembershipErr } = await supabase
+    .from("employer_admins")
+    .upsert(
+      {
+        auth_user_id: adminUser.userId,
+        employer_id: employerId,
+        admin_role: "owner",
+      },
+      { onConflict: "auth_user_id" }
+    );
+  if (adminMembershipErr) {
+    console.warn(
+      `  ⚠ employer_admins upsert: ${adminMembershipErr.message}`
+    );
+  }
   console.log(
-    `  ↳ ${adminUser.created ? "created" : "found"}: ${ABC_ADMIN.email} / ${ABC_ADMIN.password}`
+    `  ↳ ${adminUser.created ? "created" : "found"}: ${ABC_ADMIN.email} / ${ABC_ADMIN.password} (admin)`
   );
 
   // ─── 4. Personas ─────────────────────────────────────────────────────
@@ -297,9 +313,9 @@ async function main() {
   }
   console.log("");
   console.log("Login:");
-  console.log(`  Student dashboard:  /login → ${ABC_ADMIN.email} / ${ABC_ADMIN.password}`);
-  console.log(`  Employer dashboard: /employer/login → existing demo password`);
-  console.log("    (set EMPLOYER_DEMO_PASSWORD=Logoinabc123 in env if you want one creds for both)");
+  console.log(`  /login → ${ABC_ADMIN.email} / ${ABC_ADMIN.password}`);
+  console.log("  Same creds open the student dashboard AND the employer dashboard");
+  console.log("  (the layout routes admins to /employer, everyone else to /dashboard).");
 }
 
 main().catch((err) => {

@@ -17,9 +17,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { EMPLOYER_COOKIE_NAME, cookieIsValid } from "@/lib/employer/auth";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
-import { resolveActiveEmployerId } from "@/lib/employer/roles-data";
 
 const BodySchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -29,10 +28,9 @@ const BodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
+  const employerId = auth.admin.employerId;
 
   let body: z.infer<typeof BodySchema>;
   try {
@@ -40,14 +38,6 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid body";
     return NextResponse.json({ error: message }, { status: 400 });
-  }
-
-  const employerId = await resolveActiveEmployerId();
-  if (!employerId) {
-    return NextResponse.json(
-      { error: "No employer configured — seed first." },
-      { status: 400 }
-    );
   }
 
   const supabase = adminSupabase();

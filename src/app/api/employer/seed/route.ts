@@ -1,21 +1,15 @@
 /**
- * Seed the demo cohort. Gated by the employer cookie (the same gate that
- * protects /employer/*). Idempotent — safe to re-run.
+ * Seed the demo cohort. Gated on employer-admin auth. Idempotent.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import {
-  EMPLOYER_COOKIE_NAME,
-  cookieIsValid,
-} from "@/lib/employer/auth";
+import { NextResponse } from "next/server";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
 import { seedDemoCohort } from "@/lib/employer/seed-demo";
 
-export async function POST(request: NextRequest) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+export async function POST() {
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
   try {
     const result = await seedDemoCohort(adminSupabase());
     return NextResponse.json({ ok: true, ...result });

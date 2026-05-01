@@ -5,9 +5,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { EMPLOYER_COOKIE_NAME, cookieIsValid } from "@/lib/employer/auth";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
-import { resolveActiveEmployerId } from "@/lib/employer/roles-data";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 
 const BodySchema = z.object({
@@ -17,10 +16,9 @@ const BodySchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
+  const employerId = auth.admin.employerId;
 
   let body: z.infer<typeof BodySchema>;
   try {
@@ -37,14 +35,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-  }
-
-  const employerId = await resolveActiveEmployerId();
-  if (!employerId) {
-    return NextResponse.json(
-      { error: "No employer configured — seed the demo first." },
-      { status: 400 }
-    );
   }
 
   const supabase = adminSupabase();

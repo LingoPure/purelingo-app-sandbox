@@ -11,9 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { EMPLOYER_COOKIE_NAME, cookieIsValid } from "@/lib/employer/auth";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
-import { resolveActiveEmployerId } from "@/lib/employer/roles-data";
 import {
   parseStaffCsv,
   importStaffRows,
@@ -23,10 +22,9 @@ const BodySchema = z.object({ csv: z.string().min(1).max(500_000) });
 const MAX_ROWS = 1000;
 
 export async function POST(request: NextRequest) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
+  const employerId = auth.admin.employerId;
 
   let body: z.infer<typeof BodySchema>;
   try {
@@ -42,14 +40,6 @@ export async function POST(request: NextRequest) {
       {
         error: `Too many rows (${parse.rows.length}). Split the file into chunks of ${MAX_ROWS} or fewer.`,
       },
-      { status: 400 }
-    );
-  }
-
-  const employerId = await resolveActiveEmployerId();
-  if (!employerId) {
-    return NextResponse.json(
-      { error: "No employer configured — seed the demo first." },
       { status: 400 }
     );
   }

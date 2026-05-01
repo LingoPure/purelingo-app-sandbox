@@ -9,8 +9,8 @@ export function EmployerSignOut() {
 
   async function handleClick() {
     setPending(true);
-    await fetch("/api/employer/auth", { method: "DELETE" });
-    router.push("/employer/login");
+    await fetch("/auth/signout", { method: "POST" });
+    router.push("/login");
     router.refresh();
   }
 

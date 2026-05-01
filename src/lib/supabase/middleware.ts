@@ -1,9 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  EMPLOYER_COOKIE_NAME,
-  cookieIsValid,
-} from "@/lib/employer/auth";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -12,23 +8,14 @@ const PROTECTED_PREFIXES = [
   "/profile",
   "/lessons",
   "/exam",
+  // /employer/* is gated by Supabase auth — anyone signed-in passes the
+  // middleware; the layout component checks employer_admins for the
+  // actual authorisation step.
+  "/employer",
 ];
 
 export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
-
-  // ── Employer-side auth gate (separate from Supabase student auth) ──
-  // Everything under /employer/* requires the shared cookie except the
-  // login page itself.
-  if (path.startsWith("/employer") && path !== "/employer/login") {
-    const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-    if (!(await cookieIsValid(cookie))) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/employer/login";
-      url.searchParams.set("redirectTo", path);
-      return NextResponse.redirect(url);
-    }
-  }
 
   const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;

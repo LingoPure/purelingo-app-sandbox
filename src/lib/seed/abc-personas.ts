@@ -17,7 +17,7 @@ export const ABC_EMPLOYER = {
 };
 
 export const ABC_ADMIN = {
-  email: "mcmdennis@gmail.com",
+  email: "dennis@factory2key.com.au",
   password: "Logoinabc123",
   fullName: "Dennis McMahon (ABC admin)",
   targetLevel: "C1" as const,

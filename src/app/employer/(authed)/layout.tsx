@@ -1,13 +1,31 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { EmployerSignOut } from "../sign-out-button";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { getDict } from "@/lib/i18n";
+import { createClient } from "@/lib/supabase/server";
+import { loadEmployerAdmin } from "@/lib/employer/auth";
 
 export default async function EmployerAuthedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Authorise: must be a Supabase-authenticated user AND have a row in
+  // employer_admins. Middleware already ensured the user is signed in;
+  // here we check they're allowed to see the employer dashboard at all.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login?redirectTo=/employer");
+  }
+  const admin = await loadEmployerAdmin(supabase, user.id);
+  if (!admin) {
+    redirect("/dashboard?error=not_admin");
+  }
+
   const { lang, t } = await getDict();
   return (
     <div className="flex min-h-screen flex-col bg-mist">

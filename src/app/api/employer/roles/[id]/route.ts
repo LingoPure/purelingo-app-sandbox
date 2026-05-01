@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { EMPLOYER_COOKIE_NAME, cookieIsValid } from "@/lib/employer/auth";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 
@@ -26,10 +26,8 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
   const { id: roleId } = await params;
 
   let body: z.infer<typeof PatchSchema>;
@@ -79,13 +77,11 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const cookie = request.cookies.get(EMPLOYER_COOKIE_NAME)?.value;
-  if (!(await cookieIsValid(cookie))) {
-    return NextResponse.json({ error: "Not authorised" }, { status: 401 });
-  }
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) return auth;
   const { id: roleId } = await params;
 
   const supabase = adminSupabase();
