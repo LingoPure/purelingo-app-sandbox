@@ -19,6 +19,11 @@ import {
   type SpeakScorePrompt,
 } from "./speak-score-rubric";
 import { transcribeAudio } from "@/lib/transcription/whisper";
+import {
+  loadBaselinesForStudent,
+  type Baselines,
+} from "@/lib/scoring/baselines";
+import type { SkillKey } from "@/lib/scoring/rubric";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -80,7 +85,12 @@ export async function submitSpeakScore(
   const evaluation = await evaluateTranscript(prompt, transcript);
 
   // 4. Upsert gap_scores for sub-skills that were scored (presentation may be null).
-  const subSkills: { skill: string; score: number }[] = [
+  // Target per skill is the student's role baseline (or flat 80 if unassigned).
+  const baselines: Baselines = await loadBaselinesForStudent(
+    supabase,
+    input.studentId
+  );
+  const subSkills: { skill: SkillKey; score: number }[] = [
     { skill: "speaking_fluency", score: evaluation.speaking_fluency.score },
     { skill: "business_vocabulary", score: evaluation.business_vocabulary.score },
   ];
@@ -95,7 +105,7 @@ export async function submitSpeakScore(
     student_id: input.studentId,
     skill: s.skill,
     score: s.score,
-    target: 80,
+    target: baselines[s.skill],
     source: "lesson" as const,
   }));
 

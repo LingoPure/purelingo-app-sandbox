@@ -19,6 +19,7 @@ import {
   SYSTEM_PROMPT,
   type GapScoresOutput,
 } from "./rubric";
+import { loadBaselinesForStudent } from "./baselines";
 
 export type TranscriptTurn = {
   role: "agent" | "user";
@@ -95,12 +96,18 @@ export async function scoreDiscoverySession(
   const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
   const cacheWriteTokens = usage?.cache_creation_input_tokens ?? 0;
 
+  // Per-skill baseline from the student's assigned role (or flat 80 if
+  // unassigned). The dashboard radar's target line, the lesson
+  // generators' calibration, and the employer "meets baseline" rollup
+  // all read this column.
+  const baselines = await loadBaselinesForStudent(supabase, input.studentId);
+
   // Persist sub-scores. unique (student_id, skill) on gap_scores → upsert.
   const rows = SKILL_KEYS.map((skill) => ({
     student_id: input.studentId,
     skill,
     score: parsed[skill].score,
-    target: 80,
+    target: baselines[skill],
     source: "discovery" as const,
   }));
 

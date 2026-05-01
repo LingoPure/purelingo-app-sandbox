@@ -15,6 +15,7 @@ import {
   type EmailSprintEvaluation,
   type EmailSprintPrompt,
 } from "./email-sprint-rubric";
+import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -68,6 +69,9 @@ export async function submitEmailSprint(
   const evaluation = await evaluateEmail(prompt, input.submission);
 
   // 3. Upsert gap_scores for the 3 sub-skills the email exercises.
+  // Target per skill is the student's role baseline (or flat 80 if
+  // unassigned) — same as the discovery scoring path.
+  const baselines = await loadBaselinesForStudent(supabase, input.studentId);
   const subSkills = [
     { skill: "writing_formal", sub: evaluation.writing_formal },
     { skill: "business_vocabulary", sub: evaluation.business_vocabulary },
@@ -78,7 +82,7 @@ export async function submitEmailSprint(
     student_id: input.studentId,
     skill,
     score: sub.score,
-    target: 80,
+    target: baselines[skill],
     source: "lesson" as const,
   }));
 
