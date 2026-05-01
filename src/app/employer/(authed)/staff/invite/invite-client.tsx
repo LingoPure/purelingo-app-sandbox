@@ -3,7 +3,15 @@
 import { useState, useTransition } from "react";
 
 type Role = { id: string; name: string };
-type Outcome = { ok: true; message: string } | { ok: false; error: string };
+type Outcome =
+  | {
+      ok: true;
+      message: string;
+      kind: "invite" | "magiclink";
+      actionLink: string | null;
+      email: string;
+    }
+  | { ok: false; error: string };
 
 const TARGETS = ["A2", "B1", "B2", "C1", "C2"] as const;
 
@@ -15,6 +23,7 @@ export function InviteClient({ roles }: { roles: Role[] }) {
     useState<(typeof TARGETS)[number]>("B2");
   const [isPending, startTransition] = useTransition();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [copied, setCopied] = useState(false);
 
   function reset() {
     setName("");
@@ -26,19 +35,30 @@ export function InviteClient({ roles }: { roles: Role[] }) {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setOutcome(null);
+    setCopied(false);
     if (!name.trim() || !email.trim() || !roleId) {
       setOutcome({ ok: false, error: "Fill in name, email, and role." });
       return;
     }
+    const submittedEmail = email.trim();
     startTransition(async () => {
       const res = await fetch("/api/employer/staff/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), roleId, targetLevel }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: submittedEmail,
+          roleId,
+          targetLevel,
+        }),
       });
-      const data: { ok?: boolean; message?: string; error?: string } = await res
-        .json()
-        .catch(() => ({}));
+      const data: {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        kind?: "invite" | "magiclink";
+        actionLink?: string | null;
+      } = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         setOutcome({
           ok: false,
@@ -46,9 +66,26 @@ export function InviteClient({ roles }: { roles: Role[] }) {
         });
         return;
       }
-      setOutcome({ ok: true, message: data.message ?? "Invite sent." });
+      setOutcome({
+        ok: true,
+        message: data.message ?? "Invite created.",
+        kind: data.kind ?? "invite",
+        actionLink: data.actionLink ?? null,
+        email: submittedEmail,
+      });
       reset();
     });
+  }
+
+  async function copyLink() {
+    if (!outcome || !outcome.ok || !outcome.actionLink) return;
+    try {
+      await navigator.clipboard.writeText(outcome.actionLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // ignore — user can still select + copy manually
+    }
   }
 
   return (
@@ -112,15 +149,48 @@ export function InviteClient({ roles }: { roles: Role[] }) {
         </div>
       </div>
 
-      {outcome && (
-        <div
-          className={
-            outcome.ok
-              ? "rounded-md border border-teal/30 bg-teal/5 px-4 py-3 text-sm text-teal"
-              : "rounded-md border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral"
-          }
-        >
-          {outcome.ok ? outcome.message : outcome.error}
+      {outcome && !outcome.ok && (
+        <div className="rounded-md border border-coral/30 bg-coral/5 px-4 py-3 text-sm text-coral">
+          {outcome.error}
+        </div>
+      )}
+
+      {outcome && outcome.ok && (
+        <div className="flex flex-col gap-3 rounded-lg border border-teal/30 bg-teal/5 p-5 text-sm text-ink">
+          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-teal">
+            {outcome.kind === "invite" ? "Invite created" : "Magic link created"}
+          </p>
+          <p>
+            <span className="text-teal">✓</span> {outcome.message}
+          </p>
+          {outcome.actionLink && (
+            <div className="flex flex-col gap-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+                Sign-in link (paste into a chat or email if Supabase didn&apos;t deliver)
+              </p>
+              <div className="flex items-stretch gap-2">
+                <input
+                  type="text"
+                  value={outcome.actionLink}
+                  readOnly
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="flex-1 rounded-md border border-cream bg-paper px-3 py-2 font-mono text-xs text-ink"
+                />
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="rounded-md border border-cream bg-paper px-3 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-navy hover:bg-mist/40"
+                >
+                  {copied ? "Copied" : "Copy"}
+                </button>
+              </div>
+              <p className="text-xs text-mute">
+                The link signs {outcome.email} in once and lands them on
+                /onboarding. It expires after a single use or roughly an
+                hour, whichever comes first.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

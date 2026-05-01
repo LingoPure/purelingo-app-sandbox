@@ -1,18 +1,21 @@
 /**
  * POST /api/employer/staff/invite — magic-link invite for one staff member.
  *
- * Flow:
- *   1. Admin enters name + email + role on /employer/staff/invite
- *   2. We call auth.admin.inviteUserByEmail() — Supabase emails the user a
- *      magic link pointing at /auth/callback?next=/onboarding
- *   3. We pre-stamp the students row with employer_id + role_id + name +
- *      target_level so that when the candidate lands in /onboarding,
- *      their role baseline is already known and the discovery scorer can
- *      calibrate against the buyer's bar from turn one.
+ * Two paths, both end with an email going out:
+ *   1. Email NOT in auth.users → auth.admin.inviteUserByEmail()
+ *      Creates the user + sends an "invite" email pointing at
+ *      /auth/callback?next=/onboarding.
+ *   2. Email IS in auth.users → auth.admin.generateLink({type:"magiclink"})
+ *      User already exists (e.g. seeded persona, prior invite). Sends a
+ *      sign-in magic link to the same URL.
  *
- * Idempotent: if the email is already in auth.users we skip the invite
- * and just refresh the students row so the admin can re-assign someone
- * who's already been onboarded.
+ * Either way: pre-stamp the students row with employer_id + role_id +
+ * name + target_level so the role baseline is locked in BEFORE they
+ * click the link.
+ *
+ * The response always includes `actionLink` — the actual URL — so the
+ * admin can copy-paste it manually if Supabase email delivery is rate-
+ * limited / unconfigured / spam-filtered. No silent failures.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -43,17 +46,16 @@ export async function POST(request: NextRequest) {
   const supabase = adminSupabase();
   const email = body.email.toLowerCase();
 
-  // The magic link Supabase sends will land on /auth/callback. The callback
-  // exchanges the code for a session and redirects to ?next= — we send
-  // candidates straight into onboarding.
+  // Magic-link / invite emails point at /auth/callback. The callback
+  // routes admins to /employer and everyone else to ?next= (we set
+  // /onboarding here so candidates land directly in their discovery flow).
   const origin =
     request.headers.get("origin") ??
     `${request.nextUrl.protocol}//${request.nextUrl.host}`;
   const redirectTo = `${origin}/auth/callback?next=/onboarding`;
 
-  // 1. Check if the user already exists (idempotency).
+  // 1. Look up the user (paged listUsers — fine at 1k staff, not 1M).
   let userId: string | null = null;
-  let invited = false;
   let page = 1;
   while (true) {
     const { data, error } = await supabase.auth.admin.listUsers({
@@ -73,6 +75,13 @@ export async function POST(request: NextRequest) {
     page += 1;
   }
 
+  // 2. Issue the right kind of link based on existence. Both paths
+  //    auto-email via Supabase; we also return the URL so the admin
+  //    can copy it manually if email delivery is rate-limited.
+  let actionLink: string | null = null;
+  let kind: "invite" | "magiclink" = "invite";
+  let mailWarning: string | null = null;
+
   if (!userId) {
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo,
@@ -85,12 +94,41 @@ export async function POST(request: NextRequest) {
       );
     }
     userId = data.user.id;
-    invited = true;
+    kind = "invite";
+
+    // Generate the actual link too so we can show / copy it. (Invite
+    // already sends an email, but the admin may need the URL anyway.)
+    const linkRes = await supabase.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { redirectTo, data: { full_name: body.name } },
+    });
+    if (linkRes.error) {
+      mailWarning = `Invite created but couldn't generate display link: ${linkRes.error.message}`;
+    } else {
+      actionLink = linkRes.data.properties?.action_link ?? null;
+    }
+  } else {
+    // Existing user — send a magic-link sign-in email instead of an invite.
+    const linkRes = await supabase.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo },
+    });
+    if (linkRes.error) {
+      return NextResponse.json(
+        { error: `Magic link generation failed: ${linkRes.error.message}` },
+        { status: 500 }
+      );
+    }
+    actionLink = linkRes.data.properties?.action_link ?? null;
+    kind = "magiclink";
   }
 
-  // 2. Stamp the students row (handle_new_user trigger creates it on
-  //    invite acceptance; if we got an existing user, the row already
-  //    exists). The role_id is the buyer's bar from this point forward.
+  // 3. Pre-stamp the students row with employer + role + name + target.
+  //    handle_new_user creates the row on invite acceptance; if the user
+  //    already existed the row's already there. role_id is the buyer's
+  //    bar from this point forward.
   const { error: studentErr } = await supabase
     .from("students")
     .update({
@@ -105,12 +143,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: studentErr.message }, { status: 500 });
   }
 
+  const messageBase =
+    kind === "invite"
+      ? `Invite created for ${email}.`
+      : `Magic-link sign-in created for ${email} (already onboarded).`;
+  const messageTail = actionLink
+    ? " The link is shown below — Supabase will also email it, but free-tier rate limits + spam filters mean you may need to send it manually."
+    : "";
+
   return NextResponse.json({
     ok: true,
     userId,
-    invited,
-    message: invited
-      ? `Invite sent to ${email}.`
-      : `${email} already onboarded — role assignment updated.`,
+    kind,
+    actionLink,
+    mailWarning,
+    message: messageBase + messageTail,
   });
 }
