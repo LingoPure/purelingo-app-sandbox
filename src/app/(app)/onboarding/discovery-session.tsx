@@ -75,6 +75,8 @@ export function DiscoverySession({
   const [error, setError] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const convRef = useRef<Conversation | null>(null);
   const triedWebSocketRef = useRef(false);
@@ -184,6 +186,7 @@ export function DiscoverySession({
         // page, drop back to idle.
         setStatus("idle");
         setIsSpeaking(false);
+        setIsPaused(false);
         convRef.current = null;
       },
       onError: (err: unknown) => {
@@ -268,6 +271,7 @@ export function DiscoverySession({
   const start = async () => {
     setError(null);
     setStatus("connecting");
+    setIsPaused(false);
     triedWebSocketRef.current = false;
     attemptConnectedRef.current = false;
     clearWatchdog();
@@ -308,36 +312,79 @@ export function DiscoverySession({
 
   // End and exit. The webhook fires server-side as soon as ElevenLabs
   // detects the disconnect, then runs scoreDiscoverySession() in-process.
-  // We don't wait for it — the dashboard banner polls until scores appear.
-  const endAndExit = () => {
+  // We don't wait for the webhook — the dashboard banner polls until
+  // scores appear. We DO await endSession() though: it tears down the
+  // LiveKit room which owns the audio playback, and skipping the await
+  // means navigation fires while the agent's audio element is still
+  // decoding — that's why the agent kept talking after End was clicked.
+  // Belt-and-suspenders: zero output volume + mute mic before awaiting,
+  // so any in-flight TTS goes silent immediately even if teardown takes
+  // a moment.
+  const endAndExit = async () => {
+    if (isEnding) return;
     console.info("[discovery] end and exit");
+    setIsEnding(true);
     clearWatchdog();
-    try {
-      void convRef.current?.endSession();
-    } catch {
-      /* ignore */
-    }
+    const conv = convRef.current;
     convRef.current = null;
+    try {
+      conv?.setVolume({ volume: 0 });
+      conv?.setMicMuted(true);
+      await conv?.endSession();
+    } catch (err) {
+      console.warn("[discovery] endSession threw", err);
+    }
     router.push("/dashboard?just-finished=1");
   };
 
-  const ringClass =
-    status === "connected"
-      ? isSpeaking
-        ? "ring-coral animate-pulse"
-        : "ring-ai-green"
-      : status === "error"
-      ? "ring-coral/40"
-      : "ring-gold animate-pulse"; // idle / connecting
+  // Pause / resume — for "I need to step away" mid-discovery. The SDK
+  // has no native pause, so we mute the mic (agent stops getting input)
+  // and zero the output volume (user hears nothing). We also send a
+  // contextual update so the agent waits quietly rather than
+  // monologuing into silence. Resume restores both and the user can
+  // pick the conversation back up where they left off.
+  const togglePause = () => {
+    const conv = convRef.current;
+    if (!conv || status !== "connected") return;
+    const next = !isPaused;
+    try {
+      conv.setMicMuted(next);
+      conv.setVolume({ volume: next ? 0 : 1 });
+      if (next) {
+        conv.sendContextualUpdate(
+          "The user has paused the session and stepped away. Stop speaking and wait quietly. They will resume shortly."
+        );
+      } else {
+        conv.sendContextualUpdate(
+          "The user is back. Briefly acknowledge their return, then continue from where you left off."
+        );
+      }
+    } catch (err) {
+      console.warn("[discovery] toggle pause threw", err);
+      return;
+    }
+    setIsPaused(next);
+  };
 
-  const statusText =
-    status === "connected"
-      ? isSpeaking
-        ? "Aria is speaking"
-        : "Listening to you"
-      : status === "error"
-      ? "Connection error"
-      : "Connecting…";
+  const ringClass = isPaused
+    ? "ring-mute"
+    : status === "connected"
+    ? isSpeaking
+      ? "ring-coral animate-pulse"
+      : "ring-ai-green"
+    : status === "error"
+    ? "ring-coral/40"
+    : "ring-gold animate-pulse"; // idle / connecting
+
+  const statusText = isPaused
+    ? "Paused — Aria is waiting"
+    : status === "connected"
+    ? isSpeaking
+      ? "Aria is speaking"
+      : "Listening to you"
+    : status === "error"
+    ? "Connection error"
+    : "Connecting…";
 
   return (
     <div className="flex h-[calc(100vh-160px)] min-h-[560px] flex-col gap-4">
@@ -441,19 +488,36 @@ export function DiscoverySession({
             </Link>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={endAndExit}
-            className="rounded-md border border-coral/40 bg-coral/10 px-6 py-3 text-sm font-medium text-coral hover:bg-coral/15"
-          >
-            End session
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={togglePause}
+              disabled={status !== "connected" || isEnding}
+              className={`flex-1 rounded-md border px-5 py-3 text-sm font-medium hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50 ${
+                isPaused
+                  ? "border-ai-green/40 bg-ai-green/5 text-ai-green hover:bg-ai-green/10"
+                  : "border-navy/30 bg-paper text-navy"
+              }`}
+            >
+              {isPaused ? "Resume" : "Pause"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void endAndExit()}
+              disabled={isEnding}
+              className="flex-1 rounded-md border border-coral/40 bg-coral/10 px-6 py-3 text-sm font-medium text-coral hover:bg-coral/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isEnding ? "Ending…" : "End session"}
+            </button>
+          </div>
         )}
 
         <p className="text-center text-xs text-mute">
           Speak naturally. Aria will guide you through six dimensions over
-          about twenty minutes. Click <span className="font-medium">End session</span> when you&apos;re done — your gap profile takes 30-60
-          seconds to compute.
+          about twenty minutes. Need a moment? <span className="font-medium">Pause</span> mutes both sides — click{" "}
+          <span className="font-medium">Resume</span> to pick back up.{" "}
+          <span className="font-medium">End session</span> when you&apos;re done — your
+          gap profile takes 30-60 seconds to compute.
         </p>
       </footer>
     </div>
