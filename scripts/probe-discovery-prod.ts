@@ -78,14 +78,15 @@ async function main() {
   console.log(`[${ts()}] logged in, at ${page.url()}`);
 
   console.log(`[${ts()}] navigating to /onboarding`);
-  await page.goto(`${PROD_URL}/onboarding`, { waitUntil: "networkidle" });
+  await page.goto(`${PROD_URL}/onboarding`, { waitUntil: "domcontentloaded" });
 
   const startBtn = page.getByRole("button", { name: /start discovery session|connecting/i });
   await startBtn.waitFor({ state: "visible", timeout: 10_000 });
   console.log(`[${ts()}] start button visible`);
 
-  // Force-wait for React hydration to attach handlers.
-  await page.waitForTimeout(2_500);
+  // NOTE: deliberately NO hydration wait — we want to verify the fix
+  // (button disabled until React mounts) prevents pre-hydration no-ops.
+  // The Playwright click() will retry until the button is enabled.
 
   // Inspect the button: does it have a React fiber + onClick?
   const fiberInfo = await startBtn.evaluate((el) => {

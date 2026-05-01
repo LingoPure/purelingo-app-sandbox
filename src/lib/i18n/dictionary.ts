@@ -50,6 +50,9 @@ const en: Dict = {
     "An AI-first business English platform for B2B teams in Vietnam and Southeast Asia. Voice assessment, live classes, micro-lessons, and CEFR certification — measurable outcomes, not teaching hours.",
   "home.ctaPrimary": "Get started",
   "home.ctaSecondary": "I already have an account",
+  "demo.bannerLead":
+    "This is a strategic platform demo — not the real LingoPure service.",
+  "demo.bannerCta": "Visit the real LingoPure →",
 
   // ── Login ──────────────────────────────────────────────────────────────
   "login.heading": "Welcome back",
@@ -188,6 +191,9 @@ const vi: Dict = {
     "Nền tảng tiếng Anh thương mại ưu tiên AI dành cho doanh nghiệp tại Việt Nam và Đông Nam Á. Đánh giá bằng giọng nói, lớp học trực tiếp, bài học siêu nhỏ và chứng chỉ CEFR — kết quả đo lường được, không phải số giờ giảng dạy.",
   "home.ctaPrimary": "Bắt đầu",
   "home.ctaSecondary": "Tôi đã có tài khoản",
+  "demo.bannerLead":
+    "Đây là bản demo nền tảng chiến lược — không phải dịch vụ LingoPure thật.",
+  "demo.bannerCta": "Truy cập LingoPure thật →",
 
   "login.heading": "Chào mừng trở lại",
   "login.lead": "Đăng nhập để tiếp tục hành trình học của bạn.",
@@ -326,6 +332,9 @@ const tl: Dict = {
     "AI-first business English platform para sa B2B teams sa Vietnam at Timog-Silangang Asya. Voice assessment, live classes, micro-lessons, at CEFR certification — masusukat na resulta, hindi oras ng pagtuturo.",
   "home.ctaPrimary": "Magsimula",
   "home.ctaSecondary": "Mayroon na akong account",
+  "demo.bannerLead":
+    "Ito ay isang strategic platform demo — hindi ang totoong serbisyo ng LingoPure.",
+  "demo.bannerCta": "Bisitahin ang totoong LingoPure →",
 
   "login.heading": "Maligayang pagbabalik",
   "login.lead": "Mag-sign in para ipagpatuloy ang iyong learning journey.",
@@ -399,6 +408,9 @@ const id: Dict = {
     "Platform Bahasa Inggris bisnis berbasis AI untuk tim B2B di Vietnam dan Asia Tenggara. Penilaian suara, kelas langsung, pelajaran singkat, dan sertifikasi CEFR — hasil yang terukur, bukan jam mengajar.",
   "home.ctaPrimary": "Mulai",
   "home.ctaSecondary": "Saya sudah punya akun",
+  "demo.bannerLead":
+    "Ini adalah demo platform strategis — bukan layanan LingoPure yang sebenarnya.",
+  "demo.bannerCta": "Kunjungi LingoPure asli →",
 
   "login.heading": "Selamat datang kembali",
   "login.lead": "Masuk untuk melanjutkan perjalanan belajar Anda.",
@@ -472,6 +484,9 @@ const ms: Dict = {
     "Platform Bahasa Inggeris perniagaan dipacu AI untuk pasukan B2B di Vietnam dan Asia Tenggara. Penilaian suara, kelas langsung, pelajaran ringkas, dan sijil CEFR — hasil yang boleh diukur, bukan jam pengajaran.",
   "home.ctaPrimary": "Mula",
   "home.ctaSecondary": "Saya sudah ada akaun",
+  "demo.bannerLead":
+    "Ini adalah demo platform strategik — bukan perkhidmatan LingoPure sebenar.",
+  "demo.bannerCta": "Lawati LingoPure sebenar →",
 
   "login.heading": "Selamat kembali",
   "login.lead": "Log masuk untuk meneruskan perjalanan pembelajaran anda.",
@@ -545,6 +560,8 @@ const zh: Dict = {
     "面向越南及东南亚 B2B 团队的 AI 优先商务英语平台。语音评估、直播课、微课程,以及 CEFR 认证 —— 衡量结果,而非授课时长。",
   "home.ctaPrimary": "开始",
   "home.ctaSecondary": "我已有账户",
+  "demo.bannerLead": "这是一个战略平台演示 — 并非真正的 LingoPure 服务。",
+  "demo.bannerCta": "访问真正的 LingoPure →",
 
   "login.heading": "欢迎回来",
   "login.lead": "登录以继续你的学习之旅。",

@@ -4,7 +4,9 @@
 project_id = "nbvprbaumwmfczsfcyrv"
 
 [auth]
-site_url = "http://localhost:3000"
+# Production URL — used as the base for confirmation / magic-link / password-reset
+# emails. localhost stays in additional_redirect_urls so dev signup still works.
+site_url = "https://lingo-pure-ai.vercel.app"
 additional_redirect_urls = [
   "http://localhost:3000",
   "http://localhost:3000/**",
