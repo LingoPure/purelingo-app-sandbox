@@ -2,9 +2,9 @@
  * Server-rendered SVG radar showing the 6 LingoPure sub-skill scores against
  * the student's target. No client deps. Pure geometry.
  *
- *   - 5 concentric polygons at 20/40/60/80/100
+ *   - 5 concentric polygons at 200/400/600/800/1000
  *   - solid filled polygon for the current scores
- *   - dashed polygon for the target line (default 80)
+ *   - dashed polygon for the target line (default 800)
  *   - outer labels for each axis
  */
 
@@ -15,7 +15,8 @@ type Props = {
   size?: number;
 };
 
-const RING_VALUES = [20, 40, 60, 80, 100];
+const RING_VALUES = [200, 400, 600, 800, 1000];
+const SCALE_MAX = 1000;
 
 function polarPoint(cx: number, cy: number, radius: number, angleRad: number) {
   return {
@@ -37,7 +38,7 @@ export function GapRadar({ skills, size = 360 }: Props) {
   const buildPolygon = (values: number[]) =>
     values
       .map((v, i) => {
-        const r = (Math.max(0, Math.min(100, v)) / 100) * maxRadius;
+        const r = (Math.max(0, Math.min(SCALE_MAX, v)) / SCALE_MAX) * maxRadius;
         const p = polarPoint(cx, cy, r, angles[i]);
         return `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
       })
@@ -56,7 +57,7 @@ export function GapRadar({ skills, size = 360 }: Props) {
     >
       {/* Concentric reference rings */}
       {RING_VALUES.map((v) => {
-        const r = (v / 100) * maxRadius;
+        const r = (v / SCALE_MAX) * maxRadius;
         const points = angles
           .map((a) => {
             const p = polarPoint(cx, cy, r, a);
@@ -114,7 +115,7 @@ export function GapRadar({ skills, size = 360 }: Props) {
       {hasAnyScore &&
         skills.map((s, i) => {
           if (s.score == null) return null;
-          const r = (s.score / 100) * maxRadius;
+          const r = (s.score / SCALE_MAX) * maxRadius;
           const p = polarPoint(cx, cy, r, angles[i]);
           return (
             <circle

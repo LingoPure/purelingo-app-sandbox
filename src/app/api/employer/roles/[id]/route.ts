@@ -17,7 +17,7 @@ const PatchSchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   description: z.string().trim().max(2000).nullable().optional(),
   baselines: z
-    .record(z.string(), z.number().int().min(0).max(100))
+    .record(z.string(), z.number().int().min(0).max(1000))
     .optional(),
   isArchived: z.boolean().optional(),
 });

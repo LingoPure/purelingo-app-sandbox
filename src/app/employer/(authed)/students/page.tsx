@@ -77,9 +77,9 @@ export default async function StudentsPage() {
                       className={
                         s.averageScore === null
                           ? "font-mono text-mute"
-                          : s.averageScore >= 80
+                          : s.averageScore >= 800
                           ? "font-mono text-ai-green"
-                          : s.averageScore >= 60
+                          : s.averageScore >= 600
                           ? "font-mono text-amber"
                           : "font-mono text-coral"
                       }

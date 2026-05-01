@@ -15,11 +15,11 @@ import { createClient } from "@/lib/supabase/server";
 import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
 
 const FLOORS: Record<string, number> = {
-  A2: 20,
-  B1: 40,
-  B2: 60,
-  C1: 80,
-  C2: 90,
+  A2: 200,
+  B1: 400,
+  B2: 600,
+  C1: 800,
+  C2: 900,
 };
 
 export async function POST(

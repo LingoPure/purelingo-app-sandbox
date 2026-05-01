@@ -268,7 +268,7 @@ export function summariseCohort(students: CohortStudent[]): CohortSummary {
 
   const studentsWithAverage = students.filter((s) => s.averageScore !== null);
   const atTarget = studentsWithAverage.filter(
-    (s) => (s.averageScore ?? 0) >= 80
+    (s) => (s.averageScore ?? 0) >= 800
   ).length;
   const pctAtTarget =
     studentsWithAverage.length > 0
@@ -347,7 +347,7 @@ export async function loadCoverageByRole(): Promise<RoleCoverage[]> {
 
   return roles.map((r) => {
     const baselineBySkill = Object.fromEntries(
-      SKILL_KEYS.map((k) => [k, 80])
+      SKILL_KEYS.map((k) => [k, 800])
     ) as Record<SkillKey, number>;
     for (const b of baselines) {
       if (b.role_id !== r.id) continue;

@@ -33,7 +33,7 @@ export default async function EmployerOverviewPage() {
     key: k,
     label: SKILL_LABEL[k] ?? k,
     score: summary.averageBySkill[k],
-    target: 80,
+    target: 800,
   }));
 
   const topStudents = [...students]
@@ -72,7 +72,7 @@ export default async function EmployerOverviewPage() {
           accent
         />
         <MetricTile
-          label="At target (≥80)"
+          label="At target (≥800)"
           value={`${summary.pctAtTarget}%`}
           accent
         />
@@ -154,7 +154,7 @@ export default async function EmployerOverviewPage() {
                   <div className="flex items-center gap-3">
                     {s.averageScore !== null && (
                       <span className="font-mono text-xs text-mute">
-                        avg {s.averageScore}/100
+                        avg {s.averageScore}/1000
                       </span>
                     )}
                     <Link

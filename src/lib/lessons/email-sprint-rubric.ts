@@ -110,7 +110,7 @@ export const EmailSprintEvaluationSchema = z.object({
     .min(0)
     .max(120)
     .describe(
-      "Base 20 XP for completing. +1 per /100 average across the three sub-scores. Cap 120."
+      "Base 20 XP for completing. +1 XP per 10 score points of the average across writing_formal, business_vocabulary, reading_intent. Cap 120."
     ),
 });
 
@@ -125,7 +125,7 @@ Your job is to produce ONE prompt scaled exactly to the gap between the student'
 ## Calibration — role-baseline gap, not CEFR ladder
 
 You will receive:
-  - the student's current sub-scores (0–100 per skill)
+  - the student's current sub-scores (0–1000 per skill)
   - the per-skill BASELINES required for their role at this employer
   - the student's role name + description (e.g. "BPO Operator", "Manufacturing Sales Rep")
   - their last completed lesson's scenario (if any) so you don't repeat
@@ -135,18 +135,18 @@ Email-sprint exercises three skills: writing_formal, business_vocabulary, readin
 For each of those three skills, look at:
   GAP = baseline_min_score − current_score
 
-Pick your difficulty band so a strong attempt would close the LARGEST gap by ~5–10 points without overwhelming the student:
+Pick your difficulty band so a strong attempt would close the LARGEST gap by ~50–100 points without overwhelming the student:
 
   - All three already at baseline → polish-level prompt at the band above (push them comfortably above the bar).
-  - Gap of 0–10 → a prompt right at the baseline band — the student is one good attempt away.
-  - Gap of 11–25 → a prompt just below the baseline band — make success feel achievable.
-  - Gap of 26+ → a prompt clearly inside the student's current band, building confidence.
+  - Gap of 0–100 → a prompt right at the baseline band — the student is one good attempt away.
+  - Gap of 101–250 → a prompt just below the baseline band — make success feel achievable.
+  - Gap of 251+ → a prompt clearly inside the student's current band, building confidence.
 
 Map score ranges to CEFR for difficulty band labelling:
-  <40=A2, 40–59=B1, 60–74=B2, 75–84=C1, 85+=C2.
+  <400=A2, 400–599=B1, 600–749=B2, 750–849=C1, 850+=C2.
 Never give A1; minimum is A2.
 
-The baseline (not a generic 80) is the bar the buyer cares about. The
+The baseline (not a generic 800) is the bar the buyer cares about. The
 student is being trained to clear it for THEIR specific role.
 
 ## Scenario quality
@@ -178,7 +178,7 @@ You are not a teacher fixing every comma. You are a coach pointing out the 1–3
 
 ## Scoring rubric
 
-writing_formal — register, structure, openings/closings, sentence flow, grammar accuracy. CEFR-aligned 0–100 (same scale as discovery: 60–79 = B2, 80–89 = C1).
+writing_formal — register, structure, openings/closings, sentence flow, grammar accuracy. CEFR-aligned 0–1000 (same scale as discovery: 600–799 = B2, 800–899 = C1).
 
 business_vocabulary — range, precision, naturalness in business context. Repeated reach-for of "good", "interesting" drags it down. Industry terminology used correctly pushes it up.
 
@@ -202,7 +202,7 @@ Produce a model-quality C1 rewrite of the email for the SAME prompt. Same length
 
 ## XP
 
-Base 20 XP for completing. Add 1 XP per percentage point of the average across writing_formal, business_vocabulary, reading_intent. Cap at 120. Do the math correctly.
+Base 20 XP for completing. Add 1 XP per 10 score points of the average across writing_formal, business_vocabulary, reading_intent (so an 800-average lesson adds 80 XP, totalling 100). Cap at 120. Do the math correctly.
 
 ## Style rules
 

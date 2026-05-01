@@ -30,9 +30,9 @@ export const SubScore = z.object({
     .number()
     .int()
     .min(0)
-    .max(100)
+    .max(1000)
     .describe(
-      "0–100 estimate of the student's current ability for this sub-skill, where 80 is the LingoPure target floor for B2."
+      "0–1000 estimate of the student's current ability for this sub-skill, where 800 is the LingoPure target floor for low C1 / strong B2."
     ),
   cefr_band: z
     .enum(CEFR_BANDS)
@@ -99,16 +99,19 @@ You are not a teacher. You are not coaching the student. You are scoring them, a
 
 ## SCALE
 
-All sub-scores are 0–100 and map to CEFR bands as follows:
+All sub-scores are 0–1000 and map to CEFR bands as follows:
 
-  0–19   → A1 (beginner)
-  20–39  → A2 (elementary)
-  40–59  → B1 (intermediate — can hold a basic business conversation, mistakes are frequent)
-  60–79  → B2 (upper-intermediate — comfortable in most business situations, nuance still missed)
-  80–89  → C1 (advanced — handles negotiation, abstraction, idiom)
-  90–100 → C2 (proficient — indistinguishable from a strong native business communicator)
+  0–199    → A1 (beginner)
+  200–399  → A2 (elementary)
+  400–599  → B1 (intermediate — can hold a basic business conversation, mistakes are frequent)
+  600–799  → B2 (upper-intermediate — comfortable in most business situations, nuance still missed)
+  800–899  → C1 (advanced — handles negotiation, abstraction, idiom)
+  900–1000 → C2 (proficient — indistinguishable from a strong native business communicator)
 
-LingoPure's default target is 80 (low C1 / strong B2). Treat 80 as the target line.
+LingoPure's default target is 800 (low C1 / strong B2). Treat 800 as the target line.
+
+The 1000-point scale gives meaningful resolution — a 30-point movement is a real,
+visible improvement. Don't snap to round numbers. 647, 712, 858 are all fine.
 
 ## THE 6 SUB-SKILLS
 
@@ -143,9 +146,9 @@ LingoPure's default target is 80 (low C1 / strong B2). Treat 80 as the target li
 
 These fictional examples anchor the scale — calibrate against them:
 
-- A student who runs ad-hoc meetings in English, occasionally pauses for a word, gets the Sarah/Mark hint immediately, and writes a polished follow-up email: low C1 (~82 across the board).
-- A student who manages international clients via email, can hold a 10-minute call, gets the gist of Sarah/Mark but says "she wants to talk again", uses simple but correct vocabulary, and dreads presentations: B2 reading + B2 speaking + B1 writing (~65 / 65 / 55).
-- A student who answers questions but mostly with simple sentences, takes Sarah's email at face value ("she's confirming the meeting"), and avoids any presentation work: B1 across the board (~50).
-- A student who hesitates often, asks Aria to repeat questions, and answers in short Vietnamese-flavoured fragments: A2 to low B1 (~30–45).
+- A student who runs ad-hoc meetings in English, occasionally pauses for a word, gets the Sarah/Mark hint immediately, and writes a polished follow-up email: low C1 (~820 across the board).
+- A student who manages international clients via email, can hold a 10-minute call, gets the gist of Sarah/Mark but says "she wants to talk again", uses simple but correct vocabulary, and dreads presentations: B2 reading + B2 speaking + B1 writing (~650 / 650 / 550).
+- A student who answers questions but mostly with simple sentences, takes Sarah's email at face value ("she's confirming the meeting"), and avoids any presentation work: B1 across the board (~500).
+- A student who hesitates often, asks Aria to repeat questions, and answers in short Vietnamese-flavoured fragments: A2 to low B1 (~300–450).
 
 You will receive the transcript as a JSON array of {role, message} turns. Score the student. Return ONLY the JSON object that matches the provided schema.`;

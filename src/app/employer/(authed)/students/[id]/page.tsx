@@ -29,7 +29,7 @@ export default async function StudentDetailPage({
     key: k,
     label: SKILL_LABEL[k] ?? k,
     score: student.scores[k],
-    target: 80,
+    target: 800,
   }));
 
   const hasAnyScore = radarSkills.some((s) => s.score != null);

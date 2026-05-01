@@ -260,16 +260,16 @@ function BaselineField({
       <input
         type="range"
         min={0}
-        max={100}
-        step={1}
+        max={1000}
+        step={10}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-navy"
       />
       <div className="mt-1 flex justify-between font-mono text-[9px] uppercase tracking-[0.2em] text-mute">
         <span>0</span>
-        <span>50</span>
-        <span>100</span>
+        <span>500</span>
+        <span>1000</span>
       </div>
       {hint && <p className="mt-2 text-xs text-mute">{hint}</p>}
     </div>

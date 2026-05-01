@@ -104,7 +104,7 @@ export const SpeakScoreEvaluationSchema = z.object({
     .min(0)
     .max(120)
     .describe(
-      "Base 20 XP for completing. +1 per /100 average across the scored sub-skills (presentation_delivery counts only if non-null). Cap 120."
+      "Base 20 XP for completing. +1 XP per 10 score points of the average across the scored sub-skills (presentation_delivery counts only if non-null). Cap 120."
     ),
 });
 
@@ -119,7 +119,7 @@ The student records a 45–120 second spoken response. Your prompt must give the
 ## Calibration — role-baseline gap, not CEFR ladder
 
 You will receive:
-  - the student's current sub-scores (0–100 per skill)
+  - the student's current sub-scores (0–1000 per skill)
   - the per-skill BASELINES required for their role at this employer
   - the student's role name + description
   - their last completed speak_score scenario (if any)
@@ -129,15 +129,15 @@ Speak-score exercises three skills: speaking_fluency, business_vocabulary, prese
 For each relevant skill, look at:
   GAP = baseline_min_score − current_score
 
-Pick your difficulty band so a strong attempt would close the LARGEST gap by ~5–10 points without overwhelming the student:
+Pick your difficulty band so a strong attempt would close the LARGEST gap by ~50–100 points without overwhelming the student:
 
   - All at baseline → polish-level prompt at the band above (push them comfortably above the bar).
-  - Gap of 0–10 → prompt right at the baseline band — they are one good attempt away.
-  - Gap of 11–25 → prompt just below the baseline band — make success feel achievable.
-  - Gap of 26+ → prompt clearly inside the student's current band, building confidence.
+  - Gap of 0–100 → prompt right at the baseline band — they are one good attempt away.
+  - Gap of 101–250 → prompt just below the baseline band — make success feel achievable.
+  - Gap of 251+ → prompt clearly inside the student's current band, building confidence.
 
 Map score ranges to CEFR for difficulty band labelling:
-  <40=A2, 40–59=B1, 60–74=B2, 75–84=C1, 85+=C2.
+  <400=A2, 400–599=B1, 600–749=B2, 750–849=C1, 850+=C2.
 Never give A1; minimum is A2.
 
 ## Two flavours of prompt
@@ -171,7 +171,7 @@ The transcript comes from automatic speech recognition (gpt-4o-transcribe). It w
 
 ## Scoring rubric
 
-speaking_fluency — pace, hesitation, recovery, sentence-level flow. CEFR-aligned 0–100 (60–79 = B2, 80–89 = C1).
+speaking_fluency — pace, hesitation, recovery, sentence-level flow. CEFR-aligned 0–1000 (600–799 = B2, 800–899 = C1).
 business_vocabulary — range, precision, naturalness in business context. Repeated reach-for of "good", "okay", "things" drags it down. Industry terms used correctly push it up.
 presentation_delivery — score this ONLY if expects_structure was true on the prompt. Otherwise return null. When scored: judge structure (opening / point / wrap), clarity of arguments, signposting ("first... second... finally..."), and authority of delivery.
 
@@ -193,7 +193,7 @@ Produce a C1-quality model spoken response to the SAME prompt. Same length range
 
 ## XP
 
-Base 20 XP. Add 1 XP per percentage point of the average across the scored sub-skills (presentation_delivery counts only if non-null). Cap at 120.
+Base 20 XP. Add 1 XP per 10 score points of the average across the scored sub-skills (presentation_delivery counts only if non-null) — so an 800-average response adds 80 XP, totalling 100. Cap at 120.
 
 ## Style rules
 

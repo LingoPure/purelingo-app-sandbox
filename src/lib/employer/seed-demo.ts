@@ -106,12 +106,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "Voice + chat support for English-speaking clients. Listening- and speaking-heavy; writing register is functional rather than formal.",
     baselines: {
-      speaking_fluency: 65,
-      listening_comprehension: 70,
-      writing_formal: 55,
-      reading_intent: 65,
-      business_vocabulary: 60,
-      presentation_delivery: 50,
+      speaking_fluency: 650,
+      listening_comprehension: 700,
+      writing_formal: 550,
+      reading_intent: 650,
+      business_vocabulary: 600,
+      presentation_delivery: 500,
     },
   },
   {
@@ -120,12 +120,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "B2B sales into export markets — negotiation, proposal writing, customer presentations. Even balance across skills, with emphasis on speaking and reading-intent.",
     baselines: {
-      speaking_fluency: 75,
-      listening_comprehension: 70,
-      writing_formal: 70,
-      reading_intent: 75,
-      business_vocabulary: 75,
-      presentation_delivery: 70,
+      speaking_fluency: 750,
+      listening_comprehension: 700,
+      writing_formal: 700,
+      reading_intent: 750,
+      business_vocabulary: 750,
+      presentation_delivery: 700,
     },
   },
   {
@@ -134,12 +134,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "Engineering, documentation, technical support. Writing-formal and reading-intent dominate; speaking is for internal calls more than client-facing presentations.",
     baselines: {
-      speaking_fluency: 70,
-      listening_comprehension: 70,
-      writing_formal: 80,
-      reading_intent: 80,
-      business_vocabulary: 75,
-      presentation_delivery: 65,
+      speaking_fluency: 700,
+      listening_comprehension: 700,
+      writing_formal: 800,
+      reading_intent: 800,
+      business_vocabulary: 750,
+      presentation_delivery: 650,
     },
   },
 ];
@@ -152,12 +152,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "sales_rep",
     overallCefr: "B1",
     scores: {
-      speaking_fluency: 58,
-      listening_comprehension: 55,
-      writing_formal: 48,
-      reading_intent: 62,
-      business_vocabulary: 52,
-      presentation_delivery: 45,
+      speaking_fluency: 580,
+      listening_comprehension: 550,
+      writing_formal: 480,
+      reading_intent: 620,
+      business_vocabulary: 520,
+      presentation_delivery: 450,
     },
     summary:
       "Solid conversational B1 with strong reading-intent — Hà gets the subtext in business email. Biggest gap is formal writing and presentation delivery; she dreads quarterly slots and falls back on simple vocabulary under pressure.",
@@ -181,9 +181,9 @@ const DEMO_COHORT: DemoStudent[] = [
     },
     daysSinceDiscovery: 11,
     lessons: [
-      { type: "email_sprint", daysAgo: 9, xpAwarded: 64, scoreAfter: 56 },
-      { type: "speak_score", daysAgo: 6, xpAwarded: 71, scoreAfter: 60 },
-      { type: "email_sprint", daysAgo: 2, xpAwarded: 78, scoreAfter: 64 },
+      { type: "email_sprint", daysAgo: 9, xpAwarded: 64, scoreAfter: 560 },
+      { type: "speak_score", daysAgo: 6, xpAwarded: 71, scoreAfter: 600 },
+      { type: "email_sprint", daysAgo: 2, xpAwarded: 78, scoreAfter: 640 },
     ],
     classes: [
       { daysAgo: 8, teacherName: "Coach Linh", attended: true, durationMins: 45, scored: true },
@@ -215,12 +215,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "tech_specialist",
     overallCefr: "B2",
     scores: {
-      speaking_fluency: 70,
-      listening_comprehension: 68,
-      writing_formal: 62,
-      reading_intent: 72,
-      business_vocabulary: 65,
-      presentation_delivery: 60,
+      speaking_fluency: 700,
+      listening_comprehension: 680,
+      writing_formal: 620,
+      reading_intent: 720,
+      business_vocabulary: 650,
+      presentation_delivery: 600,
     },
     summary:
       "Steady B2 across the board with no glaring weakness. Minh is one polish-pass away from leading regional ops calls in English without code-switching back to Vietnamese for the difficult moments.",
@@ -240,8 +240,8 @@ const DEMO_COHORT: DemoStudent[] = [
     },
     daysSinceDiscovery: 17,
     lessons: [
-      { type: "email_sprint", daysAgo: 14, xpAwarded: 81, scoreAfter: 67 },
-      { type: "speak_score", daysAgo: 4, xpAwarded: 85, scoreAfter: 70 },
+      { type: "email_sprint", daysAgo: 14, xpAwarded: 81, scoreAfter: 670 },
+      { type: "speak_score", daysAgo: 4, xpAwarded: 85, scoreAfter: 700 },
     ],
     classes: [
       { daysAgo: 12, teacherName: "Coach Anh", attended: true, durationMins: 50, scored: true },
@@ -270,12 +270,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "bpo_operator",
     overallCefr: "B1",
     scores: {
-      speaking_fluency: 50,
-      listening_comprehension: 48,
-      writing_formal: 42,
-      reading_intent: 55,
-      business_vocabulary: 45,
-      presentation_delivery: 40,
+      speaking_fluency: 500,
+      listening_comprehension: 480,
+      writing_formal: 420,
+      reading_intent: 550,
+      business_vocabulary: 450,
+      presentation_delivery: 400,
     },
     summary:
       "Junior BD rep with high ambition and a steep gap. Anh is highly motivated — completed five lessons in the first week — but the C1 target before next year's regional summit is aggressive.",
@@ -293,11 +293,11 @@ const DEMO_COHORT: DemoStudent[] = [
     },
     daysSinceDiscovery: 7,
     lessons: [
-      { type: "email_sprint", daysAgo: 6, xpAwarded: 51, scoreAfter: 44 },
-      { type: "speak_score", daysAgo: 5, xpAwarded: 48, scoreAfter: 42 },
-      { type: "email_sprint", daysAgo: 4, xpAwarded: 56, scoreAfter: 48 },
-      { type: "speak_score", daysAgo: 2, xpAwarded: 62, scoreAfter: 51 },
-      { type: "email_sprint", daysAgo: 1, xpAwarded: 65, scoreAfter: 53 },
+      { type: "email_sprint", daysAgo: 6, xpAwarded: 51, scoreAfter: 440 },
+      { type: "speak_score", daysAgo: 5, xpAwarded: 48, scoreAfter: 420 },
+      { type: "email_sprint", daysAgo: 4, xpAwarded: 56, scoreAfter: 480 },
+      { type: "speak_score", daysAgo: 2, xpAwarded: 62, scoreAfter: 510 },
+      { type: "email_sprint", daysAgo: 1, xpAwarded: 65, scoreAfter: 530 },
     ],
     classes: [],
     // The keen one: daily lessons → strong streak. 200 discovery + 282 lessons.
@@ -320,12 +320,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "sales_rep",
     overallCefr: "C1",
     scores: {
-      speaking_fluency: 86,
-      listening_comprehension: 84,
-      writing_formal: 82,
-      reading_intent: 88,
-      business_vocabulary: 80,
-      presentation_delivery: 84,
+      speaking_fluency: 860,
+      listening_comprehension: 840,
+      writing_formal: 820,
+      reading_intent: 880,
+      business_vocabulary: 800,
+      presentation_delivery: 840,
     },
     summary:
       "Already comfortably above the B2 target. Hương's value from LingoPure is polish — idiom precision, executive-tone register — not gap-closing. Recommend graduating her to Phase 2 advanced track.",
@@ -343,13 +343,13 @@ const DEMO_COHORT: DemoStudent[] = [
     },
     daysSinceDiscovery: 21,
     lessons: [
-      { type: "speak_score", daysAgo: 13, xpAwarded: 102, scoreAfter: 85 },
+      { type: "speak_score", daysAgo: 13, xpAwarded: 102, scoreAfter: 850 },
     ],
     classes: [
       { daysAgo: 19, teacherName: "Coach Anh", attended: true, durationMins: 50, scored: true },
     ],
     certs: [
-      { level: "B2", status: "passed", daysAgo: 9, overallScore: 84 },
+      { level: "B2", status: "passed", daysAgo: 9, overallScore: 840 },
     ],
     // The star: 200 discovery + 102 lesson + 100 class + 500 cert pass = 902.
     // Inactive recently — graduated to advanced track.
@@ -360,7 +360,7 @@ const DEMO_COHORT: DemoStudent[] = [
       {
         rule: "cert_pushable",
         subject: "Ready for C1?",
-        body: "Your B2 came in at 84 — well above floor. Want to schedule the C1 exam? Reply if you'd like a custom plan.",
+        body: "Your B2 came in at 840 — well above floor. Want to schedule the C1 exam? Reply if you'd like a custom plan.",
         daysAgo: 4,
       },
       {
@@ -378,12 +378,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "bpo_operator",
     overallCefr: "A2",
     scores: {
-      speaking_fluency: 38,
-      listening_comprehension: 32,
-      writing_formal: 28,
-      reading_intent: 35,
-      business_vocabulary: 30,
-      presentation_delivery: 25,
+      speaking_fluency: 380,
+      listening_comprehension: 320,
+      writing_formal: 280,
+      reading_intent: 350,
+      business_vocabulary: 300,
+      presentation_delivery: 250,
     },
     summary:
       "Newly onboarded; struggling at A2/low-B1. Việt's day-to-day is mostly Vietnamese with occasional English over WhatsApp to suppliers. Reaching B2 inside 6 months will require 4–5 lessons per week minimum plus weekly classes.",
@@ -750,15 +750,15 @@ export async function seedDemoCohort(
           result_json:
             c.status === "passed"
               ? {
-                  overall_score: c.overallScore ?? 80,
+                  overall_score: c.overallScore ?? 800,
                   floor:
                     c.level === "C1"
-                      ? 80
+                      ? 800
                       : c.level === "B2"
-                      ? 60
+                      ? 600
                       : c.level === "B1"
-                      ? 40
-                      : 20,
+                      ? 400
+                      : 200,
                   passed: true,
                   note: `Passed ${c.level}.`,
                   simulated: true,
@@ -787,11 +787,11 @@ function daysAgo(days: number): Date {
 }
 
 function cefrFromScore(score: number): "A1" | "A2" | "B1" | "B2" | "C1" | "C2" {
-  if (score < 20) return "A1";
-  if (score < 40) return "A2";
-  if (score < 60) return "B1";
-  if (score < 80) return "B2";
-  if (score < 90) return "C1";
+  if (score < 200) return "A1";
+  if (score < 400) return "A2";
+  if (score < 600) return "B1";
+  if (score < 800) return "B2";
+  if (score < 900) return "C1";
   return "C2";
 }
 

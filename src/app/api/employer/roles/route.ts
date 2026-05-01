@@ -13,7 +13,7 @@ import { SKILL_KEYS } from "@/lib/scoring/rubric";
 const BodySchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).optional().nullable(),
-  baselines: z.record(z.string(), z.number().int().min(0).max(100)),
+  baselines: z.record(z.string(), z.number().int().min(0).max(1000)),
 });
 
 export async function POST(request: NextRequest) {

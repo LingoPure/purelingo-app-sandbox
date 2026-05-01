@@ -179,7 +179,7 @@ export default async function DashboardPage() {
       key: s.key,
       label: s.label,
       score: row?.score ?? null,
-      target: row?.target ?? 80,
+      target: row?.target ?? 800,
     };
   });
 
@@ -258,7 +258,7 @@ export default async function DashboardPage() {
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-serif text-xl text-navy">Skills</h2>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-            Target line: {student?.target_level ?? "B2"} · 80
+            Target line: {student?.target_level ?? "B2"} · 800
           </span>
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[360px_1fr]">
@@ -274,7 +274,7 @@ export default async function DashboardPage() {
                   key={s.key}
                   label={s.label}
                   score={row?.score ?? null}
-                  target={row?.target ?? 80}
+                  target={row?.target ?? 800}
                   band={sub?.cefr_band}
                   evidence={sub?.evidence}
                 />
@@ -420,13 +420,15 @@ function ScoreBar({
   band?: CefrBand;
   evidence?: string;
 }) {
-  const pct = score ?? 0;
+  const SCALE_MAX = 1000;
+  const pct = score == null ? 0 : (score / SCALE_MAX) * 100;
+  const targetPct = (target / SCALE_MAX) * 100;
   const colour =
     score == null
       ? "bg-cream"
-      : score < 40
+      : score < 400
       ? "bg-coral"
-      : score < 70
+      : score < 700
       ? "bg-amber"
       : "bg-ai-green";
 
@@ -442,7 +444,7 @@ function ScoreBar({
           {target > 0 && (
             <div
               className="absolute top-0 h-2 w-px bg-navy"
-              style={{ left: `${target}%` }}
+              style={{ left: `${targetPct}%` }}
               aria-label={`Target ${target}`}
             />
           )}

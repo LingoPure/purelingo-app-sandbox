@@ -7,7 +7,7 @@
  * sub-score is OPTIONAL here. Claude returns a score only where there's
  * meaningful evidence; the rest stay null and we don't write them.
  *
- * Same 0–100 → CEFR scale as discovery, same conservative-when-unsure rule.
+ * Same 0–1000 → CEFR scale as discovery, same conservative-when-unsure rule.
  */
 
 import { z } from "zod";
@@ -54,16 +54,16 @@ You are not assessing the lesson. You are not assessing the coach. You are scori
 
 ## SCALE
 
-Same as discovery. 0–100 → CEFR:
+Same as discovery. 0–1000 → CEFR:
 
-  0–19   → A1
-  20–39  → A2
-  40–59  → B1
-  60–79  → B2
-  80–89  → C1
-  90–100 → C2
+  0–199    → A1
+  200–399  → A2
+  400–599  → B1
+  600–799  → B2
+  800–899  → C1
+  900–1000 → C2
 
-LingoPure's default target is 80.
+LingoPure's default target is 800.
 
 ## THE 6 SUB-SKILLS — when to score, when to leave null
 

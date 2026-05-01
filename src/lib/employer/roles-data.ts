@@ -38,7 +38,7 @@ export type RoleDetail = {
   assignedStudents: AssignedStudent[];
 };
 
-const DEFAULT_BASELINE = 70;
+const DEFAULT_BASELINE = 700;
 
 export function emptyBaselines(): RoleBaselines {
   return Object.fromEntries(

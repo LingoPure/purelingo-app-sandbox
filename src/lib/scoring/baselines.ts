@@ -3,10 +3,10 @@
  *
  * Resolution order:
  *   1. The student's role's role_baselines rows (if assigned + populated)
- *   2. Flat 80 fallback for any skill the role hasn't defined yet
+ *   2. Flat 800 fallback for any skill the role hasn't defined yet
  *      (or when the student isn't assigned to a role at all)
  *
- * The 80 fallback is intentional — pre-role data, hand-loaded students,
+ * The 800 fallback is intentional — pre-role data, hand-loaded students,
  * and demo accounts all need a sensible default. Roles are an additive
  * layer; the system still works without them.
  *
@@ -20,7 +20,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SKILL_KEYS, type SkillKey } from "./rubric";
 
-export const FLAT_FALLBACK_TARGET = 80;
+export const FLAT_FALLBACK_TARGET = 800;
 
 export type Baselines = Record<SkillKey, number>;
 
@@ -31,7 +31,7 @@ function flatBaselines(): Baselines {
 }
 
 /**
- * Load the per-skill baseline for one student. Returns flat 80s if the
+ * Load the per-skill baseline for one student. Returns flat 800s if the
  * student has no role assigned. Cheap (one indexed lookup on students.role_id
  * + one PK lookup on role_baselines).
  */
@@ -46,7 +46,7 @@ export async function loadBaselinesForStudent(
     .maybeSingle();
   if (studentErr) {
     console.error(
-      "[baselines] students lookup failed, using flat 80:",
+      "[baselines] students lookup failed, using flat 800:",
       studentErr.message
     );
     return flatBaselines();
@@ -71,7 +71,7 @@ export async function loadBaselinesForRole(
     .eq("role_id", roleId);
   if (error) {
     console.error(
-      "[baselines] role_baselines lookup failed, using flat 80:",
+      "[baselines] role_baselines lookup failed, using flat 800:",
       error.message
     );
     return flatBaselines();
