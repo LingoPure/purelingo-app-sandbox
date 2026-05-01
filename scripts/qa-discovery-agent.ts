@@ -49,6 +49,35 @@ type SimulateResponse = {
   };
 };
 
+// Pre-call dynamic variables — must match what the runtime client passes
+// in src/app/(app)/onboarding/discovery-session.tsx. ConvAI does not
+// recurse when substituting variables, so we pre-interpolate the
+// nested placeholders in first_message_localized here, exactly as the
+// runtime does.
+const QA_STUDENT = {
+  user_id: "qa-fixture-user-id",
+  student_name: "Nguyen Thi Lan",
+  native_language: "Vietnamese",
+  role_name: "Senior Account Manager",
+  role_description:
+    "Manages international client accounts, negotiates pricing, runs weekly reporting and presentations.",
+  target_level: "B2",
+  employer_name: "Vinh Hoan Export Co.",
+};
+const QA_FIRST_MESSAGE_TEMPLATE =
+  "Hi {{student_name}}! I'm Aria from Lingo Pure. I've got the basics already — {{role_name}} at {{employer_name}}, aiming for {{target_level}}. We'll spend the next twenty or so minutes getting to know what's behind that — what your week actually looks like, where English shows up. No right or wrong answers. To start: walk me through what a typical day in your role looks like.";
+const QA_DYNAMIC_VARIABLES: Record<string, string> = {
+  ...QA_STUDENT,
+  first_message_localized: QA_FIRST_MESSAGE_TEMPLATE.replaceAll(
+    "{{student_name}}",
+    QA_STUDENT.student_name
+  )
+    .replaceAll("{{role_name}}", QA_STUDENT.role_name)
+    .replaceAll("{{employer_name}}", QA_STUDENT.employer_name)
+    .replaceAll("{{target_level}}", QA_STUDENT.target_level)
+    .replaceAll("{{native_language}}", QA_STUDENT.native_language),
+};
+
 async function simulate(
   apiKey: string,
   agentId: string
@@ -68,6 +97,7 @@ async function simulate(
             language: "en",
             prompt: { prompt: PERSONA_PROMPT },
           },
+          dynamic_variables: QA_DYNAMIC_VARIABLES,
         },
       }),
     }

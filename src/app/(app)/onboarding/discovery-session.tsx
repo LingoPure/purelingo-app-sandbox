@@ -139,19 +139,37 @@ export function DiscoverySession({
     }
     const j = (await r.json()) as { token?: string; signedUrl?: string };
 
+    // The dictionary's first message contains nested {{student_name}},
+    // {{role_name}}, etc. ConvAI's variable substitution doesn't
+    // recurse — it expands {{first_message_localized}} once and uses
+    // the result verbatim. So we pre-substitute here in JS before
+    // passing it; the system prompt itself still uses the un-nested
+    // {{role_name}} etc. variables directly and works fine.
+    const safeStudentName = studentName ?? "";
+    const safeRoleName = roleName ?? "";
+    const safeRoleDesc = roleDescription ?? "";
+    const safeTargetLevel = targetLevel ?? "";
+    const safeEmployerName = employerName ?? "";
+    const interpolatedFirstMessage = firstMessageLocalized
+      .replaceAll("{{student_name}}", safeStudentName)
+      .replaceAll("{{role_name}}", safeRoleName)
+      .replaceAll("{{employer_name}}", safeEmployerName)
+      .replaceAll("{{target_level}}", safeTargetLevel)
+      .replaceAll("{{native_language}}", nativeLanguage);
+
     const dynamicVariables = {
       user_id: userId,
-      student_name: studentName ?? "",
+      student_name: safeStudentName,
       native_language: nativeLanguage,
-      first_message_localized: firstMessageLocalized,
+      first_message_localized: interpolatedFirstMessage,
       // Pre-call context — Aria reads these via {{role_name}} etc in
       // the system prompt so she knows who she's talking to before the
       // first turn. Empty strings are safe substitutions; the prompt
       // gracefully degrades when a value is missing.
-      role_name: roleName ?? "",
-      role_description: roleDescription ?? "",
-      target_level: targetLevel ?? "",
-      employer_name: employerName ?? "",
+      role_name: safeRoleName,
+      role_description: safeRoleDesc,
+      target_level: safeTargetLevel,
+      employer_name: safeEmployerName,
     };
 
     const triggerFallback = (logHint: string): boolean => {
