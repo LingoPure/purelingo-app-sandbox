@@ -1,6 +1,7 @@
 "use client";
 
 import { Conversation } from "@elevenlabs/client";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
@@ -326,27 +327,33 @@ export function DiscoverySession({
   // user can hear Aria but has no way to stop her.
   if (status !== "idle") {
     const showSpeakingIndicator = status === "connected";
+    const ringClass =
+      status === "connecting"
+        ? "ring-gold animate-pulse"
+        : isSpeaking
+        ? "ring-coral animate-pulse"
+        : "ring-ai-green";
     return (
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-3">
-          <span
-            className={`inline-block h-3 w-3 rounded-full ${
-              status === "connecting"
-                ? "bg-gold animate-pulse"
-                : isSpeaking
-                ? "bg-coral animate-pulse"
-                : "bg-ai-green"
-            }`}
-            aria-hidden
+        <div
+          className={`relative h-28 w-28 overflow-hidden rounded-full ring-4 ring-offset-2 ring-offset-paper ${ringClass}`}
+        >
+          <Image
+            src="/kira-avatar.jpg"
+            alt="Aria, your discovery consultant"
+            fill
+            sizes="112px"
+            className="object-cover"
+            priority
           />
-          <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-            {status === "connecting"
-              ? "Connecting..."
-              : showSpeakingIndicator && isSpeaking
-              ? "Aria is speaking"
-              : "Listening..."}
-          </span>
         </div>
+        <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
+          {status === "connecting"
+            ? "Connecting..."
+            : showSpeakingIndicator && isSpeaking
+            ? "Aria is speaking"
+            : "Listening..."}
+        </span>
         <button
           type="button"
           onClick={stop}
@@ -369,6 +376,17 @@ export function DiscoverySession({
           {error}
         </p>
       )}
+      <div className="relative mb-1 h-20 w-20 overflow-hidden rounded-full ring-2 ring-cream ring-offset-2 ring-offset-paper">
+        <Image
+          src="/kira-avatar.jpg"
+          alt="Aria, your discovery consultant"
+          fill
+          sizes="80px"
+          className="object-cover"
+          priority
+        />
+      </div>
+      <p className="font-serif text-sm text-navy">Meet Aria</p>
       <button
         type="button"
         onClick={start}

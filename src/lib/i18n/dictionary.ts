@@ -106,7 +106,7 @@ const en: Dict = {
   // Aria's literal first words on the call. Keep it warm, end with a clear
   // switch to English so the rest of the protocol can run unchanged.
   "discovery.firstMessage":
-    "Hi! I'm Aria from LingoPure. We're going to spend the next twenty or so minutes getting to know you — your role, your work, where English fits in. There are no right answers here, just a real conversation. To start, can you tell me your full name and the company you work for?",
+    "Hi! I'm Aria from Lingo Pure. We're going to spend the next twenty or so minutes getting to know you — your role, your work, where English fits in. There are no right answers here, just a real conversation. To start, can you tell me your full name and the company you work for?",
 
   // ── Dashboard chrome ───────────────────────────────────────────────────
   "dash.kicker": "Student dashboard",
@@ -254,7 +254,7 @@ const vi: Dict = {
     "Aria sẽ chào bạn bằng ngôn ngữ của bạn trong khoảng 30 giây, sau đó chuyển sang tiếng Anh để đánh giá.",
 
   "discovery.firstMessage":
-    "Xin chào! Tôi là Aria từ LingoPure. Chúng ta sẽ dành khoảng hai mươi phút tới để tìm hiểu về bạn — vai trò, công việc, và tiếng Anh xuất hiện ở đâu trong cuộc sống của bạn. Không có câu trả lời đúng hay sai, chỉ là một cuộc trò chuyện thực sự. Bây giờ chúng ta hãy chuyển sang tiếng Anh — hãy nói tự nhiên và đừng lo lắng về lỗi. To start, can you tell me your full name and the company you work for?",
+    "Xin chào! Tôi là Aria từ Lingo Pure. Chúng ta sẽ dành khoảng hai mươi phút tới để tìm hiểu về bạn — vai trò, công việc, và tiếng Anh xuất hiện ở đâu trong cuộc sống của bạn. Không có câu trả lời đúng hay sai, chỉ là một cuộc trò chuyện thực sự. Bây giờ chúng ta hãy chuyển sang tiếng Anh — hãy nói tự nhiên và đừng lo lắng về lỗi. To start, can you tell me your full name and the company you work for?",
 
   "dash.kicker": "Bảng điều khiển học viên",
   "dash.heading": "Hồ sơ khoảng cách của bạn",
@@ -404,7 +404,7 @@ const tl: Dict = {
     "Ba-batiin ka ni Aria sa iyong wika nang ~30 segundo, pagkatapos ay lilipat sa English para sa assessment.",
 
   "discovery.firstMessage":
-    "Kumusta! Ako si Aria mula sa LingoPure. Magbubuhos tayo ng dalawampung minuto para makilala ka — ang iyong tungkulin, trabaho, at kung saan pumapasok ang English sa iyong buhay. Walang tama o maling sagot dito, isang tunay na pag-uusap lang. Ngayon, magsa-shift na tayo sa English — magsalita lang nang natural at huwag mag-alala sa mga pagkakamali. To start, can you tell me your full name and the company you work for?",
+    "Kumusta! Ako si Aria mula sa Lingo Pure. Magbubuhos tayo ng dalawampung minuto para makilala ka — ang iyong tungkulin, trabaho, at kung saan pumapasok ang English sa iyong buhay. Walang tama o maling sagot dito, isang tunay na pag-uusap lang. Ngayon, magsa-shift na tayo sa English — magsalita lang nang natural at huwag mag-alala sa mga pagkakamali. To start, can you tell me your full name and the company you work for?",
 
   "emp.brandTag": "Employer",
   "emp.navOverview": "Pangkalahatang-ideya",
@@ -483,7 +483,7 @@ const id: Dict = {
     "Aria akan menyapa Anda dalam bahasa Anda selama ~30 detik, lalu beralih ke Bahasa Inggris untuk penilaian.",
 
   "discovery.firstMessage":
-    "Halo! Saya Aria dari LingoPure. Kita akan menghabiskan sekitar dua puluh menit untuk mengenal Anda — peran, pekerjaan, dan di mana bahasa Inggris berperan dalam hidup Anda. Tidak ada jawaban benar atau salah di sini, hanya percakapan yang nyata. Sekarang mari kita beralih ke bahasa Inggris — bicaralah secara alami dan jangan khawatir tentang kesalahan. To start, can you tell me your full name and the company you work for?",
+    "Halo! Saya Aria dari Lingo Pure. Kita akan menghabiskan sekitar dua puluh menit untuk mengenal Anda — peran, pekerjaan, dan di mana bahasa Inggris berperan dalam hidup Anda. Tidak ada jawaban benar atau salah di sini, hanya percakapan yang nyata. Sekarang mari kita beralih ke bahasa Inggris — bicaralah secara alami dan jangan khawatir tentang kesalahan. To start, can you tell me your full name and the company you work for?",
 
   "emp.brandTag": "Perusahaan",
   "emp.navOverview": "Ikhtisar",
@@ -562,7 +562,7 @@ const ms: Dict = {
     "Aria akan menyapa anda dalam bahasa anda selama ~30 saat, kemudian bertukar ke Bahasa Inggeris untuk penilaian.",
 
   "discovery.firstMessage":
-    "Helo! Saya Aria daripada LingoPure. Kita akan menghabiskan kira-kira dua puluh minit untuk mengenali anda — peranan, kerja, dan di mana bahasa Inggeris terlibat dalam hidup anda. Tiada jawapan betul atau salah di sini, hanya perbualan yang sebenar. Sekarang mari kita beralih kepada bahasa Inggeris — bercakaplah secara semula jadi dan jangan risau tentang kesilapan. To start, can you tell me your full name and the company you work for?",
+    "Helo! Saya Aria daripada Lingo Pure. Kita akan menghabiskan kira-kira dua puluh minit untuk mengenali anda — peranan, kerja, dan di mana bahasa Inggeris terlibat dalam hidup anda. Tiada jawapan betul atau salah di sini, hanya perbualan yang sebenar. Sekarang mari kita beralih kepada bahasa Inggeris — bercakaplah secara semula jadi dan jangan risau tentang kesilapan. To start, can you tell me your full name and the company you work for?",
 
   "emp.brandTag": "Majikan",
   "emp.navOverview": "Gambaran keseluruhan",
@@ -638,7 +638,7 @@ const zh: Dict = {
     "Aria 会用你的语言问候你大约 30 秒,然后切换到英语进行评估。",
 
   "discovery.firstMessage":
-    "你好！我是来自 LingoPure 的 Aria。接下来大约二十分钟，我想了解一下你 — 你的角色、工作，以及英语在你生活中的位置。这里没有对错答案，只是一次真实的对话。现在我们切换到英语 — 自然地说话，不用担心犯错。To start, can you tell me your full name and the company you work for?",
+    "你好！我是来自 Lingo Pure 的 Aria。接下来大约二十分钟，我想了解一下你 — 你的角色、工作，以及英语在你生活中的位置。这里没有对错答案，只是一次真实的对话。现在我们切换到英语 — 自然地说话，不用担心犯错。To start, can you tell me your full name and the company you work for?",
 
   "emp.brandTag": "雇主",
   "emp.navOverview": "概览",
