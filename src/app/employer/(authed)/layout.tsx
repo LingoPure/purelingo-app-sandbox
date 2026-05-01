@@ -42,6 +42,8 @@ export default async function EmployerAuthedLayout({
               <NavLink href="/employer">{t("emp.navOverview")}</NavLink>
               <NavLink href="/employer/students">{t("emp.navStudents")}</NavLink>
               <NavLink href="/employer/roles">Roles</NavLink>
+              <NavLink href="/employer/teachers">Teachers</NavLink>
+              <NavLink href="/employer/departments">Departments</NavLink>
             </nav>
           </div>
           <div className="flex items-center gap-3">
