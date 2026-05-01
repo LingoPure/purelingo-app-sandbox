@@ -22,7 +22,9 @@ export default async function LoginPage({
       )}
 
       <form action={login} className="flex flex-col gap-4">
-        <input type="hidden" name="redirectTo" value={redirectTo ?? "/dashboard"} />
+        {/* Empty default so the action falls through to admin-aware routing —
+            employer admins → /employer, everyone else → /dashboard. */}
+        <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
         <Field label={t("login.fieldEmail")} name="email" type="email" required />
         <Field
           label={t("login.fieldPassword")}
