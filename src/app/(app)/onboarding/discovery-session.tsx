@@ -1,7 +1,7 @@
 "use client";
 
-import { ConversationProvider, useConversation } from "@elevenlabs/react";
-import { useEffect, useState } from "react";
+import { Conversation } from "@elevenlabs/client";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   userId: string;
@@ -13,21 +13,12 @@ type Props = {
   headphonesNote: string;
 };
 
-/**
- * @elevenlabs/react ≥1.3 splits state into a ConversationProvider + hooks.
- * `useConversation()` MUST be called inside a `<ConversationProvider>` —
- * the page component wraps the inner widget so the provider is mounted
- * exactly once around the SDK consumer.
- */
-export function DiscoverySession(props: Props) {
-  return (
-    <ConversationProvider>
-      <DiscoverySessionInner {...props} />
-    </ConversationProvider>
-  );
-}
+type Status = "idle" | "connecting" | "connected";
 
-function DiscoverySessionInner({
+// Bypasses @elevenlabs/react ConversationProvider whose React state never
+// syncs after startSession resolves (SDK issue #663, affects Chrome + Safari).
+// We drive status manually from the client-level callbacks instead.
+export function DiscoverySession({
   userId,
   studentName,
   nativeLanguage,
@@ -36,46 +27,30 @@ function DiscoverySessionInner({
   connectingLabel,
   headphonesNote,
 }: Props) {
+  const [status, setStatus] = useState<Status>("idle");
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Block clicks until React has hydrated — the SSR'd button is a static
-  // shell with no handler attached. A click in that window is a silent
-  // no-op (which is what users were reporting in prod).
   const [hydrated, setHydrated] = useState(false);
+  const convRef = useRef<Conversation | null>(null);
+
   useEffect(() => {
     setHydrated(true);
   }, []);
 
-  const conversation = useConversation({
-    onConnect: () => {
-      console.info("[discovery] connected");
-      setError(null);
-    },
-    onDisconnect: () => {
-      console.info("[discovery] disconnected");
-    },
-    onError: (err: unknown) => {
-      console.error("[discovery] error", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    },
-  });
-
   const start = async () => {
     setError(null);
+    setStatus("connecting");
     console.info("[discovery] start clicked", { userId, nativeLanguage });
+
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (mErr) {
       console.error("[discovery] mic denied", mErr);
       setError("Microphone access denied. Please allow it and try again.");
+      setStatus("idle");
       return;
     }
 
-    // Fetch the WebRTC conversation token from our own backend. This keeps
-    // the ElevenLabs API key server-side and gives us one observable place
-    // to log connection failures (Vercel runtime). Pass the token to the
-    // SDK instead of an agentId — same WebRTC LiveKit transport, just
-    // pre-authorized.
     let conversationToken: string;
     try {
       const r = await fetch("/api/convai/token");
@@ -96,13 +71,15 @@ function DiscoverySessionInner({
       console.info("[discovery] token fetched");
     } catch (tErr) {
       console.error("[discovery] token fetch failed", tErr);
-      const detail = tErr instanceof Error ? tErr.message : String(tErr);
-      setError(`Failed to authorise session — ${detail}`);
+      setError(
+        `Failed to authorise session — ${tErr instanceof Error ? tErr.message : String(tErr)}`
+      );
+      setStatus("idle");
       return;
     }
 
     try {
-      await conversation.startSession({
+      const conv = await Conversation.startSession({
         conversationToken,
         dynamicVariables: {
           user_id: userId,
@@ -110,7 +87,29 @@ function DiscoverySessionInner({
           native_language: nativeLanguage,
           first_message_localized: firstMessageLocalized,
         },
+        onConnect: () => {
+          console.info("[discovery] connected");
+          setStatus("connected");
+          setError(null);
+        },
+        onDisconnect: () => {
+          console.info("[discovery] disconnected");
+          setStatus("idle");
+          setIsSpeaking(false);
+          convRef.current = null;
+        },
+        onError: (err: unknown) => {
+          console.error("[discovery] error", err);
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(msg);
+          setStatus("idle");
+          convRef.current = null;
+        },
+        onModeChange: ({ mode }: { mode: string }) => {
+          setIsSpeaking(mode === "speaking");
+        },
       });
+      convRef.current = conv;
       console.info("[discovery] startSession resolved");
     } catch (e) {
       console.error("[discovery] startSession threw", e);
@@ -121,15 +120,13 @@ function DiscoverySessionInner({
           ? JSON.stringify(e)
           : String(e);
       setError(`Failed to start session — ${detail}`);
+      setStatus("idle");
     }
   };
 
   const stop = () => {
-    void conversation.endSession();
+    void convRef.current?.endSession();
   };
-
-  const status = conversation.status;
-  const isSpeaking = conversation.isSpeaking;
 
   if (status === "connected") {
     return (
@@ -173,14 +170,10 @@ function DiscoverySessionInner({
         disabled={!hydrated || status === "connecting"}
         className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-60"
       >
-        {!hydrated
-          ? connectingLabel
-          : status === "connecting"
-          ? connectingLabel
-          : startLabel}
+        {!hydrated || status === "connecting" ? connectingLabel : startLabel}
       </button>
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute/70">
-        status: {status ?? "idle"}
+        status: {status}
       </p>
       <p className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
         {headphonesNote}
