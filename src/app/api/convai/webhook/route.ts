@@ -7,6 +7,7 @@ import {
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
+import { awardXp } from "@/lib/gamification/award";
 
 // Map the package's generic table-name interface onto our public.convai_* schema.
 const TABLES: TableNames = {
@@ -142,6 +143,8 @@ export async function POST(request: NextRequest) {
         conversationId: payload.data.conversation_id,
         transcript: payload.data.transcript,
       });
+      // Award gamification XP for completing the discovery session.
+      await awardXp(userId, "discoveryComplete", supabase);
       console.log(
         `[convai/webhook] scored ${userId} — overall ${result.scores.overall_cefr}, ` +
           `target ${result.scores.target_level}, ` +

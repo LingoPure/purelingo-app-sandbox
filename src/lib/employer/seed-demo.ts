@@ -54,6 +54,11 @@ type DemoStudent = {
   lessons: DemoLesson[];
   classes: DemoClass[];
   certs?: DemoCert[];
+  // Gamification: deliberate "story" numbers so the cohort dashboard
+  // shows visible variety (high streak, broken streak, top XP, etc.).
+  xp: number;
+  streakDays: number;
+  lastActiveDaysAgo: number;
 };
 
 const DEMO_COHORT: DemoStudent[] = [
@@ -100,6 +105,10 @@ const DEMO_COHORT: DemoStudent[] = [
       { daysAgo: 8, teacherName: "Coach Linh", attended: true, durationMins: 45, scored: true },
       { daysAgo: 1, teacherName: "Coach Linh", attended: true, durationMins: 50, scored: false },
     ],
+    // Steady learner: discovery + 3 lessons + 2 classes = 200+213+200 = 613.
+    xp: 613,
+    streakDays: 4,
+    lastActiveDaysAgo: 1,
   },
   {
     email: "minh.tran@hanoi-manuf.demo",
@@ -141,6 +150,11 @@ const DEMO_COHORT: DemoStudent[] = [
     certs: [
       { level: "B2", status: "scheduled", daysAgo: 1 },
     ],
+    // Methodical: 200 discovery + 166 lessons + 100 class = 466. Streak broke
+    // after the weekend deep-dive; will rebuild this week.
+    xp: 466,
+    streakDays: 0,
+    lastActiveDaysAgo: 4,
   },
   {
     email: "anh.le@bizdev-sg.demo",
@@ -178,6 +192,10 @@ const DEMO_COHORT: DemoStudent[] = [
       { type: "email_sprint", daysAgo: 1, xpAwarded: 65, scoreAfter: 53 },
     ],
     classes: [],
+    // The keen one: daily lessons → strong streak. 200 discovery + 282 lessons.
+    xp: 482,
+    streakDays: 6,
+    lastActiveDaysAgo: 1,
   },
   {
     email: "huong.pham@vingroup-hr.demo",
@@ -216,6 +234,11 @@ const DEMO_COHORT: DemoStudent[] = [
     certs: [
       { level: "B2", status: "passed", daysAgo: 9, overallScore: 84 },
     ],
+    // The star: 200 discovery + 102 lesson + 100 class + 500 cert pass = 902.
+    // Inactive recently — graduated to advanced track.
+    xp: 902,
+    streakDays: 0,
+    lastActiveDaysAgo: 9,
   },
   {
     email: "viet.doan@industrial-eq.demo",
@@ -247,6 +270,10 @@ const DEMO_COHORT: DemoStudent[] = [
     daysSinceDiscovery: 3,
     lessons: [],
     classes: [],
+    // Just discovered, no lessons yet. Pure baseline 200 XP, no streak built.
+    xp: 200,
+    streakDays: 1,
+    lastActiveDaysAgo: 3,
   },
 ];
 
@@ -311,6 +338,9 @@ export async function seedDemoCohort(
 
     // 2. Update students row (the row was auto-created by the
     //    handle_new_user trigger when auth user was created).
+    const lastActiveDate = daysAgo(demo.lastActiveDaysAgo)
+      .toISOString()
+      .slice(0, 10);
     const { error: studentErr } = await supabase
       .from("students")
       .update({
@@ -318,6 +348,9 @@ export async function seedDemoCohort(
         email: demo.email,
         target_level: demo.targetLevel,
         discovery_status: "complete",
+        xp: demo.xp,
+        streak_days: demo.streakDays,
+        last_active_date: lastActiveDate,
       })
       .eq("id", userId);
     if (studentErr) {

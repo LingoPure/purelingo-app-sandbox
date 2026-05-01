@@ -7,8 +7,11 @@ import {
   CertificationCard,
   type LatestCert,
 } from "@/components/dashboard/certification-card";
+import { GamificationCard } from "@/components/dashboard/gamification-card";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import { tierForTarget } from "@/lib/gamification/rules";
+import { getDict } from "@/lib/i18n";
 
 const SKILLS = [
   { key: "speaking_fluency", label: "Speaking" },
@@ -76,7 +79,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("students")
-      .select("id, name, discovery_status, target_level")
+      .select("id, name, discovery_status, target_level, xp, streak_days")
       .eq("id", user!.id)
       .maybeSingle(),
     supabase
@@ -166,6 +169,12 @@ export default async function DashboardPage() {
   const discoveryComplete = student?.discovery_status === "complete";
   const hasScores = scores.length > 0;
 
+  const { lang, t } = await getDict();
+  const studentXp = (student as { xp?: number | null } | null)?.xp ?? 0;
+  const studentStreak =
+    (student as { streak_days?: number | null } | null)?.streak_days ?? 0;
+  const studentTier = tierForTarget(student?.target_level);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
@@ -177,6 +186,21 @@ export default async function DashboardPage() {
         </div>
         {hasScores && <RescoreButton />}
       </div>
+
+      <GamificationCard
+        xp={studentXp}
+        streakDays={studentStreak}
+        tier={studentTier}
+        lang={lang}
+        labels={{
+          title: t("gamify.title"),
+          xp: t("gamify.xp"),
+          streak: t("gamify.streak"),
+          streakUnit: t("gamify.streakUnit"),
+          streakUnitOne: t("gamify.streakUnitOne"),
+          cta: t("gamify.cta"),
+        }}
+      />
 
       {!discoveryComplete && (
         <div className="rounded-lg border border-gold/30 bg-gold/5 p-6">

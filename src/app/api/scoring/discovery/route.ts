@@ -20,6 +20,7 @@ import {
   scoreDiscoverySession,
   type TranscriptTurn,
 } from "@/lib/scoring/score-discovery";
+import { awardXp } from "@/lib/gamification/award";
 
 function adminSupabase() {
   const url =
@@ -77,11 +78,14 @@ export async function POST(_request: NextRequest) {
   }
 
   try {
-    const result = await scoreDiscoverySession(adminSupabase(), {
+    const admin = adminSupabase();
+    const result = await scoreDiscoverySession(admin, {
       studentId: user.id,
       conversationId: session.convai_conversation_id,
       transcript,
     });
+    // First-time discovery completion is a big XP moment for the demo.
+    await awardXp(user.id, "discoveryComplete", admin);
     return NextResponse.json({
       ok: true,
       overall_cefr: result.scores.overall_cefr,

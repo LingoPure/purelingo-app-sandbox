@@ -24,6 +24,22 @@ test.describe("student dashboard", () => {
     ).toBeVisible();
   });
 
+  test("/dashboard shows the gamification card with XP + tier", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard");
+    // Card kicker
+    await expect(page.getByText(/^progress$/i).first()).toBeVisible();
+    // XP label
+    await expect(page.getByText(/xp earned/i).first()).toBeVisible();
+    // A tier chip — bronze / silver / gold (a fresh test student's target
+    // defaults to B2 → silver, but we accept any of the three to keep the
+    // assertion robust against target_level changes).
+    await expect(
+      page.getByText(/(bronze|silver|gold) tier/i).first()
+    ).toBeVisible();
+  });
+
   test("/onboarding renders without crashing", async ({ page }) => {
     const response = await page.goto("/onboarding");
     expect(response?.status()).toBeLessThan(500);

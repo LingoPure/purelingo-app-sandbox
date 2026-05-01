@@ -29,6 +29,7 @@ export type CohortStudent = {
   scores: Record<SkillKey, number | null>;
   averageScore: number | null;
   totalXp: number;
+  streakDays: number;
   lessonsCompleted: number;
   classesCompleted: number;
   lastActivityAt: string | null;
@@ -61,6 +62,8 @@ type StudentRow = {
   target_level: string | null;
   discovery_status: string | null;
   created_at: string;
+  xp: number | null;
+  streak_days: number | null;
 };
 
 type ScoreRow = { student_id: string; skill: string; score: number | null };
@@ -106,7 +109,9 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
     await Promise.all([
       supabase
         .from("students")
-        .select("id, name, email, target_level, discovery_status, created_at")
+        .select(
+          "id, name, email, target_level, discovery_status, created_at, xp, streak_days"
+        )
         .order("created_at", { ascending: false })
         .returns<StudentRow[]>(),
       supabase
@@ -146,10 +151,12 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
     }
 
     const studentLessons = lessons.filter((l) => l.student_id === s.id);
-    const totalXp = studentLessons.reduce(
-      (sum, l) => sum + (l.xp_awarded ?? 0),
-      0
-    );
+    // students.xp is the source of truth — covers discovery completion, lesson
+    // submits, certification passes, etc. Fall back to summed lesson XP for
+    // any pre-migration row that hasn't been touched yet.
+    const totalXp =
+      s.xp ?? studentLessons.reduce((sum, l) => sum + (l.xp_awarded ?? 0), 0);
+    const streakDays = s.streak_days ?? 0;
     const lessonsCompleted = studentLessons.filter(
       (l) => l.status === "completed"
     ).length;
@@ -206,6 +213,7 @@ export async function loadCohortStudents(): Promise<CohortStudent[]> {
       scores: subScores,
       averageScore,
       totalXp,
+      streakDays,
       lessonsCompleted,
       classesCompleted,
       lastActivityAt,

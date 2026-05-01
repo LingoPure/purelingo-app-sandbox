@@ -87,7 +87,19 @@ export default async function StudentsPage() {
                   </Td>
                   <Td>{s.lessonsCompleted}</Td>
                   <Td>{s.classesCompleted}</Td>
-                  <Td>{s.totalXp}</Td>
+                  <Td>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-mono text-sm">{s.totalXp}</span>
+                      {s.streakDays > 0 && (
+                        <span
+                          className="font-mono text-[10px] text-mute"
+                          title={`${s.streakDays}-day streak`}
+                        >
+                          🔥{s.streakDays}
+                        </span>
+                      )}
+                    </div>
+                  </Td>
                   <Td>
                     {s.lastActivityAt
                       ? new Date(s.lastActivityAt).toLocaleDateString("en-AU", {

@@ -111,6 +111,10 @@ export async function submitEmailSprint(
     throw new Error(`micro_lessons update failed: ${lessonUpdateErr.message}`);
   }
 
+  // 6. Bump the student's lifetime XP + streak (best-effort).
+  const { awardXp } = await import("@/lib/gamification/award");
+  await awardXp(input.studentId, evaluation.xp_awarded, supabase);
+
   return {
     evaluation,
     xpAwarded: evaluation.xp_awarded,

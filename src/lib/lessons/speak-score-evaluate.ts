@@ -123,6 +123,10 @@ export async function submitSpeakScore(
     .eq("student_id", input.studentId);
   if (updateErr) throw new Error(`micro_lessons update failed: ${updateErr.message}`);
 
+  // 7. Bump the student's lifetime XP + streak (best-effort).
+  const { awardXp } = await import("@/lib/gamification/award");
+  await awardXp(input.studentId, evaluation.xp_awarded, supabase);
+
   return {
     evaluation,
     transcript,
