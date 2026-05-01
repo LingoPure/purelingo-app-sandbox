@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DiscoverySession } from "./discovery-session";
 import { getDict } from "@/lib/i18n";
 import {
+  dict,
   isLanguageCode,
   languageNameOf,
   type LanguageCode,
@@ -43,6 +44,13 @@ export default async function OnboardingPage() {
   // because Aria's prompt receives it as a {{native_language}} variable.
   const ariaLang: LanguageCode = studentNativeLang ?? lang;
   const ariaLangName = languageNameOf(ariaLang);
+  // The localized first message must match ariaLang, NOT the cookie
+  // language — otherwise Aria opens in (e.g.) English while the prompt
+  // claims her native language is Vietnamese. Pull straight from the
+  // dictionary instead of going through t() which is cookie-bound.
+  const ariaDict = dict(ariaLang);
+  const firstMessageLocalized =
+    ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
 
   const dimensions: { num: string; label: string; body: string }[] = [
     { num: "1", label: t("onboarding.dim1Label"), body: t("onboarding.dim1Body") },
@@ -109,7 +117,7 @@ export default async function OnboardingPage() {
               userId={userId}
               studentName={studentName}
               nativeLanguage={ariaLangName}
-              firstMessageLocalized={t("discovery.firstMessage")}
+              firstMessageLocalized={firstMessageLocalized}
               startLabel={t("onboarding.startButton")}
               connectingLabel={t("onboarding.connecting")}
               headphonesNote={t("onboarding.headphonesNote")}
