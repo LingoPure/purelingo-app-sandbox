@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { adminSupabase } from "@/lib/employer/data";
 
 export type EmployerAdminRow = {
   authUserId: string;
@@ -22,15 +23,24 @@ export type EmployerAdminRow = {
 
 /**
  * Returns the admin row for the given user, or null if they're not an
- * employer admin. Uses an authenticated client (RLS enforces that a user
- * can only read their own employer_admins row), so safe to call from any
- * server context that has a user-scoped supabase client.
+ * employer admin.
+ *
+ * Uses the SERVICE-ROLE client deliberately. The user-scoped client
+ * relies on auth.uid() being visible to RLS, but cookies set inside the
+ * login server action aren't always picked up by a SELECT in the same
+ * request — a known supabase/ssr timing gotcha. Since we're already
+ * server-side and explicitly passing the user id we want to look up,
+ * service-role is the right tool: no auth context needed, no RLS race.
+ *
+ * The supabase argument is kept for API compatibility but ignored — it
+ * was only used for the previous user-scoped query.
  */
 export async function loadEmployerAdmin(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   userId: string
 ): Promise<EmployerAdminRow | null> {
-  const { data, error } = await supabase
+  const svc = adminSupabase();
+  const { data, error } = await svc
     .from("employer_admins")
     .select("auth_user_id, employer_id, admin_role")
     .eq("auth_user_id", userId)
