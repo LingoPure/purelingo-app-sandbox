@@ -1,7 +1,7 @@
 "use client";
 
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   agentId: string;
@@ -37,6 +37,13 @@ function DiscoverySessionInner({
   headphonesNote,
 }: Props) {
   const [error, setError] = useState<string | null>(null);
+  // Block clicks until React has hydrated — the SSR'd button is a static
+  // shell with no handler attached. A click in that window is a silent
+  // no-op (which is what users were reporting in prod).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -131,10 +138,14 @@ function DiscoverySessionInner({
       <button
         type="button"
         onClick={start}
-        disabled={status === "connecting"}
+        disabled={!hydrated || status === "connecting"}
         className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-60"
       >
-        {status === "connecting" ? connectingLabel : startLabel}
+        {!hydrated
+          ? connectingLabel
+          : status === "connecting"
+          ? connectingLabel
+          : startLabel}
       </button>
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute/70">
         status: {status ?? "idle"}
