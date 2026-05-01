@@ -52,10 +52,15 @@ type DemoNudge = {
   daysAgo: number;
 };
 
+type RoleKey = "bpo_operator" | "sales_rep" | "tech_specialist";
+
 type DemoStudent = {
   email: string;
   name: string;
   targetLevel: "A2" | "B1" | "B2" | "C1" | "C2";
+  // Role assignment within the demo employer. The role's baselines
+  // become the per-skill targets on this student's gap_scores rows.
+  roleKey: RoleKey;
   scores: Record<SkillKey, number>;
   overallCefr: "A2" | "B1" | "B2" | "C1" | "C2";
   summary: string;
@@ -74,11 +79,77 @@ type DemoStudent = {
   nudges?: DemoNudge[];
 };
 
+// ─────────────────────────────────────────────────────────────────────
+// Demo employer + roles. All five demo students belong to this employer
+// so the per-role coverage rollup has something coherent to render.
+// ─────────────────────────────────────────────────────────────────────
+const DEMO_EMPLOYER = {
+  name: "Acme Pacific BPO (demo)",
+  contactEmail: "lnd@acme-pacific.demo",
+  defaultTargetLevel: "B2" as const,
+};
+
+type DemoRole = {
+  key: RoleKey;
+  name: string;
+  description: string;
+  baselines: Record<SkillKey, number>;
+};
+
+// Three role archetypes spanning the buyer story. Baselines were chosen
+// so the cohort produces a credible "starting state" for the rollup —
+// some roles 0% covered, one role partially covered.
+const DEMO_ROLES: DemoRole[] = [
+  {
+    key: "bpo_operator",
+    name: "BPO Operator",
+    description:
+      "Voice + chat support for English-speaking clients. Listening- and speaking-heavy; writing register is functional rather than formal.",
+    baselines: {
+      speaking_fluency: 65,
+      listening_comprehension: 70,
+      writing_formal: 55,
+      reading_intent: 65,
+      business_vocabulary: 60,
+      presentation_delivery: 50,
+    },
+  },
+  {
+    key: "sales_rep",
+    name: "Manufacturing Sales Rep",
+    description:
+      "B2B sales into export markets — negotiation, proposal writing, customer presentations. Even balance across skills, with emphasis on speaking and reading-intent.",
+    baselines: {
+      speaking_fluency: 75,
+      listening_comprehension: 70,
+      writing_formal: 70,
+      reading_intent: 75,
+      business_vocabulary: 75,
+      presentation_delivery: 70,
+    },
+  },
+  {
+    key: "tech_specialist",
+    name: "Technical Specialist",
+    description:
+      "Engineering, documentation, technical support. Writing-formal and reading-intent dominate; speaking is for internal calls more than client-facing presentations.",
+    baselines: {
+      speaking_fluency: 70,
+      listening_comprehension: 70,
+      writing_formal: 80,
+      reading_intent: 80,
+      business_vocabulary: 75,
+      presentation_delivery: 65,
+    },
+  },
+];
+
 const DEMO_COHORT: DemoStudent[] = [
   {
     email: "ha.nguyen@vinhhoan-export.demo",
     name: "Nguyễn Thị Hà",
     targetLevel: "B2",
+    roleKey: "sales_rep",
     overallCefr: "B1",
     scores: {
       speaking_fluency: 58,
@@ -141,6 +212,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "minh.tran@hanoi-manuf.demo",
     name: "Trần Văn Minh",
     targetLevel: "B2",
+    roleKey: "tech_specialist",
     overallCefr: "B2",
     scores: {
       speaking_fluency: 70,
@@ -195,6 +267,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "anh.le@bizdev-sg.demo",
     name: "Lê Hoàng Anh",
     targetLevel: "C1",
+    roleKey: "bpo_operator",
     overallCefr: "B1",
     scores: {
       speaking_fluency: 50,
@@ -244,6 +317,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "huong.pham@vingroup-hr.demo",
     name: "Phạm Thu Hương",
     targetLevel: "B2",
+    roleKey: "sales_rep",
     overallCefr: "C1",
     scores: {
       speaking_fluency: 86,
@@ -301,6 +375,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "viet.doan@industrial-eq.demo",
     name: "Đoàn Quốc Việt",
     targetLevel: "B2",
+    roleKey: "bpo_operator",
     overallCefr: "A2",
     scores: {
       speaking_fluency: 38,
@@ -342,6 +417,8 @@ type SeedResult = {
   classesWritten: number;
   certsWritten: number;
   nudgesWritten: number;
+  rolesUpserted: number;
+  baselinesUpserted: number;
 };
 
 export async function seedDemoCohort(
@@ -355,7 +432,103 @@ export async function seedDemoCohort(
     classesWritten: 0,
     certsWritten: 0,
     nudgesWritten: 0,
+    rolesUpserted: 0,
+    baselinesUpserted: 0,
   };
+
+  // 0a. Upsert the demo employer (find by name, create if absent).
+  const { data: existingEmp, error: empSelectErr } = await supabase
+    .from("employers")
+    .select("id")
+    .eq("name", DEMO_EMPLOYER.name)
+    .maybeSingle();
+  if (empSelectErr) {
+    throw new Error(`employers select failed: ${empSelectErr.message}`);
+  }
+
+  let employerId: string;
+  if (existingEmp?.id) {
+    employerId = (existingEmp as { id: string }).id;
+  } else {
+    const { data: created, error: empErr } = await supabase
+      .from("employers")
+      .insert({
+        name: DEMO_EMPLOYER.name,
+        contact_email: DEMO_EMPLOYER.contactEmail,
+        default_target_level: DEMO_EMPLOYER.defaultTargetLevel,
+      })
+      .select("id")
+      .single();
+    if (empErr || !created) {
+      throw new Error(`employer insert failed: ${empErr?.message ?? "unknown"}`);
+    }
+    employerId = (created as { id: string }).id;
+  }
+
+  // 0b. Upsert roles + baselines for the demo employer. Roles are
+  //     identified by (employer_id, name) so re-seeding overwrites
+  //     description + un-archives without creating duplicates.
+  const roleKeyToId = new Map<RoleKey, string>();
+  for (const role of DEMO_ROLES) {
+    const { data: existingRole, error: roleSelectErr } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("employer_id", employerId)
+      .eq("name", role.name)
+      .maybeSingle();
+    if (roleSelectErr) {
+      throw new Error(`roles select failed: ${roleSelectErr.message}`);
+    }
+
+    let roleId: string;
+    if (existingRole?.id) {
+      roleId = (existingRole as { id: string }).id;
+      const { error: roleUpdateErr } = await supabase
+        .from("roles")
+        .update({
+          description: role.description,
+          is_archived: false,
+        })
+        .eq("id", roleId);
+      if (roleUpdateErr) {
+        throw new Error(`roles update failed: ${roleUpdateErr.message}`);
+      }
+    } else {
+      const { data: createdRole, error: roleInsertErr } = await supabase
+        .from("roles")
+        .insert({
+          employer_id: employerId,
+          name: role.name,
+          description: role.description,
+        })
+        .select("id")
+        .single();
+      if (roleInsertErr || !createdRole) {
+        throw new Error(
+          `roles insert failed: ${roleInsertErr?.message ?? "unknown"}`
+        );
+      }
+      roleId = (createdRole as { id: string }).id;
+    }
+    roleKeyToId.set(role.key, roleId);
+    result.rolesUpserted += 1;
+
+    // Six baselines per role — upsert keyed on (role_id, skill).
+    const baselineRows = (Object.keys(role.baselines) as SkillKey[]).map(
+      (skill) => ({
+        role_id: roleId,
+        skill,
+        min_score: role.baselines[skill],
+      })
+    );
+    const { error: baselineErr } = await supabase
+      .from("role_baselines")
+      .upsert(baselineRows, { onConflict: "role_id,skill" });
+    if (baselineErr) {
+      throw new Error(`role_baselines upsert failed: ${baselineErr.message}`);
+    }
+    result.baselinesUpserted += baselineRows.length;
+  }
 
   // 1. Build email → existing-userId map (paginate, but cohort is small).
   const emailToId = new Map<string, string>();
@@ -400,6 +573,10 @@ export async function seedDemoCohort(
     const lastActiveDate = daysAgo(demo.lastActiveDaysAgo)
       .toISOString()
       .slice(0, 10);
+    const roleId = roleKeyToId.get(demo.roleKey);
+    if (!roleId) {
+      throw new Error(`unknown roleKey "${demo.roleKey}" for ${demo.email}`);
+    }
     const { error: studentErr } = await supabase
       .from("students")
       .update({
@@ -410,18 +587,27 @@ export async function seedDemoCohort(
         xp: demo.xp,
         streak_days: demo.streakDays,
         last_active_date: lastActiveDate,
+        employer_id: employerId,
+        role_id: roleId,
       })
       .eq("id", userId);
     if (studentErr) {
       throw new Error(`students update failed for ${demo.email}: ${studentErr.message}`);
     }
 
-    // 3. Upsert gap_scores (unique student_id+skill).
+    // 3. Upsert gap_scores (unique student_id+skill). The target per
+    //    skill is read from the role's baseline so the dashboard radar
+    //    + skill bars line up with the buyer's role definition rather
+    //    than a flat 80.
+    const role = DEMO_ROLES.find((r) => r.key === demo.roleKey);
+    if (!role) {
+      throw new Error(`unknown role for student ${demo.email}`);
+    }
     const scoreRows = (Object.keys(demo.scores) as SkillKey[]).map((skill) => ({
       student_id: userId,
       skill,
       score: demo.scores[skill],
-      target: 80,
+      target: role.baselines[skill],
       source: "discovery" as const,
     }));
     const { error: scoresErr } = await supabase
