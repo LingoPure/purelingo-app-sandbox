@@ -1,12 +1,16 @@
 /**
  * CSV bulk staff import.
  *
- * Format (header required):
- *   name,email,role,target_level
+ * Format (header required, columns can appear in any order):
+ *   name,email,role,target_level,native_language
  *
  * - role matches roles.name within the active employer (case-insensitive).
  *   Unknown role → row reported as error, NOT created.
  * - target_level defaults to "B2" when blank.
+ * - native_language is optional. When blank we leave the column unset on
+ *   the students row so it cascades to the employer default at read time.
+ *   Accepts a 2-letter code (e.g. "vi", "en") — no validation against the
+ *   supported set; unknown codes will simply fall through at read time.
  * - Existing auth users are looked up by email; the students row gets
  *   updated rather than duplicated. handle_new_user trigger creates the
  *   row on signup, so for new users we create the auth user and then
@@ -29,6 +33,8 @@ export type ParsedRow = {
   email: string;
   roleName: string;
   targetLevel: TargetLevel;
+  /** Lower-cased 2-letter code, or null if column omitted/blank. */
+  nativeLanguage: string | null;
 };
 
 export type ParseError = {
@@ -117,6 +123,7 @@ export function parseStaffCsv(csv: string): ParseResult {
     email: header.indexOf("email"),
     role: header.indexOf("role"),
     target_level: header.indexOf("target_level"),
+    native_language: header.indexOf("native_language"),
   };
   if (idx.name === -1 || idx.email === -1 || idx.role === -1) {
     return {
@@ -141,6 +148,11 @@ export function parseStaffCsv(csv: string): ParseResult {
     const tlRaw =
       idx.target_level === -1 ? "" : (fields[idx.target_level] ?? "").toUpperCase();
     const targetLevel = (tlRaw || "B2") as string;
+    const nlRaw =
+      idx.native_language === -1
+        ? ""
+        : (fields[idx.native_language] ?? "").toLowerCase();
+    const nativeLanguage = nlRaw || null;
 
     if (!name) {
       errors.push({ rowNumber: i + 1, raw: line, error: "Missing name" });
@@ -169,6 +181,7 @@ export function parseStaffCsv(csv: string): ParseResult {
       email,
       roleName,
       targetLevel: targetLevel as TargetLevel,
+      nativeLanguage,
     });
   }
 
@@ -217,6 +230,21 @@ async function loadRolesByLowerName(
   return new Map((data ?? []).map((r) => [r.name.toLowerCase(), r.id]));
 }
 
+async function loadEmployerDefaultLanguage(
+  supabase: SupabaseClient,
+  employerId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("employers")
+    .select("default_native_language")
+    .eq("id", employerId)
+    .maybeSingle();
+  return (
+    (data as { default_native_language?: string } | null)
+      ?.default_native_language ?? null
+  );
+}
+
 export async function importStaffRows(
   supabase: SupabaseClient,
   employerId: string,
@@ -232,16 +260,24 @@ export async function importStaffRows(
 
   if (rows.length === 0) return result;
 
-  const [emailToAuthId, rolesByName] = await Promise.all([
+  const [emailToAuthId, rolesByName, employerDefaultLang] = await Promise.all([
     loadEmailToAuthId(supabase),
     loadRolesByLowerName(supabase, employerId),
+    loadEmployerDefaultLanguage(supabase, employerId),
   ]);
 
   for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
     const chunk = rows.slice(start, start + CHUNK_SIZE);
     const outcomes = await Promise.all(
       chunk.map((row) =>
-        importOneRow(supabase, employerId, row, emailToAuthId, rolesByName)
+        importOneRow(
+          supabase,
+          employerId,
+          row,
+          emailToAuthId,
+          rolesByName,
+          employerDefaultLang
+        )
       )
     );
     for (const outcome of outcomes) {
@@ -260,7 +296,8 @@ async function importOneRow(
   employerId: string,
   row: ParsedRow,
   emailToAuthId: Map<string, string>,
-  rolesByName: Map<string, string>
+  rolesByName: Map<string, string>,
+  employerDefaultLang: string | null
 ): Promise<ImportRowOutcome> {
   const roleId = rolesByName.get(row.roleName.toLowerCase());
   if (!roleId) {
@@ -294,6 +331,7 @@ async function importOneRow(
     isNew = true;
   }
 
+  const resolvedLang = row.nativeLanguage ?? employerDefaultLang ?? null;
   const { error: studentErr } = await supabase
     .from("students")
     .update({
@@ -302,6 +340,7 @@ async function importOneRow(
       target_level: row.targetLevel,
       employer_id: employerId,
       role_id: roleId,
+      ...(resolvedLang ? { native_language: resolvedLang } : {}),
     })
     .eq("id", userId);
   if (studentErr) {

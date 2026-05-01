@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import {
+  SUPPORTED_LANGUAGES,
+  type LanguageCode,
+} from "@/lib/i18n/dictionary";
 
 type Role = { id: string; name: string };
 type StaffPick = {
@@ -9,6 +13,7 @@ type StaffPick = {
   email: string;
   role_id: string | null;
   target_level: string | null;
+  native_language: string | null;
 };
 type Outcome =
   | {
@@ -29,21 +34,33 @@ function isTargetLevel(value: string | null | undefined): value is TargetLevel {
   return TARGETS.some((t) => t === value);
 }
 
+function isLanguageCode(value: string | null | undefined): value is LanguageCode {
+  return SUPPORTED_LANGUAGES.some((l) => l.code === value);
+}
+
 export function InviteClient({
   roles,
   existingStaff,
+  defaultNativeLanguage,
 }: {
   roles: Role[];
   existingStaff: StaffPick[];
+  /** Employer-level seed for the language picker — used when no
+   *  existing employee is selected and as fallback for picks that
+   *  haven't had a language stamped yet. */
+  defaultNativeLanguage: LanguageCode;
 }) {
   // "" = "Add new" (free-form). Anything else = id of an existing
-  // student → name/email lock to their record, role/target prefill but
-  // remain editable so admin can reassign before sending.
+  // student → name/email lock to their record, role/target/lang prefill
+  // but remain editable so admin can reassign before sending.
   const [pickedStaffId, setPickedStaffId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
   const [targetLevel, setTargetLevel] = useState<TargetLevel>("B2");
+  const [nativeLanguage, setNativeLanguage] = useState<LanguageCode>(
+    defaultNativeLanguage
+  );
   const [isPending, startTransition] = useTransition();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [copied, setCopied] = useState(false);
@@ -64,6 +81,7 @@ export function InviteClient({
     setEmail("");
     setRoleId(roles[0]?.id ?? "");
     setTargetLevel("B2");
+    setNativeLanguage(defaultNativeLanguage);
   }
 
   function onPickStaff(id: string) {
@@ -75,6 +93,7 @@ export function InviteClient({
       setEmail("");
       setRoleId(roles[0]?.id ?? "");
       setTargetLevel("B2");
+      setNativeLanguage(defaultNativeLanguage);
       return;
     }
     const pick = staffById.get(id);
@@ -87,6 +106,11 @@ export function InviteClient({
         : roles[0]?.id ?? ""
     );
     setTargetLevel(isTargetLevel(pick.target_level) ? pick.target_level : "B2");
+    setNativeLanguage(
+      isLanguageCode(pick.native_language)
+        ? pick.native_language
+        : defaultNativeLanguage
+    );
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -107,6 +131,7 @@ export function InviteClient({
           email: submittedEmail,
           roleId,
           targetLevel,
+          nativeLanguage,
         }),
       });
       const data: {
@@ -260,6 +285,24 @@ export function InviteClient({
               {TARGETS.map((t) => (
                 <option key={t} value={t}>
                   {t}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label="Native language"
+            hint="Aria opens in this language for ~30s, then switches to English."
+          >
+            <select
+              value={nativeLanguage}
+              onChange={(e) =>
+                setNativeLanguage(e.target.value as LanguageCode)
+              }
+              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.flag} {l.name}
                 </option>
               ))}
             </select>

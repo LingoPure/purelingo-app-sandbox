@@ -21,13 +21,20 @@ export default async function StaffImportPage() {
         <p className="mt-2 max-w-2xl text-sm text-mute">
           Paste a CSV, or drop a file. Header row required:{" "}
           <code className="rounded bg-mist/40 px-1 font-mono text-xs">
-            name,email,role,target_level
+            name,email,role,target_level,native_language
           </code>
           . The role column must match an existing role name (case-insensitive).{" "}
           <code className="rounded bg-mist/40 px-1 font-mono text-xs">
             target_level
           </code>{" "}
-          is optional and defaults to B2.
+          is optional and defaults to B2.{" "}
+          <code className="rounded bg-mist/40 px-1 font-mono text-xs">
+            native_language
+          </code>{" "}
+          is optional too — accepts a 2-letter code (e.g.{" "}
+          <code className="rounded bg-mist/40 px-1 font-mono text-xs">vi</code>,{" "}
+          <code className="rounded bg-mist/40 px-1 font-mono text-xs">en</code>);
+          when blank, falls back to your organisation&apos;s default.
         </p>
       </div>
 

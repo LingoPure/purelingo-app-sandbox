@@ -36,6 +36,14 @@ const BodySchema = z.object({
   email: z.string().trim().email().max(254),
   roleId: z.string().uuid(),
   targetLevel: z.enum(["A2", "B1", "B2", "C1", "C2"]).default("B2"),
+  // Optional. If omitted we inherit from employers.default_native_language.
+  // Stored as a 2-letter code matching LanguageCode in i18n/dictionary.ts.
+  nativeLanguage: z
+    .string()
+    .trim()
+    .min(2)
+    .max(8)
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -171,10 +179,23 @@ export async function POST(request: NextRequest) {
 
   console.log("[invite] issued", { email, kind, hasLink: Boolean(actionLink) });
 
-  // 3. Pre-stamp the students row with employer + role + name + target.
-  //    handle_new_user creates the row on invite acceptance; if the user
-  //    already existed the row's already there. role_id is the buyer's
-  //    bar from this point forward.
+  // 3. Resolve native language: explicit body value > employer default.
+  //    Read the employer row up-front since step 4 also wants the name.
+  const { data: empRow } = await supabase
+    .from("employers")
+    .select("name, default_native_language")
+    .eq("id", employerId)
+    .maybeSingle();
+  const employerName = (empRow as { name?: string } | null)?.name ?? null;
+  const employerDefaultLang =
+    (empRow as { default_native_language?: string } | null)
+      ?.default_native_language ?? null;
+  const resolvedNativeLanguage =
+    body.nativeLanguage ?? employerDefaultLang ?? null;
+
+  // 4. Pre-stamp the students row with employer + role + name + target +
+  //    native language. handle_new_user creates the row on invite
+  //    acceptance; if the user already existed the row's already there.
   const { error: studentErr } = await supabase
     .from("students")
     .update({
@@ -183,13 +204,16 @@ export async function POST(request: NextRequest) {
       employer_id: employerId,
       role_id: body.roleId,
       target_level: body.targetLevel,
+      ...(resolvedNativeLanguage
+        ? { native_language: resolvedNativeLanguage }
+        : {}),
     })
     .eq("id", userId);
   if (studentErr) {
     return NextResponse.json({ error: studentErr.message }, { status: 500 });
   }
 
-  // 4. Email the action link via Resend. We do NOT depend on Supabase
+  // 5. Email the action link via Resend. We do NOT depend on Supabase
   //    Auth's mailer for this — for the magiclink path it never emails
   //    at all, and even for the invite path the verify-URL flow lands
   //    on /login. Resend with our own template + direct callback URL is
@@ -197,13 +221,6 @@ export async function POST(request: NextRequest) {
   let emailDelivery: "sent" | "skipped" | "failed" = "skipped";
   let emailError: string | null = null;
   if (actionLink) {
-    const { data: empRow } = await supabase
-      .from("employers")
-      .select("name")
-      .eq("id", employerId)
-      .maybeSingle();
-    const employerName =
-      (empRow as { name?: string } | null)?.name ?? null;
     const send = await sendInviteEmail({
       to: email,
       inviteeName: body.name,

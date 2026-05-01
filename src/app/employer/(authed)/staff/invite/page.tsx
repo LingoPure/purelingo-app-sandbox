@@ -1,14 +1,44 @@
 import Link from "next/link";
 import { loadRolesIndex } from "@/lib/employer/roles-data";
 import { loadEmployerStaffPicks } from "@/lib/employer/data";
+import { adminSupabase } from "@/lib/employer/data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
+import {
+  isLanguageCode,
+  type LanguageCode,
+} from "@/lib/i18n/dictionary";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { InviteClient } from "./invite-client";
 
 export const dynamic = "force-dynamic";
 
+async function loadEmployerDefaultLang(
+  employerId: string
+): Promise<LanguageCode> {
+  const { data } = await adminSupabase()
+    .from("employers")
+    .select("default_native_language")
+    .eq("id", employerId)
+    .maybeSingle();
+  const code = (data as { default_native_language?: string } | null)
+    ?.default_native_language;
+  return isLanguageCode(code) ? code : "vi";
+}
+
 export default async function InviteStaffPage() {
-  const [roles, picks] = await Promise.all([
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    // requireEmployerAdmin returned a 401/403 — we're rendering a page,
+    // not a route handler, so redirect to login instead.
+    redirect("/login?redirectTo=/employer/staff/invite");
+  }
+  const employerId = auth.admin.employerId;
+
+  const [roles, picks, defaultLang] = await Promise.all([
     loadRolesIndex(),
     loadEmployerStaffPicks(),
+    loadEmployerDefaultLang(employerId),
   ]);
 
   return (
@@ -42,6 +72,7 @@ export default async function InviteStaffPage() {
         <InviteClient
           roles={roles.map((r) => ({ id: r.id, name: r.name }))}
           existingStaff={picks}
+          defaultNativeLanguage={defaultLang}
         />
       )}
     </div>

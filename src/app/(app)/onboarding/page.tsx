@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n";
-import {
-  isLanguageCode,
-  languageNameOf,
-  type LanguageCode,
-} from "@/lib/i18n/dictionary";
+import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
 import { RoleConfirmAndStart } from "./role-confirm";
 
 export default async function OnboardingPage() {
@@ -13,11 +9,15 @@ export default async function OnboardingPage() {
   const { lang, t } = await getDict();
 
   // Pull the authenticated student's id, persisted native language,
-  // current role_id, and the employer's available roles. The discovery
-  // session needs role + native language locked in BEFORE Aria starts —
-  // otherwise the gap scorer can't calibrate against the role baseline.
+  // current role_id, and the employer's available roles. Native
+  // language now cascades: students.native_language (employer-stamped
+  // at invite or set by the employee here) → employers.default_native_
+  // language → UI lang. The discovery session needs role + native
+  // language locked in BEFORE Aria starts — otherwise the gap scorer
+  // can't calibrate against the role baseline.
   let userId: string | null = null;
   let studentNativeLang: LanguageCode | null = null;
+  let employerDefaultLang: LanguageCode | null = null;
   let initialRoleId: string | null = null;
   let employerId: string | null = null;
   let roles: { id: string; name: string; description: string | null }[] = [];
@@ -48,19 +48,30 @@ export default async function OnboardingPage() {
       employerId = studentRow?.employer_id ?? null;
 
       if (employerId) {
-        const { data: rolesData } = await supabase
-          .from("roles")
-          .select("id, name, description")
-          .eq("employer_id", employerId)
-          .eq("is_archived", false)
-          .order("name", { ascending: true });
-        roles = (rolesData ?? []) as typeof roles;
+        const [rolesRes, empRes] = await Promise.all([
+          supabase
+            .from("roles")
+            .select("id, name, description")
+            .eq("employer_id", employerId)
+            .eq("is_archived", false)
+            .order("name", { ascending: true }),
+          supabase
+            .from("employers")
+            .select("default_native_language")
+            .eq("id", employerId)
+            .maybeSingle(),
+        ]);
+        roles = (rolesRes.data ?? []) as typeof roles;
+        const empDefault = (
+          empRes.data as { default_native_language?: string } | null
+        )?.default_native_language;
+        if (isLanguageCode(empDefault)) employerDefaultLang = empDefault;
       }
     }
   }
 
-  const ariaLang: LanguageCode = studentNativeLang ?? lang;
-  const ariaLangName = languageNameOf(ariaLang);
+  const ariaLang: LanguageCode =
+    studentNativeLang ?? employerDefaultLang ?? lang;
 
   const dimensions: { num: string; label: string; body: string }[] = [
     { num: "1", label: t("onboarding.dim1Label"), body: t("onboarding.dim1Body") },
@@ -106,9 +117,9 @@ export default async function OnboardingPage() {
         <RoleConfirmAndStart
           roles={roles}
           initialRoleId={initialRoleId}
+          initialNativeLanguage={ariaLang}
           copy={{
             languageLabel: t("onboarding.languagePickerLabel"),
-            languageName: ariaLangName,
             languageExplain: t("onboarding.langExplain"),
             readyHeading: t("onboarding.readyHeading"),
             readyLead: t("onboarding.readyLead"),

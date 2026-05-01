@@ -62,21 +62,13 @@ export default async function DiscoverySessionPage() {
     user.email ||
     null;
 
-  const studentNativeLang: LanguageCode | null = isLanguageCode(
-    studentRow?.native_language
-  )
-    ? studentRow!.native_language
-    : null;
-  const ariaLang: LanguageCode = studentNativeLang ?? lang;
-  const ariaLangName = languageNameOf(ariaLang);
-  const ariaDict = dict(ariaLang);
-  const firstMessageLocalized =
-    ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
-
-  // Pre-call context for Aria: role + employer.
+  // Pre-call context for Aria: role + employer + employer-default
+  // language. The native-language fallback chain is the same as
+  // /onboarding: student row → employer default → UI lang.
   let roleName: string | null = null;
   let roleDescription: string | null = null;
   let employerName: string | null = null;
+  let employerDefaultLang: LanguageCode | null = null;
 
   if (studentRow?.role_id) {
     const { data: roleRaw } = await supabase
@@ -91,11 +83,29 @@ export default async function DiscoverySessionPage() {
   if (studentRow?.employer_id) {
     const { data: empRaw } = await supabase
       .from("employers")
-      .select("name")
+      .select("name, default_native_language")
       .eq("id", studentRow.employer_id)
       .maybeSingle();
-    employerName = (empRaw as { name?: string } | null)?.name ?? null;
+    const empRow = empRaw as
+      | { name?: string; default_native_language?: string }
+      | null;
+    employerName = empRow?.name ?? null;
+    if (isLanguageCode(empRow?.default_native_language)) {
+      employerDefaultLang = empRow!.default_native_language;
+    }
   }
+
+  const studentNativeLang: LanguageCode | null = isLanguageCode(
+    studentRow?.native_language
+  )
+    ? studentRow!.native_language
+    : null;
+  const ariaLang: LanguageCode =
+    studentNativeLang ?? employerDefaultLang ?? lang;
+  const ariaLangName = languageNameOf(ariaLang);
+  const ariaDict = dict(ariaLang);
+  const firstMessageLocalized =
+    ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
 
   return (
     <DiscoverySession

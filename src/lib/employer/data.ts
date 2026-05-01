@@ -251,13 +251,14 @@ export type StaffPick = {
   email: string;
   role_id: string | null;
   target_level: string | null;
+  native_language: string | null;
 };
 
 export async function loadEmployerStaffPicks(): Promise<StaffPick[]> {
   const supabase = adminSupabase();
   const { data, error } = await supabase
     .from("students")
-    .select("id, name, email, role_id, target_level")
+    .select("id, name, email, role_id, target_level, native_language")
     .order("name", { ascending: true })
     .returns<
       {
@@ -266,6 +267,7 @@ export async function loadEmployerStaffPicks(): Promise<StaffPick[]> {
         email: string | null;
         role_id: string | null;
         target_level: string | null;
+        native_language: string | null;
       }[]
     >();
   if (error) {
@@ -273,13 +275,14 @@ export async function loadEmployerStaffPicks(): Promise<StaffPick[]> {
     return [];
   }
   return (data ?? [])
-    .filter((s): s is StaffPick => Boolean(s.email))
+    .filter((s): s is StaffPick & { email: string } => Boolean(s.email))
     .map((s) => ({
       id: s.id,
       name: s.name,
       email: s.email,
       role_id: s.role_id,
       target_level: s.target_level,
+      native_language: s.native_language,
     }));
 }
 

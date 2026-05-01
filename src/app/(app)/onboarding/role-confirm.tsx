@@ -3,16 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import {
+  SUPPORTED_LANGUAGES,
+  type LanguageCode,
+} from "@/lib/i18n/dictionary";
 
 type Role = { id: string; name: string; description: string | null };
 
 type Props = {
   roles: Role[];
   initialRoleId: string | null;
+  /** Pre-stamped by employer (or the previous onboarding visit). */
+  initialNativeLanguage: LanguageCode;
   /** Translated copy from the parent server component. */
   copy: {
     languageLabel: string;
-    languageName: string;
     languageExplain: string;
     readyHeading: string;
     readyLead: string;
@@ -21,8 +26,16 @@ type Props = {
   };
 };
 
-export function RoleConfirmAndStart({ roles, initialRoleId, copy }: Props) {
+export function RoleConfirmAndStart({
+  roles,
+  initialRoleId,
+  initialNativeLanguage,
+  copy,
+}: Props) {
   const [roleId, setRoleId] = useState(initialRoleId ?? roles[0]?.id ?? "");
+  const [nativeLanguage, setNativeLanguage] = useState<LanguageCode>(
+    initialNativeLanguage
+  );
   const [confirmed, setConfirmed] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +50,7 @@ export function RoleConfirmAndStart({ roles, initialRoleId, copy }: Props) {
       const res = await fetch("/api/onboarding/role", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roleId }),
+        body: JSON.stringify({ roleId, nativeLanguage }),
       });
       const data: { ok?: boolean; error?: string } = await res
         .json()
@@ -72,34 +85,61 @@ export function RoleConfirmAndStart({ roles, initialRoleId, copy }: Props) {
           Step 1
         </p>
         <h2 className="mb-2 font-serif text-2xl text-navy">
-          Confirm the role you&apos;re here for
+          Confirm your role and native language
         </h2>
         <p className="mb-5 text-sm text-mute">
-          The role you pick sets the bar your gap analysis is measured against.
-          Pick the role you&apos;re actually doing — not a stretch goal.
+          The role you pick sets the bar your gap analysis is measured against —
+          pick what you&apos;re actually doing, not a stretch goal. Your native
+          language tells Aria how to greet you in the first 30 seconds before we
+          switch to English.
         </p>
 
-        <div className="flex flex-col gap-3">
-          <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
-            Role
-          </label>
-          <select
-            value={roleId}
-            onChange={(e) => setRoleId(e.target.value)}
-            className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
-            disabled={isPending}
-          >
-            {roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-          {selected?.description && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+              Role
+            </label>
+            <select
+              value={roleId}
+              onChange={(e) => setRoleId(e.target.value)}
+              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+              disabled={isPending}
+            >
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+            {selected?.description && (
+              <p className="rounded-md bg-cream/50 px-3 py-2 text-xs italic text-mute">
+                {selected.description}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+              Native language
+            </label>
+            <select
+              value={nativeLanguage}
+              onChange={(e) =>
+                setNativeLanguage(e.target.value as LanguageCode)
+              }
+              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+              disabled={isPending}
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.flag} {l.name}
+                </option>
+              ))}
+            </select>
             <p className="rounded-md bg-cream/50 px-3 py-2 text-xs italic text-mute">
-              {selected.description}
+              {copy.languageExplain}
             </p>
-          )}
+          </div>
         </div>
 
         {error && (
@@ -115,7 +155,7 @@ export function RoleConfirmAndStart({ roles, initialRoleId, copy }: Props) {
             disabled={isPending}
             className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Confirm role and continue →"}
+            {isPending ? "Saving…" : "Confirm and continue →"}
           </button>
         </div>
       </section>
@@ -147,7 +187,8 @@ export function RoleConfirmAndStart({ roles, initialRoleId, copy }: Props) {
         </span>
         <br />
         <span className="font-serif text-lg text-navy">
-          {copy.languageName}
+          {SUPPORTED_LANGUAGES.find((l) => l.code === nativeLanguage)?.name ??
+            "English"}
         </span>
         <br />
         <span className="text-xs text-mute">{copy.languageExplain}</span>
