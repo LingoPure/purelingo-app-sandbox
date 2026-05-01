@@ -6,13 +6,16 @@ export default async function LandingPage() {
   const { lang, t } = await getDict();
   return (
     <div className="flex flex-1 flex-col bg-paper text-ink">
-      <div className="border-b border-gold/30 bg-gold/10 px-6 py-2 text-center text-xs text-navy">
-        <span className="font-medium">{t("demo.bannerLead")}</span>{" "}
+      <div className="border-b border-cream bg-mist px-6 py-2 text-center text-xs text-navy/80">
+        <span className="mr-2 inline-block rounded-sm bg-gold/15 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gold">
+          Demo
+        </span>
+        <span>{t("demo.bannerLead")}</span>{" "}
         <a
           href="https://lingopure.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-medium text-navy underline decoration-gold/60 underline-offset-2 hover:text-navy-deep"
+          className="font-medium text-navy underline decoration-navy/30 underline-offset-2 hover:text-navy-deep hover:decoration-navy"
         >
           {t("demo.bannerCta")}
         </a>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, DM_Serif_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
+import { getActiveLanguage } from "@/lib/i18n";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -21,19 +22,21 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LingoPure — AI-First Business English Platform",
+  title: "LingoPure AI · Strategic Platform Demo",
   description:
-    "Voice-led AI assessment, gamified micro-learning, and CEFR certification — wrapped around ClassIn for B2B language outcomes.",
+    "Strategic platform demo for LingoPure: voice-led AI discovery, gap-scored micro-learning, employer cohort dashboards, and CEFR certification — wrapped around ClassIn. Not the production LingoPure service.",
+  robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const lang = await getActiveLanguage();
   return (
     <html
-      lang="en"
+      lang={lang}
       className={`${jakarta.variable} ${dmSerif.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">{children}</body>

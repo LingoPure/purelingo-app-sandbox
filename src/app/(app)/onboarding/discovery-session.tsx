@@ -8,6 +8,7 @@ type Props = {
   userId: string;
   studentName?: string | null;
   nativeLanguage: string;
+  firstMessageLocalized: string;
   startLabel: string;
   connectingLabel: string;
   headphonesNote: string;
@@ -32,6 +33,7 @@ function DiscoverySessionInner({
   userId,
   studentName,
   nativeLanguage,
+  firstMessageLocalized,
   startLabel,
   connectingLabel,
   headphonesNote,
@@ -77,6 +79,7 @@ function DiscoverySessionInner({
           user_id: userId,
           student_name: studentName ?? "",
           native_language: nativeLanguage,
+          first_message_localized: firstMessageLocalized,
         },
       });
       console.info("[discovery] startSession resolved");

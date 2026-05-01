@@ -104,4 +104,13 @@ Then end the call. Do not add further pleasantries after this line.
   - {{student_name}} — their first/full name. Use it once you've heard them confirm it.
   - {{native_language}} — language for the opening 30 seconds (then switch to English).`;
 
-export const FIRST_MESSAGE = `Hi! I'm Aria from LingoPure. We're going to spend the next twenty or so minutes getting to know you — your role, your work, where English fits in. There are no right answers here, just a real conversation. The more naturally you speak, the better I can build a learning plan that closes the gap to where you need to be. To start, can you tell me your full name and the company you work for?`;
+/**
+ * The literal first thing Aria says on a call.
+ *
+ * The {{first_message_localized}} template is replaced at runtime by a
+ * dynamic variable (see src/lib/i18n/dictionary.ts → discovery.firstMessage)
+ * so Aria opens in the student's native language and ends with the switch
+ * sentence to English. The English fallback content lives in the dictionary
+ * — never duplicated here.
+ */
+export const FIRST_MESSAGE = `{{first_message_localized}}`;

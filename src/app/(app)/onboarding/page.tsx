@@ -109,6 +109,7 @@ export default async function OnboardingPage() {
               userId={userId}
               studentName={studentName}
               nativeLanguage={ariaLangName}
+              firstMessageLocalized={t("discovery.firstMessage")}
               startLabel={t("onboarding.startButton")}
               connectingLabel={t("onboarding.connecting")}
               headphonesNote={t("onboarding.headphonesNote")}
