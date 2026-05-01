@@ -8,15 +8,23 @@ export default async function StudentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-          Roster
-        </p>
-        <h1 className="font-serif text-3xl text-navy">Students</h1>
-        <p className="mt-2 max-w-2xl text-sm text-mute">
-          Every student in the pilot, with discovery status, current average
-          score, and recent activity. Click any row for the full gap profile.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
+            Roster
+          </p>
+          <h1 className="font-serif text-3xl text-navy">Students</h1>
+          <p className="mt-2 max-w-2xl text-sm text-mute">
+            Every student in the pilot, with discovery status, current average
+            score, and recent activity. Click any row for the full gap profile.
+          </p>
+        </div>
+        <Link
+          href="/employer/staff/import"
+          className="rounded-full bg-navy px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-paper hover:bg-navy/90"
+        >
+          Bulk import →
+        </Link>
       </div>
 
       <section className="overflow-hidden rounded-lg border border-cream bg-paper">
