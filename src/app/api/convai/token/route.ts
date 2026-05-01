@@ -1,26 +1,28 @@
 /**
  * Server-side conversation-token proxy for ElevenLabs ConvAI.
  *
- * The browser SDK can either (a) hit ElevenLabs' /v1/convai/conversation/token
- * directly with `{ agentId }`, or (b) be handed a pre-fetched WebRTC token via
- * `{ conversationToken }`. We do (b) so:
+ * Two transports, chosen via `?transport=webrtc|websocket`:
  *
- *   1. The ElevenLabs API key never reaches the browser.
- *   2. We log every connection attempt — if the token fetch fails, we see
- *      WHY in our Vercel runtime logs instead of having to scrape headless
- *      browser console output.
- *   3. We avoid origin/CORS/cert-pinning issues that some networks have
- *      with api.elevenlabs.io.
+ *   - webrtc (default) — fetches a WebRTC conversation token (LiveKit JWT)
+ *     and returns `{ token }`. Lower latency, native browser audio.
  *
- * Auth: must be a signed-in student. We don't echo the agentId back from the
- * client — it's pulled from server env so a leaked client can't request a
- * token for a different agent.
+ *   - websocket — fetches a signed WSS URL and returns `{ signedUrl }`.
+ *     Uses a single TLS connection on 443; survives most corporate
+ *     firewalls and CGNAT setups that block WebRTC media (UDP/STUN/TURN).
+ *
+ * The client tries webrtc first and falls back to websocket on
+ * NegotiationError. See `discovery-session.tsx`.
+ *
+ * Auth: must be a signed-in student. The agent ID is server-side env, so a
+ * leaked client can't request a token for a different agent.
  */
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET() {
+type Transport = "webrtc" | "websocket";
+
+export async function GET(request: Request) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   const agentId = process.env.ELEVENLABS_AGENT_ID;
   if (!apiKey || !agentId) {
@@ -30,7 +32,6 @@ export async function GET() {
     );
   }
 
-  // Auth: only signed-in users can request a token.
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,7 +41,15 @@ export async function GET() {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
 
-  const url = `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${encodeURIComponent(
+  const transportParam = new URL(request.url).searchParams.get("transport");
+  const transport: Transport =
+    transportParam === "websocket" ? "websocket" : "webrtc";
+
+  const upstreamPath =
+    transport === "websocket"
+      ? "/v1/convai/conversation/get_signed_url"
+      : "/v1/convai/conversation/token";
+  const url = `https://api.elevenlabs.io${upstreamPath}?agent_id=${encodeURIComponent(
     agentId
   )}`;
 
@@ -54,7 +63,7 @@ export async function GET() {
     });
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    console.error(`[convai/token] fetch failed: ${detail}`);
+    console.error(`[convai/token:${transport}] fetch failed: ${detail}`);
     return NextResponse.json(
       { error: `ElevenLabs unreachable: ${detail}` },
       { status: 502 }
@@ -64,7 +73,10 @@ export async function GET() {
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     console.error(
-      `[convai/token] ElevenLabs ${response.status}: ${text.slice(0, 300)}`
+      `[convai/token:${transport}] ElevenLabs ${response.status}: ${text.slice(
+        0,
+        300
+      )}`
     );
     return NextResponse.json(
       {
@@ -76,14 +88,37 @@ export async function GET() {
   }
 
   const body = (await response.json().catch(() => null)) as
-    | { token?: string }
+    | { token?: string; signed_url?: string }
     | null;
+
+  if (transport === "websocket") {
+    const signedUrl = body?.signed_url;
+    if (!signedUrl) {
+      console.error(
+        `[convai/token:websocket] missing signed_url field: ${JSON.stringify(
+          body
+        ).slice(0, 300)}`
+      );
+      return NextResponse.json(
+        { error: "ElevenLabs returned no signed_url" },
+        { status: 502 }
+      );
+    }
+    console.log(
+      `[convai/token:websocket] issued signed URL for ${user.id} (agent ${agentId.slice(
+        -8
+      )})`
+    );
+    return NextResponse.json({ signedUrl });
+  }
+
   const token = body?.token;
   if (!token) {
     console.error(
-      `[convai/token] missing token field in response: ${JSON.stringify(
-        body
-      ).slice(0, 300)}`
+      `[convai/token:webrtc] missing token field: ${JSON.stringify(body).slice(
+        0,
+        300
+      )}`
     );
     return NextResponse.json(
       { error: "ElevenLabs returned no token" },
@@ -92,7 +127,9 @@ export async function GET() {
   }
 
   console.log(
-    `[convai/token] issued token for ${user.id} (agent ${agentId.slice(-8)})`
+    `[convai/token:webrtc] issued token for ${user.id} (agent ${agentId.slice(
+      -8
+    )})`
   );
   return NextResponse.json({ token });
 }
