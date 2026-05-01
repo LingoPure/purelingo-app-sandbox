@@ -1,27 +1,35 @@
 /**
  * POST /api/employer/staff/invite — magic-link invite for one staff member.
  *
- * Two paths, both end with an email going out:
+ * Two paths:
  *   1. Email NOT in auth.users → auth.admin.inviteUserByEmail()
- *      Creates the user + sends an "invite" email pointing at
- *      /auth/callback?next=/onboarding.
+ *      Creates the user + asks Supabase to email an invite. Supabase's
+ *      built-in mailer is rate-limited (~3-4/hr on free tier) and often
+ *      spam-filtered, so we treat it as best-effort.
  *   2. Email IS in auth.users → auth.admin.generateLink({type:"magiclink"})
- *      User already exists (e.g. seeded persona, prior invite). Sends a
- *      sign-in magic link to the same URL.
+ *      generateLink does NOT send an email — it only returns the link.
+ *      We rely on the admin copy-pasting the returned URL.
  *
- * Either way: pre-stamp the students row with employer_id + role_id +
- * name + target_level so the role baseline is locked in BEFORE they
- * click the link.
+ * Either way we ALWAYS return an `actionLink` the admin can paste into
+ * a chat / email manually. That link is built directly against our own
+ * /auth/callback with `?token_hash=…&type=…&next=/onboarding` — NOT the
+ * Supabase verify URL that generateLink hands back. That matters: the
+ * Supabase verify endpoint redirects to redirect_to with auth tokens in
+ * the URL hash fragment for type=magiclink (implicit flow), which the
+ * server-side route handler can never read, so it falls through to
+ * /login. Pointing straight at our callback with token_hash as a query
+ * param consumes the OTP via supabase.auth.verifyOtp() server-side and
+ * sets the session cookie cleanly.
  *
- * The response always includes `actionLink` — the actual URL — so the
- * admin can copy-paste it manually if Supabase email delivery is rate-
- * limited / unconfigured / spam-filtered. No silent failures.
+ * Pre-stamps the students row with employer_id + role_id + name +
+ * target_level so the role baseline is locked in before they click.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { adminSupabase } from "@/lib/employer/data";
+import { sendInviteEmail } from "@/lib/email/invite";
 
 const BodySchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -46,13 +54,25 @@ export async function POST(request: NextRequest) {
   const supabase = adminSupabase();
   const email = body.email.toLowerCase();
 
-  // Magic-link / invite emails point at /auth/callback. The callback
-  // routes admins to /employer and everyone else to ?next= (we set
-  // /onboarding here so candidates land directly in their discovery flow).
+  // Two URLs we care about:
+  //  - redirectTo: passed to Supabase as the post-verify destination.
+  //    Used by inviteUserByEmail's emailed link.
+  //  - directCallback(): builds an action link that points STRAIGHT at
+  //    our callback with ?token_hash=…&type=…&next=/onboarding so we
+  //    consume the OTP server-side. Bypasses Supabase's verify endpoint
+  //    entirely, which is what we paste into the admin UI for the
+  //    "copy & message it manually" path.
   const origin =
     request.headers.get("origin") ??
     `${request.nextUrl.protocol}//${request.nextUrl.host}`;
   const redirectTo = `${origin}/auth/callback?next=/onboarding`;
+  const directCallback = (
+    tokenHash: string,
+    linkType: "invite" | "magiclink"
+  ) =>
+    `${origin}/auth/callback?token_hash=${encodeURIComponent(
+      tokenHash
+    )}&type=${linkType}&next=${encodeURIComponent("/onboarding")}`;
 
   // 1. Look up the user (paged listUsers — fine at 1k staff, not 1M).
   let userId: string | null = null;
@@ -75,9 +95,9 @@ export async function POST(request: NextRequest) {
     page += 1;
   }
 
-  // 2. Issue the right kind of link based on existence. Both paths
-  //    auto-email via Supabase; we also return the URL so the admin
-  //    can copy it manually if email delivery is rate-limited.
+  // 2. Issue the right kind of link based on existence. Only the
+  //    inviteUserByEmail path auto-mails (best effort); generateLink
+  //    is link-only. Either way we return the URL for manual delivery.
   let actionLink: string | null = null;
   let kind: "invite" | "magiclink" = "invite";
   let mailWarning: string | null = null;
@@ -88,6 +108,10 @@ export async function POST(request: NextRequest) {
       data: { full_name: body.name },
     });
     if (error || !data.user) {
+      console.error("[invite] inviteUserByEmail failed", {
+        email,
+        message: error?.message,
+      });
       return NextResponse.json(
         { error: error?.message ?? "Invite failed" },
         { status: 500 }
@@ -96,34 +120,56 @@ export async function POST(request: NextRequest) {
     userId = data.user.id;
     kind = "invite";
 
-    // Generate the actual link too so we can show / copy it. (Invite
-    // already sends an email, but the admin may need the URL anyway.)
+    // Re-generate the link to grab hashed_token. inviteUserByEmail
+    // already triggered Supabase's mailer (best-effort); this call is
+    // for the URL we surface to the admin to paste manually.
     const linkRes = await supabase.auth.admin.generateLink({
       type: "invite",
       email,
       options: { redirectTo, data: { full_name: body.name } },
     });
-    if (linkRes.error) {
-      mailWarning = `Invite created but couldn't generate display link: ${linkRes.error.message}`;
+    if (linkRes.error || !linkRes.data.properties?.hashed_token) {
+      mailWarning = `Invite created but couldn't generate copy-link: ${
+        linkRes.error?.message ?? "missing hashed_token"
+      }`;
     } else {
-      actionLink = linkRes.data.properties?.action_link ?? null;
+      actionLink = directCallback(
+        linkRes.data.properties.hashed_token,
+        "invite"
+      );
     }
   } else {
-    // Existing user — send a magic-link sign-in email instead of an invite.
+    // Existing user — generateLink is link-only (no email). The admin
+    // must paste the actionLink manually.
     const linkRes = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email,
       options: { redirectTo },
     });
-    if (linkRes.error) {
+    if (linkRes.error || !linkRes.data.properties?.hashed_token) {
+      console.error("[invite] generateLink magiclink failed", {
+        email,
+        message: linkRes.error?.message,
+      });
       return NextResponse.json(
-        { error: `Magic link generation failed: ${linkRes.error.message}` },
+        {
+          error: `Magic link generation failed: ${
+            linkRes.error?.message ?? "missing hashed_token"
+          }`,
+        },
         { status: 500 }
       );
     }
-    actionLink = linkRes.data.properties?.action_link ?? null;
+    actionLink = directCallback(
+      linkRes.data.properties.hashed_token,
+      "magiclink"
+    );
     kind = "magiclink";
+    mailWarning =
+      "Existing-user magic links are not auto-emailed by Supabase — paste the link below to the invitee.";
   }
+
+  console.log("[invite] issued", { email, kind, hasLink: Boolean(actionLink) });
 
   // 3. Pre-stamp the students row with employer + role + name + target.
   //    handle_new_user creates the row on invite acceptance; if the user
@@ -143,12 +189,60 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: studentErr.message }, { status: 500 });
   }
 
+  // 4. Email the action link via Resend. We do NOT depend on Supabase
+  //    Auth's mailer for this — for the magiclink path it never emails
+  //    at all, and even for the invite path the verify-URL flow lands
+  //    on /login. Resend with our own template + direct callback URL is
+  //    the reliable channel.
+  let emailDelivery: "sent" | "skipped" | "failed" = "skipped";
+  let emailError: string | null = null;
+  if (actionLink) {
+    const { data: empRow } = await supabase
+      .from("employers")
+      .select("name")
+      .eq("id", employerId)
+      .maybeSingle();
+    const employerName =
+      (empRow as { name?: string } | null)?.name ?? null;
+    const send = await sendInviteEmail({
+      to: email,
+      inviteeName: body.name,
+      employerName,
+      actionLink,
+      kind,
+    });
+    if (send.ok) {
+      emailDelivery = "sent";
+    } else if (send.error === "RESEND_API_KEY not configured") {
+      emailDelivery = "skipped";
+      emailError = send.error;
+      mailWarning =
+        mailWarning ??
+        "RESEND_API_KEY not set on this deployment — paste the link below to the invitee manually.";
+    } else {
+      emailDelivery = "failed";
+      emailError = send.error ?? "Resend send failed";
+      console.error("[invite] resend send failed", {
+        email,
+        kind,
+        error: send.error,
+      });
+      mailWarning =
+        mailWarning ??
+        `Email send failed (${send.error}) — paste the link below manually.`;
+    }
+  }
+
+  console.log("[invite] complete", { email, kind, emailDelivery });
+
   const messageBase =
-    kind === "invite"
-      ? `Invite created for ${email}.`
-      : `Magic-link sign-in created for ${email} (already onboarded).`;
+    emailDelivery === "sent"
+      ? `Invite emailed to ${email} via Resend.`
+      : kind === "invite"
+        ? `Invite created for ${email}.`
+        : `Magic-link sign-in link created for ${email} (already onboarded).`;
   const messageTail = actionLink
-    ? " The link is shown below — Supabase will also email it, but free-tier rate limits + spam filters mean you may need to send it manually."
+    ? " The link is also shown below for manual delivery if needed."
     : "";
 
   return NextResponse.json({
@@ -157,6 +251,8 @@ export async function POST(request: NextRequest) {
     kind,
     actionLink,
     mailWarning,
+    emailDelivery,
+    emailError,
     message: messageBase + messageTail,
   });
 }

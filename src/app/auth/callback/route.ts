@@ -20,6 +20,13 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type");
   const explicitNext = url.searchParams.get("next");
 
+  console.log("[auth/callback] hit", {
+    hasCode: Boolean(code),
+    hasTokenHash: Boolean(tokenHash),
+    type,
+    next: explicitNext,
+  });
+
   const supabase = await createClient();
 
   async function postAuthTarget(): Promise<string> {

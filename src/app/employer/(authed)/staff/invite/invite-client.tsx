@@ -9,6 +9,8 @@ type Outcome =
       message: string;
       kind: "invite" | "magiclink";
       actionLink: string | null;
+      mailWarning: string | null;
+      emailDelivery: "sent" | "skipped" | "failed";
       email: string;
     }
   | { ok: false; error: string };
@@ -58,6 +60,8 @@ export function InviteClient({ roles }: { roles: Role[] }) {
         error?: string;
         kind?: "invite" | "magiclink";
         actionLink?: string | null;
+        mailWarning?: string | null;
+        emailDelivery?: "sent" | "skipped" | "failed";
       } = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
         setOutcome({
@@ -71,6 +75,8 @@ export function InviteClient({ roles }: { roles: Role[] }) {
         message: data.message ?? "Invite created.",
         kind: data.kind ?? "invite",
         actionLink: data.actionLink ?? null,
+        mailWarning: data.mailWarning ?? null,
+        emailDelivery: data.emailDelivery ?? "skipped",
         email: submittedEmail,
       });
       reset();
@@ -158,11 +164,22 @@ export function InviteClient({ roles }: { roles: Role[] }) {
       {outcome && outcome.ok && (
         <div className="flex flex-col gap-3 rounded-lg border border-teal/30 bg-teal/5 p-5 text-sm text-ink">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-teal">
-            {outcome.kind === "invite" ? "Invite created" : "Magic link created"}
+            {outcome.emailDelivery === "sent"
+              ? "Email sent via Resend"
+              : outcome.emailDelivery === "failed"
+                ? "Email send failed"
+                : outcome.kind === "invite"
+                  ? "Invite created"
+                  : "Magic link created"}
           </p>
           <p>
             <span className="text-teal">✓</span> {outcome.message}
           </p>
+          {outcome.mailWarning && (
+            <p className="rounded-md border border-gold/30 bg-gold/10 px-3 py-2 text-xs text-gold">
+              {outcome.mailWarning}
+            </p>
+          )}
           {outcome.actionLink && (
             <div className="flex flex-col gap-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
