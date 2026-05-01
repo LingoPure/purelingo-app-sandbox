@@ -35,6 +35,12 @@ import {
   type AbcRole,
   type AbcRoleKey,
 } from "../src/lib/seed/abc-personas";
+import {
+  ABC_DEPARTMENTS,
+  ABC_TEACHERS,
+  ABC_ASSIGNMENT_BY_ROLE,
+  ABC_AI_TUTOR_PERSONA_SLUG,
+} from "../src/lib/seed/abc-teachers";
 import { generatePersonaTranscript } from "../src/lib/seed/persona-discovery";
 import { scoreDiscoverySession } from "../src/lib/scoring/score-discovery";
 import { SKILL_KEYS } from "../src/lib/scoring/rubric";
@@ -220,6 +226,93 @@ async function main() {
     `  ↳ ${adminUser.created ? "created" : "found"}: ${ABC_ADMIN.email} / ${ABC_ADMIN.password} (admin)`
   );
 
+  // ─── 3b. LingoPure-side teaching staff ───────────────────────────────
+  console.log("◇ Departments + teachers (LingoPure side)…");
+  const departmentNameToId = new Map<string, string>();
+  for (const dept of ABC_DEPARTMENTS) {
+    const { data: existing } = await supabase
+      .from("departments")
+      .select("id")
+      .eq("name", dept.name)
+      .maybeSingle();
+    let id: string;
+    if (existing) {
+      id = (existing as { id: string }).id;
+      const { error } = await supabase
+        .from("departments")
+        .update({ focus: dept.focus })
+        .eq("id", id);
+      if (error) throw new Error(`department update: ${error.message}`);
+    } else {
+      const { data: created, error } = await supabase
+        .from("departments")
+        .insert({ name: dept.name, focus: dept.focus })
+        .select("id")
+        .single();
+      if (error || !created) {
+        throw new Error(`department insert: ${error?.message}`);
+      }
+      id = (created as { id: string }).id;
+    }
+    departmentNameToId.set(dept.name, id);
+    console.log(`  ↳ ${dept.name}`);
+  }
+
+  const teacherSlugToId = new Map<string, string>();
+  for (const teacher of ABC_TEACHERS) {
+    const teacherEmail = `${teacher.slug}@lingopure.demo`;
+    const { data: existing } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("email", teacherEmail)
+      .maybeSingle();
+    let id: string;
+    const baseFields = {
+      full_name: teacher.fullName,
+      email: teacherEmail,
+      classin_account_id: teacher.classinAccountId,
+      employment_type: teacher.employmentType,
+      bio: teacher.bio,
+    };
+    if (existing) {
+      id = (existing as { id: string }).id;
+      const { error } = await supabase
+        .from("teachers")
+        .update(baseFields)
+        .eq("id", id);
+      if (error) throw new Error(`teacher update: ${error.message}`);
+    } else {
+      const { data: created, error } = await supabase
+        .from("teachers")
+        .insert(baseFields)
+        .select("id")
+        .single();
+      if (error || !created) {
+        throw new Error(`teacher insert: ${error?.message}`);
+      }
+      id = (created as { id: string }).id;
+    }
+    teacherSlugToId.set(teacher.slug, id);
+
+    // Department membership.
+    const deptRows = teacher.departments.map((deptName) => {
+      const deptId = departmentNameToId.get(deptName);
+      if (!deptId) throw new Error(`unknown department ${deptName}`);
+      return {
+        teacher_id: id,
+        department_id: deptId,
+        is_head_of_department: teacher.headOf === deptName,
+      };
+    });
+    const { error: tdErr } = await supabase
+      .from("teacher_departments")
+      .upsert(deptRows, { onConflict: "teacher_id,department_id" });
+    if (tdErr) throw new Error(`teacher_departments upsert: ${tdErr.message}`);
+    console.log(
+      `  ↳ ${teacher.fullName} (${teacher.employmentType}${teacher.headOf ? ", head" : ""})`
+    );
+  }
+
   // ─── 4. Personas ─────────────────────────────────────────────────────
   console.log(`◇ Seeding ${ABC_PERSONAS.length} personas…`);
   let scoredOk = 0;
@@ -261,6 +354,50 @@ async function main() {
         })
         .eq("id", auth.userId);
       if (studentErr) throw new Error(`students update: ${studentErr.message}`);
+
+      // Teacher assignment(s) — one persona is pinned to the AI tutor as
+      // a forward-looking demo, everyone else gets the role-based
+      // primary (and optional specialist).
+      const isAiTutorDemo = persona.slug === ABC_AI_TUTOR_PERSONA_SLUG;
+      const assignment = isAiTutorDemo
+        ? { primary: "aria-tutor" as string, specialist: undefined as string | undefined }
+        : ABC_ASSIGNMENT_BY_ROLE[persona.roleKey];
+      const primaryTeacherId = teacherSlugToId.get(assignment.primary);
+      if (!primaryTeacherId) {
+        throw new Error(`unknown primary teacher slug: ${assignment.primary}`);
+      }
+      // Replace any existing rows so re-runs don't accumulate duplicates.
+      await supabase
+        .from("student_teacher_assignments")
+        .delete()
+        .eq("student_id", auth.userId);
+      const assignmentRows: Array<{
+        student_id: string;
+        teacher_id: string;
+        assignment_role: "primary" | "specialist";
+      }> = [
+        {
+          student_id: auth.userId,
+          teacher_id: primaryTeacherId,
+          assignment_role: "primary",
+        },
+      ];
+      if (assignment.specialist) {
+        const specialistId = teacherSlugToId.get(assignment.specialist);
+        if (specialistId) {
+          assignmentRows.push({
+            student_id: auth.userId,
+            teacher_id: specialistId,
+            assignment_role: "specialist",
+          });
+        }
+      }
+      const { error: asnErr } = await supabase
+        .from("student_teacher_assignments")
+        .insert(assignmentRows);
+      if (asnErr) {
+        throw new Error(`student_teacher_assignments insert: ${asnErr.message}`);
+      }
 
       // Generate the transcript (Claude #1).
       console.log("    · generating transcript…");
