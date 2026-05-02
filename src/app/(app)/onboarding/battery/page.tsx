@@ -81,39 +81,11 @@ export default async function BatteryPage() {
           Step 2 — Assessment battery
         </p>
         <h1 className="font-serif text-3xl text-navy">
-          {tasks.length === 1
-            ? "One short task to confirm your strongest skill"
-            : `${tasks.length} short tasks tuned to your voice profile`}
+          Voice complete — let&apos;s measure the rest
         </h1>
-        <p className="mt-3 max-w-2xl text-mute">
-          Aria heard you talk. We picked these tasks based on what the voice
-          conversation couldn&apos;t measure directly — or where the score
-          looked close to your role baseline and we want to verify.
-        </p>
       </div>
-      {selected.length > 0 && <SelectionRationale selected={selected} />}
-      <BatteryRunner tasks={tasks} />
+      <BatteryRunner tasks={tasks} selected={selected} />
     </div>
-  );
-}
-
-function SelectionRationale({ selected }: { selected: SelectedTask[] }) {
-  return (
-    <details className="rounded-md border border-cream bg-paper p-4 text-sm">
-      <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.22em] text-mute hover:text-navy">
-        Why these tasks?
-      </summary>
-      <ul className="mt-3 flex flex-col gap-2">
-        {selected.map((s) => (
-          <li key={s.taskType} className="flex flex-col gap-0.5">
-            <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-navy">
-              {s.taskType.replace("_", " ")} · {s.difficultyBand}
-            </span>
-            <span className="text-xs italic text-mute">{s.reason}</span>
-          </li>
-        ))}
-      </ul>
-    </details>
   );
 }
 

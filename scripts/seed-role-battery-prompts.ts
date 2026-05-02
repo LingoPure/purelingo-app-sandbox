@@ -521,11 +521,45 @@ async function seedForRole(role: RoleRow, band: Band, dryRun: boolean) {
     return { generated: 0, written: 0 };
   }
 
+  // Idempotent replacement: delete any prior prompts for the same
+  // (role_id, task_type, difficulty_band, variant_bucket) tuples
+  // before inserting. Re-running the seeder for the same role+band
+  // replaces its prior pair instead of stacking duplicates.
+  // The variant_bucket is deterministic (band + task_type + role-id
+  // prefix) so a re-run computes the same bucket strings and the
+  // delete actually targets the prior rows.
+  const replaceKeys = new Map<string, { task_type: TaskType; variant_bucket: string }>();
+  for (const r of allRows) {
+    const k = `${r.task_type}::${r.variant_bucket}`;
+    if (!replaceKeys.has(k)) {
+      replaceKeys.set(k, {
+        task_type: r.task_type,
+        variant_bucket: r.variant_bucket,
+      });
+    }
+  }
+  for (const { task_type, variant_bucket } of replaceKeys.values()) {
+    const { error: delErr } = await sb
+      .from("discovery_task_prompts")
+      .delete()
+      .eq("role_id", role.id)
+      .eq("task_type", task_type)
+      .eq("difficulty_band", band)
+      .eq("variant_bucket", variant_bucket);
+    if (delErr) {
+      throw new Error(
+        `delete (idempotent replace) failed for ${task_type}/${variant_bucket}: ${delErr.message}`
+      );
+    }
+  }
+
   const { error } = await sb.from("discovery_task_prompts").insert(allRows);
   if (error) {
     throw new Error(`insert failed: ${error.message}`);
   }
-  console.log(`└── Inserted ${allRows.length} rows for ${role.name}.`);
+  console.log(
+    `└── Replaced ${replaceKeys.size} bucket(s) → inserted ${allRows.length} rows for ${role.name}.`
+  );
   return { generated: allRows.length, written: allRows.length };
 }
 

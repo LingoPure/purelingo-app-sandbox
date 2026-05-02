@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   TaskPromptPublic,
   TaskType,
 } from "@/lib/onboarding/battery/types";
+import type { SelectedTask } from "@/lib/onboarding/battery/select-tasks";
 
 export type LoadedTask = {
   prompt_id: string;
@@ -15,57 +16,191 @@ export type LoadedTask = {
 
 type Props = {
   tasks: LoadedTask[];
+  /** Per-task selection metadata produced by selectTasksForStudent —
+   *  used to surface "why this task" in the intro screen. Optional;
+   *  if missing the intro renders a generic blurb. */
+  selected?: SelectedTask[];
 };
 
-const TASK_LABELS: Record<TaskType, { num: string; label: string; mins: string }> = {
-  email_writing: { num: "1", label: "Email writing", mins: "~5 min" },
-  listen_paraphrase: { num: "2", label: "Listen & paraphrase", mins: "~3 min" },
-  read_summarise: { num: "3", label: "Read & summarise", mins: "~4 min" },
-  vocab_cloze: { num: "4", label: "Vocabulary at register", mins: "~3 min" },
+const TASK_LABELS: Record<
+  TaskType,
+  { num: string; label: string; mins: string; minutes: number; measures: string }
+> = {
+  email_writing: {
+    num: "1",
+    label: "Email writing",
+    mins: "~5 min",
+    minutes: 5,
+    measures:
+      "Direct measurement of business writing — register, structure, strategic content, and lexical range.",
+  },
+  listen_paraphrase: {
+    num: "2",
+    label: "Listen & paraphrase",
+    mins: "~3 min",
+    minutes: 3,
+    measures:
+      "Active listening — recall, inference of implications, and capture of action items from a 30-45 second clip.",
+  },
+  read_summarise: {
+    num: "3",
+    label: "Read & summarise",
+    mins: "~4 min",
+    minutes: 4,
+    measures:
+      "Reading comprehension AND subtext detection — does the student spot the buried question hidden behind hedge language?",
+  },
+  vocab_cloze: {
+    num: "4",
+    label: "Vocabulary at register",
+    mins: "~3 min",
+    minutes: 3,
+    measures:
+      "Register-aware word choice — picking the right business-English collocation when several near-synonyms compete.",
+  },
 };
 
-export function BatteryRunner({ tasks }: Props) {
+type Phase = "intro" | "tasks" | "review" | "submitting" | "done";
+
+type StoredResponse = {
+  task_prompt_id: string;
+  task_type: TaskType;
+  payload: unknown;
+};
+
+export function BatteryRunner({ tasks, selected }: Props) {
   const router = useRouter();
+  const [phase, setPhase] = useState<Phase>("intro");
   const [activeIdx, setActiveIdx] = useState(0);
-  const [submitting, startSubmit] = useTransition();
+  const [responses, setResponses] = useState<Record<number, StoredResponse>>(
+    {}
+  );
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
 
   const active = tasks[activeIdx];
-  const isLast = activeIdx === tasks.length - 1;
 
-  function handleSubmit(payload: unknown) {
-    setError(null);
-    startSubmit(async () => {
-      const res = await fetch("/api/onboarding/battery/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          task_prompt_id: active.prompt_id,
-          task_type: active.prompt.task_type,
-          response: payload,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        error?: string;
-      };
-      if (!res.ok || !data.ok) {
-        setError(data.error ?? `Submit failed (${res.status})`);
-        return;
-      }
-      if (isLast) {
-        setDone(true);
-        // Land on the dashboard so the polling banner picks up the
-        // canonical battery scores as they finish reconciling.
-        router.push("/dashboard?just-finished=battery");
-      } else {
-        setActiveIdx((i) => i + 1);
-      }
-    });
+  function reasonFor(taskType: TaskType): string | null {
+    return selected?.find((s) => s.taskType === taskType)?.reason ?? null;
   }
 
-  if (done) {
+  // Per-task "Save and continue" — stores the answer in state and
+  // advances. No network call yet; the final "Submit all" at the review
+  // screen is the single trigger for the unified scoring + gap analysis.
+  function handleSave(payload: unknown) {
+    setError(null);
+    setResponses((prev) => ({
+      ...prev,
+      [activeIdx]: {
+        task_prompt_id: active.prompt_id,
+        task_type: active.prompt.task_type,
+        payload,
+      },
+    }));
+    if (activeIdx >= tasks.length - 1) {
+      setPhase("review");
+    } else {
+      setActiveIdx((i) => i + 1);
+    }
+  }
+
+  async function handleSubmitAll() {
+    setPhase("submitting");
+    setError(null);
+    const ordered = tasks.map((_, idx) => responses[idx]).filter(Boolean) as StoredResponse[];
+    if (ordered.length !== tasks.length) {
+      setError("Some tasks have no recorded answer — go back and complete them.");
+      setPhase("review");
+      return;
+    }
+
+    type SubmitOutcome = {
+      ok: boolean;
+      task_type: TaskType;
+      error?: string;
+    };
+    let outcomes: SubmitOutcome[] = [];
+    try {
+      outcomes = await Promise.all(
+        ordered.map(async (r): Promise<SubmitOutcome> => {
+          const res = await fetch("/api/onboarding/battery/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              task_prompt_id: r.task_prompt_id,
+              task_type: r.task_type,
+              response: r.payload,
+            }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            error?: string;
+          };
+          return {
+            ok: res.ok && Boolean(data.ok),
+            task_type: r.task_type,
+            error: data.error,
+          };
+        })
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setPhase("review");
+      return;
+    }
+
+    const failed = outcomes.filter((o) => !o.ok);
+    if (failed.length > 0) {
+      setError(
+        `Failed to submit ${failed.length} task(s): ${failed
+          .map((f) => `${TASK_LABELS[f.task_type].label}${f.error ? ` — ${f.error}` : ""}`)
+          .join("; ")}. Try again.`
+      );
+      setPhase("review");
+      return;
+    }
+
+    setPhase("done");
+    router.push("/dashboard?just-finished=battery");
+  }
+
+  if (phase === "intro") {
+    return <BatteryIntro tasks={tasks} selected={selected} onStart={() => setPhase("tasks")} />;
+  }
+
+  if (phase === "review") {
+    return (
+      <BatteryReview
+        tasks={tasks}
+        responses={responses}
+        error={error}
+        onEditTask={(idx) => {
+          setActiveIdx(idx);
+          setPhase("tasks");
+          setError(null);
+        }}
+        onSubmitAll={handleSubmitAll}
+      />
+    );
+  }
+
+  if (phase === "submitting") {
+    return (
+      <div className="rounded-lg border border-gold/30 bg-gold/5 p-6">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-gold">
+          Submitting all assessments
+        </p>
+        <h2 className="mt-1 font-serif text-2xl text-navy">
+          Triggering your full gap analysis…
+        </h2>
+        <p className="mt-2 text-sm text-mute">
+          Your responses are being scored in parallel. You&apos;ll land on the
+          dashboard in a moment — the gap profile updates as each score lands.
+        </p>
+      </div>
+    );
+  }
+
+  if (phase === "done") {
     return (
       <div className="rounded-lg border border-teal/30 bg-teal/5 p-6">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-teal">
@@ -74,14 +209,13 @@ export function BatteryRunner({ tasks }: Props) {
         <h2 className="mt-1 font-serif text-2xl text-navy">
           Heading to your dashboard…
         </h2>
-        <p className="mt-2 text-sm text-mute">
-          Your gap profile is being finalised. The dashboard will refresh as each
-          score lands.
-        </p>
       </div>
     );
   }
 
+  // phase === "tasks"
+  const reason = reasonFor(active.prompt.task_type);
+  const submitting = false; // task buttons stay enabled in the new flow
   return (
     <div className="flex flex-col gap-6">
       <ProgressRail tasks={tasks} activeIdx={activeIdx} />
@@ -90,13 +224,16 @@ export function BatteryRunner({ tasks }: Props) {
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-              Task {TASK_LABELS[active.prompt.task_type].num} of {tasks.length}
+              Task {activeIdx + 1} of {tasks.length}
               {" · "}
               {TASK_LABELS[active.prompt.task_type].mins}
             </p>
             <h2 className="mt-1 font-serif text-2xl text-navy">
               {TASK_LABELS[active.prompt.task_type].label}
             </h2>
+            {reason && (
+              <p className="mt-1 text-xs italic text-mute">Why this task: {reason}</p>
+            )}
           </div>
         </div>
 
@@ -104,28 +241,36 @@ export function BatteryRunner({ tasks }: Props) {
           <EmailWritingTask
             data={active.prompt.data}
             disabled={submitting}
-            onSubmit={handleSubmit}
+            initial={responses[activeIdx]?.payload}
+            onSave={handleSave}
+            isLast={activeIdx === tasks.length - 1}
           />
         )}
         {active.prompt.task_type === "listen_paraphrase" && (
           <ListenParaphraseTask
             data={active.prompt.data}
             disabled={submitting}
-            onSubmit={handleSubmit}
+            initial={responses[activeIdx]?.payload}
+            onSave={handleSave}
+            isLast={activeIdx === tasks.length - 1}
           />
         )}
         {active.prompt.task_type === "read_summarise" && (
           <ReadSummariseTask
             data={active.prompt.data}
             disabled={submitting}
-            onSubmit={handleSubmit}
+            initial={responses[activeIdx]?.payload}
+            onSave={handleSave}
+            isLast={activeIdx === tasks.length - 1}
           />
         )}
         {active.prompt.task_type === "vocab_cloze" && (
           <VocabClozeTask
             data={active.prompt.data}
             disabled={submitting}
-            onSubmit={handleSubmit}
+            initial={responses[activeIdx]?.payload}
+            onSave={handleSave}
+            isLast={activeIdx === tasks.length - 1}
           />
         )}
 
@@ -134,15 +279,202 @@ export function BatteryRunner({ tasks }: Props) {
             {error}
           </p>
         )}
-        {submitting && (
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
-            Submitting…
-          </p>
-        )}
       </section>
     </div>
   );
 }
+
+// ─── Intro screen ────────────────────────────────────────────────────────────
+
+function BatteryIntro({
+  tasks,
+  selected,
+  onStart,
+}: {
+  tasks: LoadedTask[];
+  selected?: SelectedTask[];
+  onStart: () => void;
+}) {
+  const totalMinutes = tasks.reduce(
+    (sum, t) => sum + TASK_LABELS[t.prompt.task_type].minutes,
+    0
+  );
+  return (
+    <section className="flex flex-col gap-6 rounded-lg border border-cream bg-paper p-6 sm:p-8">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          Voice discovery complete
+        </p>
+        <h2 className="mt-1 font-serif text-2xl text-navy">
+          Now we measure the rest — directly
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-mute">
+          Aria heard you speak. The voice conversation is great for fluency,
+          comprehension, and learning style — but it can&apos;t directly
+          measure how you write business emails, how you read for subtext, or
+          how precisely you pick words. These short tasks fill those gaps.
+          Together they produce the full profile your employer sees.
+        </p>
+      </div>
+
+      <ol className="flex flex-col gap-3">
+        {tasks.map((t, i) => {
+          const meta = TASK_LABELS[t.prompt.task_type];
+          const reason = selected?.find(
+            (s) => s.taskType === t.prompt.task_type
+          )?.reason;
+          return (
+            <li
+              key={t.prompt_id}
+              className="flex gap-4 rounded-md border border-cream bg-mist/30 p-4"
+            >
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-navy font-mono text-xs text-paper">
+                {i + 1}
+              </span>
+              <div className="flex flex-col gap-1">
+                <p className="font-serif text-base text-navy">
+                  {meta.label}
+                  <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+                    {meta.mins}
+                  </span>
+                </p>
+                <p className="text-sm leading-relaxed text-ink">{meta.measures}</p>
+                {reason && (
+                  <p className="text-xs italic text-mute">Why for you: {reason}</p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-cream pt-4">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+          Total time: ~{totalMinutes} min · One submission at the end triggers
+          the full gap analysis
+        </p>
+        <button
+          type="button"
+          onClick={onStart}
+          className="rounded-md bg-navy px-6 py-3 text-sm font-medium text-paper hover:bg-navy-deep"
+        >
+          Start the assessment →
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ─── Review screen ───────────────────────────────────────────────────────────
+
+function BatteryReview({
+  tasks,
+  responses,
+  error,
+  onEditTask,
+  onSubmitAll,
+}: {
+  tasks: LoadedTask[];
+  responses: Record<number, StoredResponse>;
+  error: string | null;
+  onEditTask: (idx: number) => void;
+  onSubmitAll: () => void;
+}) {
+  const allComplete = tasks.every((_, idx) => responses[idx]);
+  return (
+    <section className="flex flex-col gap-6 rounded-lg border border-cream bg-paper p-6 sm:p-8">
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          Review and submit
+        </p>
+        <h2 className="mt-1 font-serif text-2xl text-navy">
+          Ready to trigger your full gap analysis
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-mute">
+          Submitting now scores all tasks together and reconciles the results
+          with your voice profile into a single canonical gap analysis your
+          employer will see.
+        </p>
+      </div>
+
+      <ol className="flex flex-col gap-3">
+        {tasks.map((t, idx) => {
+          const meta = TASK_LABELS[t.prompt.task_type];
+          const stored = responses[idx];
+          return (
+            <li
+              key={t.prompt_id}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-cream bg-mist/30 p-4"
+            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal text-xs text-paper">
+                  ✓
+                </span>
+                <div>
+                  <p className="font-serif text-sm text-navy">{meta.label}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
+                    {summariseStored(t.prompt.task_type, stored)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onEditTask(idx)}
+                className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute hover:text-navy"
+              >
+                Edit
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
+      {error && (
+        <p className="rounded-md border border-coral/30 bg-coral/5 px-3 py-2 text-sm text-coral">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-cream pt-4">
+        <button
+          type="button"
+          onClick={onSubmitAll}
+          disabled={!allComplete}
+          className="rounded-md bg-navy px-6 py-3 text-sm font-medium text-paper hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Submit all assessments →
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function summariseStored(
+  taskType: TaskType,
+  stored?: StoredResponse
+): string {
+  if (!stored) return "Not answered yet";
+  const p = stored.payload as Record<string, unknown>;
+  if (taskType === "email_writing") {
+    const wc = (p?.word_count as number) ?? 0;
+    return `${wc} word${wc === 1 ? "" : "s"} written`;
+  }
+  if (taskType === "listen_paraphrase") {
+    const points = (p?.points as string[] | undefined) ?? [];
+    const plays = (p?.plays_used as number) ?? 0;
+    return `${points.length} point${points.length === 1 ? "" : "s"} captured · ${plays} play${plays === 1 ? "" : "s"} used`;
+  }
+  if (taskType === "read_summarise") {
+    const summary = (p?.summary as string | undefined) ?? "";
+    const wc = summary.trim().length === 0 ? 0 : summary.trim().split(/\s+/).length;
+    return `${wc}-word summary`;
+  }
+  // vocab_cloze
+  const answers = (p?.answers as { selected: string }[] | undefined) ?? [];
+  return `${answers.length} item${answers.length === 1 ? "" : "s"} answered`;
+}
+
+// ─── Progress rail ───────────────────────────────────────────────────────────
 
 function ProgressRail({
   tasks,
@@ -169,7 +501,7 @@ function ProgressRail({
                     : "border border-cream bg-paper text-mute")
               }
             >
-              {state === "done" ? "✓" : meta.num}
+              {state === "done" ? "✓" : i + 1}
             </span>
             <span
               className={
@@ -196,22 +528,31 @@ type EmailWritingData = Extract<TaskPromptPublic, { task_type: "email_writing" }
 function EmailWritingTask({
   data,
   disabled,
-  onSubmit,
+  initial,
+  onSave,
+  isLast,
 }: {
   data: EmailWritingData;
   disabled: boolean;
-  onSubmit: (payload: unknown) => void;
+  initial?: unknown;
+  onSave: (payload: unknown) => void;
+  isLast: boolean;
 }) {
-  const [text, setText] = useState("");
+  const initialText =
+    typeof initial === "object" && initial !== null && "text" in initial
+      ? String((initial as { text: unknown }).text ?? "")
+      : "";
+  const [text, setText] = useState(initialText);
   const startedAtRef = useRef(0);
   const keystrokesRef = useRef(0);
   const pasteCountRef = useRef(0);
 
+  // One-time timestamp init on mount. The component re-mounts whenever
+  // activeIdx changes (each task type renders a different component),
+  // so we don't need a reset-on-data-change effect.
   useEffect(() => {
     startedAtRef.current = Date.now();
-    keystrokesRef.current = 0;
-    pasteCountRef.current = 0;
-  }, [data]);
+  }, []);
 
   const wordCount = useMemo(
     () => (text.trim().length === 0 ? 0 : text.trim().split(/\s+/).length),
@@ -221,8 +562,8 @@ function EmailWritingTask({
     wordCount >= data.target_word_count.min &&
     wordCount <= data.target_word_count.max;
 
-  function submit() {
-    onSubmit({
+  function save() {
+    onSave({
       text,
       word_count: wordCount,
       paste_count: pasteCountRef.current,
@@ -269,11 +610,11 @@ function EmailWritingTask({
         </p>
         <button
           type="button"
-          onClick={submit}
+          onClick={save}
           disabled={disabled || wordCount < 30}
           className="rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Submit and continue →
+          {isLast ? "Save and review →" : "Save and continue →"}
         </button>
       </div>
     </div>
@@ -287,17 +628,39 @@ type ListenData = Extract<TaskPromptPublic, { task_type: "listen_paraphrase" }>[
 function ListenParaphraseTask({
   data,
   disabled,
-  onSubmit,
+  initial,
+  onSave,
+  isLast,
 }: {
   data: ListenData;
   disabled: boolean;
-  onSubmit: (payload: unknown) => void;
+  initial?: unknown;
+  onSave: (payload: unknown) => void;
+  isLast: boolean;
 }) {
+  const initialPoints =
+    typeof initial === "object" && initial !== null && "points" in initial
+      ? ((initial as { points: unknown }).points as string[])
+      : null;
+  const initialPlays =
+    typeof initial === "object" && initial !== null && "plays_used" in initial
+      ? Number((initial as { plays_used: unknown }).plays_used) || 0
+      : 0;
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playsUsed, setPlaysUsed] = useState(0);
+  const [playsUsed, setPlaysUsed] = useState(initialPlays);
   const [playing, setPlaying] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const [points, setPoints] = useState<string[]>(["", "", ""]);
+  const [points, setPoints] = useState<string[]>(
+    initialPoints && initialPoints.length === 3
+      ? initialPoints
+      : initialPoints
+        ? [
+            initialPoints[0] ?? "",
+            initialPoints[1] ?? "",
+            initialPoints[2] ?? "",
+          ]
+        : ["", "", ""]
+  );
   const playsAllowed = data.plays_allowed ?? 1;
   const canPlay = playsUsed < playsAllowed && !playing;
 
@@ -317,10 +680,10 @@ function ListenParaphraseTask({
     });
   }
 
-  function submit() {
+  function save() {
     const cleaned = points.map((p) => p.trim()).filter((p) => p.length > 0);
     if (cleaned.length < 1) return;
-    onSubmit({ points: cleaned, plays_used: playsUsed });
+    onSave({ points: cleaned, plays_used: playsUsed });
   }
 
   const filled = points.filter((p) => p.trim().length > 0).length;
@@ -391,11 +754,11 @@ function ListenParaphraseTask({
         </p>
         <button
           type="button"
-          onClick={submit}
+          onClick={save}
           disabled={disabled || filled < 1 || playsUsed === 0}
           className="rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Submit and continue →
+          {isLast ? "Save and review →" : "Save and continue →"}
         </button>
       </div>
     </div>
@@ -409,21 +772,29 @@ type ReadData = Extract<TaskPromptPublic, { task_type: "read_summarise" }>["data
 function ReadSummariseTask({
   data,
   disabled,
-  onSubmit,
+  initial,
+  onSave,
+  isLast,
 }: {
   data: ReadData;
   disabled: boolean;
-  onSubmit: (payload: unknown) => void;
+  initial?: unknown;
+  onSave: (payload: unknown) => void;
+  isLast: boolean;
 }) {
-  const [summary, setSummary] = useState("");
+  const initialSummary =
+    typeof initial === "object" && initial !== null && "summary" in initial
+      ? String((initial as { summary: unknown }).summary ?? "")
+      : "";
+  const [summary, setSummary] = useState(initialSummary);
   const startedAtRef = useRef(0);
 
   useEffect(() => {
     startedAtRef.current = Date.now();
-  }, [data]);
+  }, []);
 
-  function submit() {
-    onSubmit({
+  function save() {
+    onSave({
       summary,
       total_seconds: (Date.now() - startedAtRef.current) / 1000,
     });
@@ -446,11 +817,11 @@ function ReadSummariseTask({
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={submit}
+          onClick={save}
           disabled={disabled || summary.trim().length < 30}
           className="rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Submit and continue →
+          {isLast ? "Save and review →" : "Save and continue →"}
         </button>
       </div>
     </div>
@@ -464,13 +835,24 @@ type VocabData = Extract<TaskPromptPublic, { task_type: "vocab_cloze" }>["data"]
 function VocabClozeTask({
   data,
   disabled,
-  onSubmit,
+  initial,
+  onSave,
+  isLast,
 }: {
   data: VocabData;
   disabled: boolean;
-  onSubmit: (payload: unknown) => void;
+  initial?: unknown;
+  onSave: (payload: unknown) => void;
+  isLast: boolean;
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const initialAnswers =
+    typeof initial === "object" && initial !== null && "answers" in initial
+      ? ((initial as { answers: { item_id: string; selected: string }[] }).answers ?? [])
+      : [];
+  const initialMap: Record<string, string> = Object.fromEntries(
+    initialAnswers.map((a) => [a.item_id, a.selected])
+  );
+  const [answers, setAnswers] = useState<Record<string, string>>(initialMap);
   const startsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
@@ -483,7 +865,7 @@ function VocabClozeTask({
     setAnswers((prev) => ({ ...prev, [itemId]: choice }));
   }
 
-  function submit() {
+  function save() {
     const now = Date.now();
     const payload = {
       answers: data.items.map((item) => ({
@@ -492,7 +874,7 @@ function VocabClozeTask({
         time_taken_ms: Math.max(0, now - (startsRef.current[item.id] ?? now)),
       })),
     };
-    onSubmit(payload);
+    onSave(payload);
   }
 
   const answered = Object.keys(answers).length;
@@ -546,11 +928,11 @@ function VocabClozeTask({
         </p>
         <button
           type="button"
-          onClick={submit}
+          onClick={save}
           disabled={disabled || !allAnswered}
           className="rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Submit and finish →
+          {isLast ? "Save and review →" : "Save and continue →"}
         </button>
       </div>
     </div>
