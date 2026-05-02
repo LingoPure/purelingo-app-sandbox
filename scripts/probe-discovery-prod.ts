@@ -1,12 +1,15 @@
 /**
  * One-shot prod probe for the discovery session.
  *
- * Logs in as the e2e test student, opens /onboarding, clicks
- * "Start discovery session", and captures:
+ * Logs in as the e2e test student, opens /onboarding/session (which
+ * auto-starts — no Start button to click anymore after the WebSocket-
+ * only rewrite), and captures:
  *   - browser console output (info/warn/error)
  *   - page-level errors (uncaught exceptions)
  *   - failed network requests
- *   - the on-screen status pill + visible error text
+ *   - WebSocket lifecycle events (open/close/error)
+ *   - the on-screen status text + visible error text
+ *   - Pause / End button enablement + click responsiveness
  *
  * Run with:  npx tsx scripts/probe-discovery-prod.ts
  */
@@ -77,72 +80,55 @@ async function main() {
   );
   console.log(`[${ts()}] logged in, at ${page.url()}`);
 
-  console.log(`[${ts()}] navigating to /onboarding`);
-  await page.goto(`${PROD_URL}/onboarding`, { waitUntil: "domcontentloaded" });
-
-  const startBtn = page.getByRole("button", { name: /start discovery session|connecting/i });
-  await startBtn.waitFor({ state: "visible", timeout: 10_000 });
-  console.log(`[${ts()}] start button visible`);
-
-  // NOTE: deliberately NO hydration wait — we want to verify the fix
-  // (button disabled until React mounts) prevents pre-hydration no-ops.
-  // The Playwright click() will retry until the button is enabled.
-
-  // Inspect the button: does it have a React fiber + onClick?
-  const fiberInfo = await startBtn.evaluate((el) => {
-    const fiberKey = Object.keys(el).find(
-      (k) => k.startsWith("__reactFiber$") || k.startsWith("__reactProps$")
-    );
-    const propsKey = Object.keys(el).find((k) => k.startsWith("__reactProps$"));
-    // @ts-expect-error — runtime inspection
-    const props = propsKey ? el[propsKey] : null;
-    return {
-      hasFiberKey: Boolean(fiberKey),
-      hasPropsKey: Boolean(propsKey),
-      hasOnClick: Boolean(props && typeof props.onClick === "function"),
-      disabled: (el as HTMLButtonElement).disabled,
-      tagName: el.tagName,
-      text: el.textContent?.trim() ?? "",
-    };
+  // Go straight to /onboarding/session — that's the page with the live
+  // discovery UI and auto-start. /onboarding shows the role-confirm
+  // overview, not the call.
+  console.log(`[${ts()}] navigating to /onboarding/session`);
+  await page.goto(`${PROD_URL}/onboarding/session`, {
+    waitUntil: "domcontentloaded",
   });
-  console.log(`[${ts()}] button inspection: ${JSON.stringify(fiberInfo)}`);
 
-  // Capture pre-click status.
-  const preStatus = await page.locator("text=/^status:/i").first().textContent().catch(() => null);
-  console.log(`[${ts()}] pre-click status pill: ${preStatus}`);
+  // The page auto-starts on mount — no Start button to click. We just
+  // watch the status text + button states evolve.
+  const statusLocator = page.locator("text=/^status:/i").first();
 
-  console.log(`[${ts()}] clicking Start (Playwright click)`);
-  await startBtn.click();
-  await page.waitForTimeout(1_500);
-
-  // If status didn't change, also try a direct JS click — bypasses any
-  // pointer-events / overlay weirdness.
-  const midStatus = await page.locator("text=/^status:/i").first().textContent().catch(() => null);
-  console.log(`[${ts()}] +1.5s status: ${midStatus}`);
-  if (midStatus && /disconnected/i.test(midStatus)) {
-    console.log(`[${ts()}] click had no effect — retrying via element.click()`);
-    await startBtn.evaluate((el) => (el as HTMLButtonElement).click());
-  }
-
-  // Watch the status pill for ~12s.
-  const deadline = Date.now() + 12_000;
+  // Watch the status text for ~25s (enough time for getUserMedia → token
+  // fetch → WebSocket connect → onConnect callback). With WebSocket-only
+  // we expect: idle → connecting → connected. If we never reach
+  // "connected", that's the bug we want to surface.
+  const deadline = Date.now() + 25_000;
   let lastStatus: string | null = null;
   while (Date.now() < deadline) {
-    const cur = await page
-      .locator("text=/^status:/i")
-      .first()
-      .textContent()
-      .catch(() => null);
+    const cur = await statusLocator.textContent().catch(() => null);
     if (cur && cur !== lastStatus) {
-      console.log(`[${ts()}] status pill: ${cur}`);
+      console.log(`[${ts()}] status: ${cur}`);
       lastStatus = cur;
+      if (/connected/i.test(cur) && !/disconnected/i.test(cur)) break;
     }
     await page.waitForTimeout(250);
   }
 
-  // Capture any visible error block.
+  // Inspect the Pause / End buttons after the connection settles.
+  const buttonStates = await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll("button"));
+    return buttons
+      .filter((b) =>
+        /pause|resume|end session/i.test(b.textContent ?? "")
+      )
+      .map((b) => ({
+        text: b.textContent?.trim() ?? "",
+        disabled: (b as HTMLButtonElement).disabled,
+        className: b.className.slice(0, 80),
+      }));
+  });
+  console.log(`[${ts()}] action buttons: ${JSON.stringify(buttonStates)}`);
+
+  // Capture any visible error block — the LingoPure error CTA uses
+  // text-coral, not text-rose-700, so we widen the selector.
   const errorText = await page
-    .locator('[role="alert"], .text-rose-700, .text-red-600, [class*="error"]')
+    .locator(
+      '[role="alert"], .text-coral, .text-rose-700, .text-red-600, [class*="error"]'
+    )
     .allTextContents()
     .catch(() => []);
   if (errorText.length) {
