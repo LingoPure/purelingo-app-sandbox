@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
 import { RoleConfirmAndStart } from "./role-confirm";
+import { MeetAriaIntro } from "./meet-aria-intro";
 
 export default async function OnboardingPage() {
   const agentId = process.env.ELEVENLABS_AGENT_ID;
@@ -93,6 +94,8 @@ export default async function OnboardingPage() {
         </h1>
         <p className="mt-3 max-w-2xl text-mute">{t("onboarding.lead")}</p>
       </div>
+
+      <MeetAriaIntro />
 
       <section className="rounded-lg border border-cream bg-paper p-6">
         <h2 className="mb-4 font-serif text-xl text-navy">
