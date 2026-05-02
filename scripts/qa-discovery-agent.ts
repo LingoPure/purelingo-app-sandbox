@@ -5,14 +5,19 @@
  * and the protocol-enforcement rules from §09.
  *
  * Usage:
- *   set -a; source .env.local; set +a; npx tsx scripts/qa-discovery-agent.ts
+ *   npx tsx scripts/qa-discovery-agent.ts
  *
- * Env required: ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID.
+ * Env required: ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID. Loaded from
+ * .env.local automatically.
  *
  * Note: this calls ElevenLabs' /v1/convai/agents/{id}/simulate-conversation
  * endpoint. It does not consume voice minutes — it's text-only simulation
  * over the same system prompt and tools that drive a real call.
  */
+
+import { config as loadEnv } from "dotenv";
+loadEnv({ path: ".env.local" });
+loadEnv();
 
 const PERSONA_PROMPT = `You are Nguyen Thi Lan, a 32-year-old Senior Account Manager at Vinh Hoan Export Co., a seafood exporter based in Ho Chi Minh City, Vietnam. You speak intermediate English (around B1+ in CEFR terms): generally fluent and confident in conversation, but you occasionally use Vietnamese-accented constructions, sometimes pause to find a word, and your formal writing in English needs work. Your tone is friendly and professional.
 
