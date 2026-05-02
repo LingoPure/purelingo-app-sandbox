@@ -26,6 +26,7 @@ type Props = {
 export function MobileNav({ items, tone = "light", signOut }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [drawerTop, setDrawerTop] = useState(64);
 
   // Close drawer whenever the route changes.
   useEffect(() => {
@@ -44,6 +45,30 @@ export function MobileNav({ items, tone = "light", signOut }: Props) {
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  // Position the drawer below whatever sticky chrome (demo banner + header)
+  // currently sits at the top of the viewport. The demo banner is z-50 and
+  // would otherwise cover the first nav items.
+  useEffect(() => {
+    if (!open) return;
+    const compute = () => {
+      let top = 64;
+      const header = document.querySelector("header");
+      if (header) top = Math.max(top, header.getBoundingClientRect().bottom);
+      const banner = document.querySelector(
+        "[data-demo-banner]",
+      ) as HTMLElement | null;
+      if (banner) top = Math.max(top, banner.getBoundingClientRect().bottom);
+      setDrawerTop(Math.round(top));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", compute, { passive: true });
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", compute);
     };
   }, [open]);
 
@@ -102,11 +127,13 @@ export function MobileNav({ items, tone = "light", signOut }: Props) {
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="fixed inset-0 top-[64px] z-30 bg-navy/40 backdrop-blur-sm"
+            style={{ top: drawerTop }}
+            className="fixed inset-x-0 bottom-0 z-30 bg-navy/40 backdrop-blur-sm"
           />
           <div
             id="mobile-nav-drawer"
-            className={`fixed inset-x-0 top-[64px] z-40 border-b shadow-xl ${drawerClass}`}
+            style={{ top: drawerTop }}
+            className={`fixed inset-x-0 z-40 border-b shadow-xl ${drawerClass}`}
           >
             <nav className="flex flex-col px-4 py-3">
               {items.map((item) => {

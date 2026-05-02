@@ -12,7 +12,10 @@ import { getDict } from "@/lib/i18n";
 export async function DemoBanner() {
   const { t } = await getDict();
   return (
-    <div className="sticky top-0 z-50 w-full border-b-2 border-navy/20 bg-gold text-navy shadow-[0_2px_0_rgba(10,37,64,0.08)]">
+    <div
+      data-demo-banner
+      className="sticky top-0 z-50 w-full border-b-2 border-navy/20 bg-gold text-navy shadow-[0_2px_0_rgba(10,37,64,0.08)]"
+    >
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-2 px-4 py-3 text-center sm:flex-row sm:gap-5 sm:py-4">
         <span className="inline-block rounded bg-navy px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.28em] text-gold sm:text-sm">
           Strategic Demo

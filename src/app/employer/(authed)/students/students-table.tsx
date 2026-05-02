@@ -160,13 +160,13 @@ export function StudentsTable({ rows }: { rows: RosterRow[] }) {
         </div>
       )}
 
-      <div className="overflow-hidden rounded-lg border border-cream bg-paper">
+      <div className="overflow-x-auto rounded-lg border border-cream bg-paper">
         {rows.length === 0 ? (
           <p className="px-6 py-10 text-center text-sm text-mute">
             No students yet.
           </p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[960px] text-sm">
             <thead className="border-b border-cream bg-mist/50 text-left">
               <tr>
                 <Th>
