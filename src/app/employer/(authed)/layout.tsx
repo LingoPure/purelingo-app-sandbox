@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmployerSignOut } from "../sign-out-button";
+import { EmployerMobileNav } from "./mobile-nav";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
@@ -27,32 +28,42 @@ export default async function EmployerAuthedLayout({
   }
 
   const { lang, t } = await getDict();
+  const navItems = [
+    { href: "/employer", label: t("emp.navOverview") },
+    { href: "/employer/students", label: t("emp.navStudents") },
+    { href: "/employer/roles", label: "Roles" },
+    { href: "/employer/teachers", label: "Teachers" },
+    { href: "/employer/departments", label: "Departments" },
+  ];
   return (
     <div className="flex min-h-screen flex-col bg-mist">
-      <header className="border-b border-cream bg-navy text-paper">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-6">
+      <header className="sticky top-0 z-20 border-b border-cream bg-navy text-paper">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-6">
             <Link href="/employer" className="font-serif text-xl text-paper">
               LingoPure<span className="text-gold">.</span>
-              <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.25em] text-gold">
+              <span className="ml-2 hidden font-mono text-[10px] uppercase tracking-[0.25em] text-gold sm:inline">
                 {t("emp.brandTag")}
               </span>
             </Link>
             <nav className="hidden items-center gap-5 sm:flex">
-              <NavLink href="/employer">{t("emp.navOverview")}</NavLink>
-              <NavLink href="/employer/students">{t("emp.navStudents")}</NavLink>
-              <NavLink href="/employer/roles">Roles</NavLink>
-              <NavLink href="/employer/teachers">Teachers</NavLink>
-              <NavLink href="/employer/departments">Departments</NavLink>
+              {navItems.map((item) => (
+                <NavLink key={item.href} href={item.href}>
+                  {item.label}
+                </NavLink>
+              ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <LanguagePill current={lang} tone="light" />
-            <EmployerSignOut />
+            <div className="hidden sm:block">
+              <EmployerSignOut />
+            </div>
+            <EmployerMobileNav items={navItems} />
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-10">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
         {children}
       </main>
     </div>
