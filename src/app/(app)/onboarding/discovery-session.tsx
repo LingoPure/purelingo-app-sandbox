@@ -309,7 +309,7 @@ export function DiscoverySession({
         console.warn("[discovery] endSession threw", err);
       }
     }
-    router.push("/dashboard?just-finished=1");
+    router.push("/onboarding/battery?just-finished=voice");
   };
 
   // Pause / resume. The SDK has no native pause — we mute the mic
@@ -479,7 +479,7 @@ export function DiscoverySession({
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => router.push("/dashboard?just-finished=1")}
+              onClick={() => router.push("/onboarding/battery?just-finished=voice")}
               className="flex-1 rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
             >
               View your results

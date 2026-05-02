@@ -99,7 +99,8 @@ export default async function DashboardPage() {
     supabase
       .from("gap_scores")
       .select("skill, score, target")
-      .eq("student_id", user!.id),
+      .eq("student_id", user!.id)
+      .eq("is_canonical", true),
     supabase
       .from("discovery_sessions")
       .select("profile_json, completed_at, status")

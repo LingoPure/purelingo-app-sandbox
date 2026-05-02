@@ -102,18 +102,21 @@ export async function scoreDiscoverySession(
   // all read this column.
   const baselines = await loadBaselinesForStudent(supabase, input.studentId);
 
-  // Persist sub-scores. unique (student_id, skill) on gap_scores → upsert.
+  // Persist sub-scores. unique (student_id, skill, source) on gap_scores
+  // (since 0017) — the voice scorer always writes source='discovery' and is
+  // canonical until the Phase 0b battery overrides per-skill.
   const rows = SKILL_KEYS.map((skill) => ({
     student_id: input.studentId,
     skill,
     score: parsed[skill].score,
     target: baselines[skill],
     source: "discovery" as const,
+    is_canonical: true,
   }));
 
   const { error: gapErr } = await supabase
     .from("gap_scores")
-    .upsert(rows, { onConflict: "student_id,skill" });
+    .upsert(rows, { onConflict: "student_id,skill,source" });
   if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
 
   // Update discovery_sessions.profile_json with the full structured rubric output
