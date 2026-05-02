@@ -1,17 +1,21 @@
 /**
  * Server-side conversation-token proxy for ElevenLabs ConvAI.
  *
- * Two transports, chosen via `?transport=webrtc|websocket`:
+ * Two transports, chosen via `?transport=websocket|webrtc`:
  *
- *   - webrtc (default) — fetches a WebRTC conversation token (LiveKit JWT)
- *     and returns `{ token }`. Lower latency, native browser audio.
+ *   - websocket (DEFAULT) — fetches a signed WSS URL and returns
+ *     `{ signedUrl }`. Single TLS connection on 443; survives every
+ *     corporate / hotel / mobile network we've tested. Slightly higher
+ *     latency than WebRTC (~150ms), inaudible to non-technical users.
  *
- *   - websocket — fetches a signed WSS URL and returns `{ signedUrl }`.
- *     Uses a single TLS connection on 443; survives most corporate
- *     firewalls and CGNAT setups that block WebRTC media (UDP/STUN/TURN).
+ *   - webrtc — fetches a WebRTC conversation token (LiveKit JWT) and
+ *     returns `{ token }`. Lower latency, but requires UDP / STUN / TURN
+ *     which corporate firewalls and CGNAT setups frequently block.
+ *     Available behind `?transport=webrtc` for testing only.
  *
- * The client tries webrtc first and falls back to websocket on
- * NegotiationError. See `discovery-session.tsx`.
+ * The client always asks for websocket. The previous WebRTC-primary +
+ * fallback dance produced a race that intermittently disabled the
+ * Pause / End buttons (see discovery-session.tsx commit history).
  *
  * Auth: must be a signed-in student. The agent ID is server-side env, so a
  * leaked client can't request a token for a different agent.
@@ -42,8 +46,10 @@ export async function GET(request: Request) {
   }
 
   const transportParam = new URL(request.url).searchParams.get("transport");
+  // Websocket is now the default (and what the discovery client always
+  // requests). WebRTC remains opt-in via `?transport=webrtc` for testing.
   const transport: Transport =
-    transportParam === "websocket" ? "websocket" : "webrtc";
+    transportParam === "webrtc" ? "webrtc" : "websocket";
 
   const upstreamPath =
     transport === "websocket"

@@ -19,55 +19,41 @@ type Props = {
   employerName?: string | null;
 };
 
-type Status = "idle" | "connecting" | "connected" | "error";
-type Transport = "webrtc" | "websocket";
+type Status = "idle" | "connecting" | "connected" | "ended" | "error";
 type TranscriptEntry = {
   id: number;
   role: "user" | "agent";
   text: string;
 };
 
-const WEBRTC_FAILURE_HINTS = [
-  "negotiation",
-  "negotiationerror",
-  "ice",
-  "peerconnection",
-  "peer connection",
-  "webrtc",
-  "could not find local track publication",
-];
-
-function looksLikeWebRTCFailure(message: string): boolean {
-  const m = message.toLowerCase();
-  return WEBRTC_FAILURE_HINTS.some((hint) => m.includes(hint));
-}
-
 function friendlyError(message: string): string {
-  if (looksLikeWebRTCFailure(message)) {
-    return "Your network is blocking voice traffic. We'll try a slower backup connection — if that also fails, switch to a different WiFi or use mobile data.";
-  }
   if (/microphone|getusermedia|permission denied/i.test(message)) {
     return "Microphone access denied. Please allow it in your browser and try again.";
   }
   if (/not signed in|401/i.test(message)) {
     return "You're not signed in. Refresh the page and sign in again.";
   }
-  return `Failed to start session — ${message}`;
+  return `Couldn't connect to Aria — ${message}`;
 }
 
 /**
- * Full-page discovery-session experience.
+ * Full-page discovery-session experience, WebSocket-only.
  *
- *   - Auto-starts on mount (mic permission → token → startSession)
- *   - Live scrolling transcript captured via the SDK's onMessage callback
- *   - End button navigates to /dashboard?just-finished=1, where a banner
- *     polls until scoring completes
+ * Earlier versions tried WebRTC primary with a WebSocket fallback. The
+ * handoff between transports raced against the SDK's onDisconnect
+ * callback, which nulled out the active conversation ref and silently
+ * disabled the Pause / End buttons. We've ripped the fallback dance out:
+ * we always connect via WebSocket. Voice quality is identical (same
+ * Rachel TTS, same latency-perceived response), but the connection works
+ * behind every corporate / hotel / mobile network we've tested and the
+ * student never sees a confusing "primary voice connection failed"
+ * message.
  *
- * Bypasses @elevenlabs/react ConversationProvider whose React state never
- * syncs after startSession resolves (SDK issue #663). We drive status
- * manually from the client-level callbacks. WebRTC failures auto-fall-back
- * to the WebSocket transport, with a 12-second watchdog catching the case
- * where the SDK hangs without firing any callback.
+ * Each call to start() bumps a sessionGen counter that's captured by the
+ * SDK callbacks. If the SDK fires onConnect / onDisconnect / onError /
+ * onMessage for a stale session (e.g. a previously torn-down connection
+ * whose teardown is still flushing), we silently no-op so the live
+ * session's React state stays clean.
  */
 export function DiscoverySession({
   userId,
@@ -89,27 +75,23 @@ export function DiscoverySession({
   const [isPaused, setIsPaused] = useState(false);
 
   const convRef = useRef<Conversation | null>(null);
-  const triedWebSocketRef = useRef(false);
-  const attemptConnectedRef = useRef(false);
-  const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Bumped on every start() and every endAndExit(). SDK callbacks bound
+   *  to a stale gen no-op — that's how we keep late teardown events from
+   *  mutating the React state of a fresh session or a navigated-away
+   *  page. */
+  const sessionGenRef = useRef(0);
+  const everConnectedRef = useRef(false);
   const autoStartedRef = useRef(false);
   const transcriptIdRef = useRef(0);
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
 
-  const clearWatchdog = () => {
-    if (watchdogTimerRef.current) {
-      clearTimeout(watchdogTimerRef.current);
-      watchdogTimerRef.current = null;
-    }
-  };
-
-  // Mount + cleanup. The cleanup endSession is a backstop for tab close
-  // or back-navigation — the SDK would otherwise leave the LiveKit room
-  // open until ElevenLabs reaps it.
+  // Mount + cleanup. Cleanup endSession is a backstop for tab-close /
+  // back-navigation; the SDK would otherwise leave the session open
+  // until ElevenLabs reaps it server-side.
   useEffect(() => {
     setHydrated(true);
     return () => {
-      clearWatchdog();
+      sessionGenRef.current++; // any in-flight callbacks become stale
       try {
         void convRef.current?.endSession();
       } catch {
@@ -124,27 +106,51 @@ export function DiscoverySession({
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [transcript]);
 
-  const startWithTransport = async (transport: Transport): Promise<void> => {
-    const r = await fetch(`/api/convai/token?transport=${transport}`);
-    if (!r.ok) {
-      const body = (await r.json().catch(() => ({}))) as {
-        error?: string;
-        detail?: string;
-      };
-      throw new Error(
-        body.detail
-          ? `${body.error ?? "token error"} — ${body.detail}`
-          : body.error ?? `HTTP ${r.status}`
-      );
-    }
-    const j = (await r.json()) as { token?: string; signedUrl?: string };
+  const start = async () => {
+    setError(null);
+    setStatus("connecting");
+    setIsPaused(false);
+    everConnectedRef.current = false;
+    const myGen = ++sessionGenRef.current;
+    console.info("[discovery] start", { gen: myGen, userId, nativeLanguage });
 
-    // The dictionary's first message contains nested {{student_name}},
-    // {{role_name}}, etc. ConvAI's variable substitution doesn't
-    // recurse — it expands {{first_message_localized}} once and uses
-    // the result verbatim. So we pre-substitute here in JS before
-    // passing it; the system prompt itself still uses the un-nested
-    // {{role_name}} etc. variables directly and works fine.
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (mErr) {
+      console.error("[discovery] mic denied", mErr);
+      setError("Microphone access denied. Please allow it and try again.");
+      setStatus("error");
+      return;
+    }
+
+    let signedUrl: string;
+    try {
+      const r = await fetch(`/api/convai/token?transport=websocket`);
+      if (!r.ok) {
+        const body = (await r.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        throw new Error(
+          body.detail
+            ? `${body.error ?? "token error"} — ${body.detail}`
+            : body.error ?? `HTTP ${r.status}`
+        );
+      }
+      const j = (await r.json()) as { signedUrl?: string };
+      if (!j.signedUrl) throw new Error("signedUrl missing in token response");
+      signedUrl = j.signedUrl;
+    } catch (e) {
+      console.error("[discovery] token fetch failed", e);
+      const detail = e instanceof Error ? e.message : String(e);
+      setError(friendlyError(detail));
+      setStatus("error");
+      return;
+    }
+
+    // ConvAI's variable substitution is single-pass and won't recurse,
+    // so any nested {{vars}} inside firstMessageLocalized must be
+    // resolved client-side before the SDK sees them.
     const safeStudentName = studentName ?? "";
     const safeRoleName = roleName ?? "";
     const safeRoleDesc = roleDescription ?? "";
@@ -162,82 +168,62 @@ export function DiscoverySession({
       student_name: safeStudentName,
       native_language: nativeLanguage,
       first_message_localized: interpolatedFirstMessage,
-      // Pre-call context — Aria reads these via {{role_name}} etc in
-      // the system prompt so she knows who she's talking to before the
-      // first turn. Empty strings are safe substitutions; the prompt
-      // gracefully degrades when a value is missing.
       role_name: safeRoleName,
       role_description: safeRoleDesc,
       target_level: safeTargetLevel,
       employer_name: safeEmployerName,
     };
 
-    const triggerFallback = (logHint: string): boolean => {
-      if (transport !== "webrtc" || triedWebSocketRef.current) return false;
-      triedWebSocketRef.current = true;
-      clearWatchdog();
-      console.warn(
-        "[discovery] webrtc failed, retrying on websocket transport",
-        logHint
-      );
-      setError(
-        "Voice connection blocked by your network — falling back to backup mode…"
-      );
-      setStatus("connecting");
-      try {
-        void convRef.current?.endSession();
-      } catch {
-        /* ignore */
-      }
-      convRef.current = null;
-      attemptConnectedRef.current = false;
-      setTimeout(() => {
-        startWithTransport("websocket").catch((retryErr) => {
-          const retryMsg =
-            retryErr instanceof Error ? retryErr.message : String(retryErr);
-          console.error("[discovery] websocket fallback failed", retryErr);
-          setError(friendlyError(retryMsg));
-          setStatus("error");
-        });
-      }, 250);
-      return true;
-    };
+    const isStale = () => sessionGenRef.current !== myGen;
 
     const callbacks = {
       onConnect: () => {
-        console.info("[discovery] connected");
-        clearWatchdog();
-        attemptConnectedRef.current = true;
+        if (isStale()) return;
+        console.info("[discovery] connected", { gen: myGen });
+        everConnectedRef.current = true;
         setStatus("connected");
         setError(null);
       },
       onDisconnect: (details: { reason: string; message?: string }) => {
-        console.info("[discovery] disconnected", details);
-        clearWatchdog();
-        if (details?.reason === "error") {
-          if (triggerFallback(details.message ?? "disconnect:error")) return;
+        if (isStale()) {
+          console.info("[discovery] stale onDisconnect ignored", {
+            gen: myGen,
+            currentGen: sessionGenRef.current,
+            details,
+          });
+          return;
         }
-        // Normal disconnect (user clicked End → we already navigated, or
-        // agent ended, or fallback already ran). If we're still on the
-        // page, drop back to idle.
-        setStatus("idle");
+        console.info("[discovery] disconnected", { gen: myGen, details });
+        // Don't null convRef here — endAndExit handles cleanup on the
+        // user-initiated path. If the agent or network ended the call
+        // unilaterally, route the student to their results.
+        if (details?.reason === "error" && !everConnectedRef.current) {
+          // Failed before ever connecting → let the user retry.
+          setError(
+            friendlyError(details.message ?? "connection ended unexpectedly")
+          );
+          setStatus("error");
+          return;
+        }
+        // Either the agent ended the call, the network dropped after a
+        // successful connection, or we're past natural completion.
+        setStatus("ended");
         setIsSpeaking(false);
         setIsPaused(false);
-        convRef.current = null;
       },
       onError: (err: unknown) => {
-        console.error("[discovery] error", err);
-        clearWatchdog();
+        if (isStale()) return;
+        console.error("[discovery] error", { gen: myGen, err });
         const msg = err instanceof Error ? err.message : String(err);
-        if (looksLikeWebRTCFailure(msg) && triggerFallback(msg)) return;
         setError(friendlyError(msg));
         setStatus("error");
-        convRef.current = null;
       },
       onModeChange: ({ mode }: { mode: string }) => {
+        if (isStale()) return;
         setIsSpeaking(mode === "speaking");
       },
       onMessage: (props: { message?: string; source?: string }) => {
+        if (isStale()) return;
         const msg = props?.message;
         if (!msg) return;
         const role: "user" | "agent" =
@@ -249,81 +235,29 @@ export function DiscoverySession({
       },
     };
 
-    if (transport === "webrtc") {
-      attemptConnectedRef.current = false;
-      clearWatchdog();
-      watchdogTimerRef.current = setTimeout(() => {
-        if (!attemptConnectedRef.current) {
-          console.warn(
-            "[discovery] webrtc stuck after 12s with no onConnect — forcing fallback"
-          );
-          triggerFallback("startup-timeout");
-        }
-      }, 12_000);
-    }
-
-    if (transport === "websocket") {
-      if (!j.signedUrl) throw new Error("signedUrl missing in token response");
-      console.info("[discovery] signed URL fetched (websocket fallback)");
+    try {
       const conv = await Conversation.startSession({
-        signedUrl: j.signedUrl,
+        signedUrl,
         connectionType: "websocket",
         dynamicVariables,
         ...callbacks,
       });
+      // If our session was superseded while startSession was in-flight
+      // (user clicked End or unmounted) tear this one down and bail.
+      if (isStale()) {
+        try {
+          void conv.endSession();
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
       convRef.current = conv;
-      attemptConnectedRef.current = true;
-      clearWatchdog();
+      // Belt-and-suspenders: onConnect timing varies; mark connected on
+      // resolve too so we never get stuck in "connecting".
+      everConnectedRef.current = true;
       setStatus("connected");
       setError(null);
-      return;
-    }
-
-    if (!j.token) throw new Error("token missing in token response");
-    console.info("[discovery] token fetched (webrtc)");
-    const conv = await Conversation.startSession({
-      conversationToken: j.token,
-      dynamicVariables,
-      ...callbacks,
-    });
-    if (triedWebSocketRef.current) {
-      console.warn(
-        "[discovery] webrtc startSession resolved after fallback fired — discarding"
-      );
-      try {
-        void conv.endSession();
-      } catch {
-        /* ignore */
-      }
-      return;
-    }
-    convRef.current = conv;
-    attemptConnectedRef.current = true;
-    clearWatchdog();
-    setStatus("connected");
-    setError(null);
-  };
-
-  const start = async () => {
-    setError(null);
-    setStatus("connecting");
-    setIsPaused(false);
-    triedWebSocketRef.current = false;
-    attemptConnectedRef.current = false;
-    clearWatchdog();
-    console.info("[discovery] start", { userId, nativeLanguage });
-
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (mErr) {
-      console.error("[discovery] mic denied", mErr);
-      setError("Microphone access denied. Please allow it and try again.");
-      setStatus("error");
-      return;
-    }
-
-    try {
-      await startWithTransport("webrtc");
     } catch (e) {
       console.error("[discovery] startSession threw", e);
       const detail = e instanceof Error ? e.message : String(e);
@@ -341,24 +275,20 @@ export function DiscoverySession({
   }, [hydrated]);
 
   const tryAgain = () => {
-    autoStartedRef.current = true; // already mounted; just re-fire
     setTranscript([]);
     void start();
   };
 
-  // End and exit. We await endSession() because that tears down the
-  // LiveKit room which owns the audio elements — skipping the await
-  // navigates while the agent's audio is still decoding. Belt-and-
-  // suspenders: zero output volume + mute mic before awaiting so any
-  // in-flight TTS goes silent immediately. Each SDK call is wrapped in
-  // its own try/catch — if one throws (e.g. the connection is in a
-  // half-open state) we still proceed to the next one and ultimately
-  // navigate, so the button can never appear "stuck".
+  // End and exit. We bump sessionGen first so any in-flight or late SDK
+  // callbacks are treated as stale and can't mutate state after the
+  // user's already on their way to the dashboard. Each SDK call gets its
+  // own try/catch — if one throws (half-open connection, etc.) we still
+  // reach the navigate.
   const endAndExit = async () => {
     if (isEnding) return;
     console.info("[discovery] end and exit clicked");
     setIsEnding(true);
-    clearWatchdog();
+    sessionGenRef.current++;
     const conv = convRef.current;
     convRef.current = null;
     if (conv) {
@@ -378,27 +308,23 @@ export function DiscoverySession({
       } catch (err) {
         console.warn("[discovery] endSession threw", err);
       }
-    } else {
-      console.warn("[discovery] end clicked with no active conversation ref");
     }
     router.push("/dashboard?just-finished=1");
   };
 
-  // Pause / resume — for "I need to step away" mid-discovery. The SDK
-  // has no native pause, so we mute the mic (agent stops getting input)
-  // and zero output volume (user hears nothing). Each SDK call is in
-  // its own try/catch so a synchronous throw from one doesn't prevent
-  // the others or the React state update — the worst case is the
-  // contextual update fails to send, not a button that visually
-  // ignores the click.
+  // Pause / resume. The SDK has no native pause — we mute the mic
+  // (agent stops getting input), zero output volume (user hears
+  // nothing), and send a contextual update so Aria pauses speaking
+  // rather than continuing to talk to a silent room.
   const togglePause = () => {
     const conv = convRef.current;
-    console.info("[discovery] pause clicked", {
-      hasConv: Boolean(conv),
-      status,
-      isPaused,
-    });
-    if (!conv || status !== "connected") return;
+    if (!conv || status !== "connected") {
+      console.info("[discovery] pause clicked but no live conv", {
+        hasConv: Boolean(conv),
+        status,
+      });
+      return;
+    }
     const next = !isPaused;
     try {
       conv.setMicMuted(next);
@@ -428,6 +354,8 @@ export function DiscoverySession({
     ? isSpeaking
       ? "ring-coral animate-pulse"
       : "ring-ai-green"
+    : status === "ended"
+    ? "ring-ai-green/40"
     : status === "error"
     ? "ring-coral/40"
     : "ring-gold animate-pulse"; // idle / connecting
@@ -438,6 +366,8 @@ export function DiscoverySession({
     ? isSpeaking
       ? "Aria is speaking"
       : "Listening to you"
+    : status === "ended"
+    ? "Session complete — head to your dashboard"
     : status === "error"
     ? "Connection error"
     : "Connecting…";
@@ -489,6 +419,8 @@ export function DiscoverySession({
                 ? "Aria is about to speak — make sure your headphones are on."
                 : status === "error"
                 ? "No conversation yet. Try again to start."
+                : status === "ended"
+                ? "Session ended before any turns were captured."
                 : "Connecting to Aria…"}
             </p>
           ) : (
@@ -542,6 +474,16 @@ export function DiscoverySession({
             >
               Back to overview
             </Link>
+          </div>
+        ) : status === "ended" ? (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard?just-finished=1")}
+              className="flex-1 rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
+            >
+              View your results
+            </button>
           </div>
         ) : (
           <div className="flex gap-3">
