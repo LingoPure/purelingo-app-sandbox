@@ -45,8 +45,9 @@ next-env.d.ts
 /.idea/
 /.venv/
 
-# Claude Code local permissions
+# Claude Code local permissions and runtime state
 /.claude/settings.local.json
+/.claude/scheduled_tasks.*
 
 # Internal artefacts (kept out of source control)
 /briefing-extracted.txt

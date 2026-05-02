@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, DM_Serif_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { getActiveLanguage } from "@/lib/i18n";
+import { DemoBanner } from "@/components/demo-banner";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -39,7 +40,10 @@ export default async function RootLayout({
       lang={lang}
       className={`${jakarta.variable} ${dmSerif.variable} ${dmMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-paper text-ink">{children}</body>
+      <body className="min-h-full flex flex-col bg-paper text-ink">
+        <DemoBanner />
+        {children}
+      </body>
     </html>
   );
 }
