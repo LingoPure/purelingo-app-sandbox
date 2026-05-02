@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { loadStudentDetail } from "@/lib/employer/data";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import type { PlanRecommendation } from "@/lib/lessons/plan-generator";
 
 const SKILL_LABEL: Record<string, string> = {
   speaking_fluency: "Speaking",
@@ -22,8 +23,15 @@ export default async function StudentDetailPage({
   const detail = await loadStudentDetail(id);
   if (!detail) notFound();
 
-  const { student, profile, recentLessons, recentClasses, certifications } =
-    detail;
+  const {
+    student,
+    profile,
+    recentLessons,
+    recentClasses,
+    certifications,
+    programme,
+    programmeProgress,
+  } = detail;
 
   const radarSkills = SKILL_KEYS.map((k) => ({
     key: k,
@@ -110,6 +118,12 @@ export default async function StudentDetailPage({
         <StatTile label="Classes attended" value={student.classesCompleted} />
       </section>
 
+      <ProgrammeSection
+        programme={programme}
+        progress={programmeProgress}
+      />
+
+
       {certifications.length > 0 && (
         <section className="rounded-lg border border-cream bg-paper p-6">
           <h3 className="mb-3 font-serif text-lg text-navy">Certifications</h3>
@@ -181,6 +195,115 @@ export default async function StudentDetailPage({
         />
       </section>
     </div>
+  );
+}
+
+function ProgrammeSection({
+  programme,
+  progress,
+}: {
+  programme: PlanRecommendation[];
+  progress: {
+    completedByType: Record<string, number>;
+    classesCount: number;
+    classesAttendedCount: number;
+  };
+}) {
+  if (programme.length === 0) {
+    return (
+      <section className="rounded-lg border border-teal/30 bg-teal/5 p-6">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-teal">
+          Recommended programme
+        </p>
+        <h2 className="mt-1 font-serif text-xl text-navy">
+          At or above role baseline on every skill
+        </h2>
+        <p className="mt-2 text-sm text-mute">
+          No prescribed lessons — keep practising to push above baseline.
+        </p>
+      </section>
+    );
+  }
+
+  // Total micro-lesson completions across all types in the programme.
+  const lessonTypesInProgramme = new Set(
+    programme
+      .filter((r) => r.kind === "micro_lesson" && r.lessonType)
+      .map((r) => r.lessonType!)
+  );
+  const programmeLessonsCompleted = Array.from(lessonTypesInProgramme).reduce(
+    (sum, t) => sum + (progress.completedByType[t] ?? 0),
+    0
+  );
+  const programmeClassesRecommended = programme.filter(
+    (r) => r.kind === "class"
+  ).length;
+
+  return (
+    <section className="rounded-lg border border-cream bg-paper p-6">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-gold">
+            Recommended programme
+          </p>
+          <h2 className="mt-1 font-serif text-xl text-navy">
+            What the system has prescribed for this student
+          </h2>
+        </div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+          {programmeLessonsCompleted} lesson
+          {programmeLessonsCompleted === 1 ? "" : "s"} completed ·{" "}
+          {progress.classesAttendedCount}/{programmeClassesRecommended} class
+          {programmeClassesRecommended === 1 ? "" : "es"} attended
+        </p>
+      </div>
+
+      <ol className="flex flex-col gap-3">
+        {programme.map((rec, i) => {
+          const completedCount =
+            rec.kind === "micro_lesson" && rec.lessonType
+              ? progress.completedByType[rec.lessonType] ?? 0
+              : rec.kind === "class"
+                ? progress.classesAttendedCount
+                : 0;
+          return (
+            <li
+              key={`${rec.skill}-${rec.kind}-${rec.lessonType ?? "class"}-${i}`}
+              className={
+                "rounded-md border p-4 " +
+                (rec.priority === "critical"
+                  ? "border-coral/40 bg-coral/5"
+                  : rec.priority === "recommended"
+                    ? "border-cream bg-mist/30"
+                    : "border-cream bg-paper")
+              }
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-navy">
+                  {rec.priority === "critical"
+                    ? "Critical · "
+                    : rec.priority === "optional"
+                      ? "Optional · "
+                      : ""}
+                  {rec.skillLabel} · gap {rec.gap}
+                </p>
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
+                  {rec.kind === "micro_lesson" ? "Micro-lesson" : "Live class"}
+                  {" · "}
+                  {completedCount} completed
+                </p>
+              </div>
+              <h4 className="mt-1 font-serif text-base text-navy">
+                {rec.title}
+              </h4>
+              <p className="mt-1 text-sm leading-relaxed text-mute">
+                {rec.rationale}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 

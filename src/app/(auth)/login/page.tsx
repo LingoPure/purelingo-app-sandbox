@@ -1,13 +1,17 @@
 import Link from "next/link";
-import { login } from "./actions";
+import { login, requestMagicLink } from "./actions";
 import { getDict } from "@/lib/i18n";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ redirectTo?: string; error?: string }>;
+  searchParams: Promise<{
+    redirectTo?: string;
+    error?: string;
+    message?: string;
+  }>;
 }) {
-  const { redirectTo, error } = await searchParams;
+  const { redirectTo, error, message } = await searchParams;
   const { t } = await getDict();
 
   return (
@@ -20,10 +24,13 @@ export default async function LoginPage({
           {error}
         </div>
       )}
+      {message && (
+        <div className="mb-4 rounded-md border border-teal/30 bg-teal/10 px-3 py-2 text-sm text-teal">
+          {message}
+        </div>
+      )}
 
       <form action={login} className="flex flex-col gap-4">
-        {/* Empty default so the action falls through to admin-aware routing —
-            employer admins → /employer, everyone else → /dashboard. */}
         <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
         <Field label={t("login.fieldEmail")} name="email" type="email" required />
         <Field
@@ -40,6 +47,29 @@ export default async function LoginPage({
           {t("login.submit")}
         </button>
       </form>
+
+      {/* Returning students invited via magic link don't have a password.
+          This second form lets them request a fresh sign-in link without
+          having to ask their employer admin to re-invite them. */}
+      <div className="mt-8 border-t border-cream pt-6">
+        <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.22em] text-mute">
+          No password yet?
+        </p>
+        <p className="mb-3 text-sm text-mute">
+          If you arrived via an invite link from your employer, you can sign in
+          again by getting a fresh link in your email.
+        </p>
+        <form action={requestMagicLink} className="flex flex-col gap-3">
+          <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
+          <Field label="Email" name="email" type="email" required />
+          <button
+            type="submit"
+            className="rounded-md border border-navy/30 bg-paper px-4 py-2.5 text-sm font-medium text-navy hover:bg-mist"
+          >
+            Email me a sign-in link →
+          </button>
+        </form>
+      </div>
 
       <p className="mt-6 text-center text-sm text-mute">
         {t("login.signupPrompt")}{" "}

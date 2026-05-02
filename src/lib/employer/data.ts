@@ -9,6 +9,10 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
+import {
+  generateLessonPlan,
+  type PlanRecommendation,
+} from "@/lib/lessons/plan-generator";
 
 export function adminSupabase() {
   const url =
@@ -563,6 +567,21 @@ export type StudentDetail = {
     issued_at: string | null;
     created_at: string;
   }[];
+  /** The same recommended programme the student sees on /dashboard,
+   *  computed from the canonical gap_scores. Empty array if the
+   *  student is at/above baseline on every skill. */
+  programme: PlanRecommendation[];
+  /** Aggregate counts so the employer can read progress at a glance
+   *  without scrolling through the recent-lessons list. */
+  programmeProgress: {
+    /** Completed micro_lessons grouped by type. Keyed by the
+     *  lesson_type strings the plan generator emits
+     *  ('email_sprint', 'speak_score'). */
+    completedByType: Record<string, number>;
+    /** Total ClassIn sessions in any state (scheduled, live, completed). */
+    classesCount: number;
+    classesAttendedCount: number;
+  };
 };
 
 export async function loadStudentDetail(
@@ -574,33 +593,58 @@ export async function loadStudentDetail(
   const student = cohort.find((s) => s.id === studentId);
   if (!student) return null;
 
-  const [profileRes, lessonsRes, classesRes, certsRes] = await Promise.all([
-    supabase
-      .from("discovery_sessions")
-      .select("profile_json")
-      .eq("student_id", studentId)
-      .eq("status", "complete")
-      .order("completed_at", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("micro_lessons")
-      .select("id, type, completed_at, xp_awarded, score_after")
-      .eq("student_id", studentId)
-      .order("completed_at", { ascending: false, nullsFirst: false })
-      .limit(8),
-    supabase
-      .from("classin_sessions")
-      .select("id, teacher_name, scheduled_at, transcribed_at")
-      .eq("student_id", studentId)
-      .order("scheduled_at", { ascending: false, nullsFirst: false })
-      .limit(5),
-    supabase
-      .from("certifications")
-      .select("id, level, status, issued_at, created_at")
-      .eq("student_id", studentId)
-      .order("created_at", { ascending: false }),
-  ]);
+  const [profileRes, lessonsRes, classesRes, certsRes, lessonCountsRes, classCountsRes, programme] =
+    await Promise.all([
+      supabase
+        .from("discovery_sessions")
+        .select("profile_json")
+        .eq("student_id", studentId)
+        .eq("status", "complete")
+        .order("completed_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("micro_lessons")
+        .select("id, type, completed_at, xp_awarded, score_after")
+        .eq("student_id", studentId)
+        .order("completed_at", { ascending: false, nullsFirst: false })
+        .limit(8),
+      supabase
+        .from("classin_sessions")
+        .select("id, teacher_name, scheduled_at, transcribed_at")
+        .eq("student_id", studentId)
+        .order("scheduled_at", { ascending: false, nullsFirst: false })
+        .limit(5),
+      supabase
+        .from("certifications")
+        .select("id, level, status, issued_at, created_at")
+        .eq("student_id", studentId)
+        .order("created_at", { ascending: false }),
+      // Aggregates across the WHOLE history (not the recent-N slice
+      // recentLessons returns) so progress counters are accurate.
+      supabase
+        .from("micro_lessons")
+        .select("type, status")
+        .eq("student_id", studentId)
+        .eq("status", "completed"),
+      supabase
+        .from("classin_sessions")
+        .select("status")
+        .eq("student_id", studentId),
+      generateLessonPlan(supabase, studentId),
+    ]);
+
+  const completedByType: Record<string, number> = {};
+  for (const row of lessonCountsRes.data ?? []) {
+    const t = (row as { type?: string }).type;
+    if (!t) continue;
+    completedByType[t] = (completedByType[t] ?? 0) + 1;
+  }
+  const classRows = (classCountsRes.data ?? []) as { status?: string | null }[];
+  const classesCount = classRows.length;
+  const classesAttendedCount = classRows.filter(
+    (r) => r.status === "completed"
+  ).length;
 
   return {
     student,
@@ -610,5 +654,11 @@ export async function loadStudentDetail(
     recentLessons: (lessonsRes.data ?? []) as StudentDetail["recentLessons"],
     recentClasses: (classesRes.data ?? []) as StudentDetail["recentClasses"],
     certifications: (certsRes.data ?? []) as StudentDetail["certifications"],
+    programme,
+    programmeProgress: {
+      completedByType,
+      classesCount,
+      classesAttendedCount,
+    },
   };
 }
