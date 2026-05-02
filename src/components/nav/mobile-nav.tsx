@@ -3,15 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { EmployerSignOut } from "../sign-out-button";
 
-type NavItem = { href: string; label: string };
-
-type Props = {
-  items: NavItem[];
+export type MobileNavItem = {
+  href: string;
+  label: string;
+  /** When true, only highlight as active on an exact pathname match. */
+  exact?: boolean;
 };
 
-export function EmployerMobileNav({ items }: Props) {
+type Props = {
+  items: MobileNavItem[];
+  /**
+   * Matches the LanguagePill convention:
+   *   "light" = light text/borders for use on a dark header.
+   *   "dark"  = dark text/borders for use on a light header.
+   */
+  tone?: "light" | "dark";
+  /** Optional sign-out element rendered at the bottom of the drawer. */
+  signOut?: React.ReactNode;
+};
+
+export function MobileNav({ items, tone = "light", signOut }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -35,15 +47,28 @@ export function EmployerMobileNav({ items }: Props) {
     };
   }, [open]);
 
+  const isLight = tone === "light";
+  const buttonClass = isLight
+    ? "border-paper/20 text-paper hover:bg-paper/10"
+    : "border-navy/20 text-navy hover:bg-mist";
+  const drawerClass = isLight
+    ? "bg-navy text-paper border-cream"
+    : "bg-paper text-navy border-cream";
+  const linkActive = isLight ? "bg-paper/10 text-gold" : "bg-mist text-navy";
+  const linkInactive = isLight
+    ? "text-paper/80 hover:bg-paper/5 hover:text-paper"
+    : "text-navy/70 hover:bg-mist hover:text-navy";
+  const dividerClass = isLight ? "border-paper/15" : "border-navy/10";
+
   return (
     <div className="sm:hidden">
       <button
         type="button"
         aria-label={open ? "Close menu" : "Open menu"}
         aria-expanded={open}
-        aria-controls="employer-mobile-drawer"
+        aria-controls="mobile-nav-drawer"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-paper/20 text-paper hover:bg-paper/10"
+        className={`inline-flex h-10 w-10 items-center justify-center rounded-md border ${buttonClass}`}
       >
         <svg
           width="18"
@@ -80,33 +105,33 @@ export function EmployerMobileNav({ items }: Props) {
             className="fixed inset-0 top-[64px] z-30 bg-navy/40 backdrop-blur-sm"
           />
           <div
-            id="employer-mobile-drawer"
-            className="fixed inset-x-0 top-[64px] z-40 border-b border-cream bg-navy text-paper shadow-xl"
+            id="mobile-nav-drawer"
+            className={`fixed inset-x-0 top-[64px] z-40 border-b shadow-xl ${drawerClass}`}
           >
             <nav className="flex flex-col px-4 py-3">
               {items.map((item) => {
-                const active =
-                  item.href === "/employer"
-                    ? pathname === "/employer"
-                    : pathname?.startsWith(item.href);
+                const active = item.exact
+                  ? pathname === item.href
+                  : pathname === item.href ||
+                    pathname?.startsWith(item.href + "/");
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     className={
                       "rounded-md px-3 py-3 font-mono text-[12px] uppercase tracking-[0.22em] " +
-                      (active
-                        ? "bg-paper/10 text-gold"
-                        : "text-paper/80 hover:bg-paper/5 hover:text-paper")
+                      (active ? linkActive : linkInactive)
                     }
                   >
                     {item.label}
                   </Link>
                 );
               })}
-              <div className="mt-3 border-t border-paper/15 pt-3">
-                <EmployerSignOut />
-              </div>
+              {signOut && (
+                <div className={`mt-3 border-t pt-3 ${dividerClass}`}>
+                  {signOut}
+                </div>
+              )}
             </nav>
           </div>
         </>

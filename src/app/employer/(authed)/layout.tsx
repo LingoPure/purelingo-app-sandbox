@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EmployerSignOut } from "../sign-out-button";
-import { EmployerMobileNav } from "./mobile-nav";
+import { MobileNav, type MobileNavItem } from "@/components/nav/mobile-nav";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { getDict } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/server";
@@ -28,8 +28,8 @@ export default async function EmployerAuthedLayout({
   }
 
   const { lang, t } = await getDict();
-  const navItems = [
-    { href: "/employer", label: t("emp.navOverview") },
+  const navItems: MobileNavItem[] = [
+    { href: "/employer", label: t("emp.navOverview"), exact: true },
     { href: "/employer/students", label: t("emp.navStudents") },
     { href: "/employer/roles", label: "Roles" },
     { href: "/employer/teachers", label: "Teachers" },
@@ -59,7 +59,11 @@ export default async function EmployerAuthedLayout({
             <div className="hidden sm:block">
               <EmployerSignOut />
             </div>
-            <EmployerMobileNav items={navItems} />
+            <MobileNav
+              items={navItems}
+              tone="light"
+              signOut={<EmployerSignOut />}
+            />
           </div>
         </div>
       </header>
