@@ -13,6 +13,9 @@ import { RecommendedPlan } from "@/components/dashboard/recommended-plan";
 import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
+import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
+import { BilingualText } from "@/components/i18n/bilingual-text";
 import { tierForTarget } from "@/lib/gamification/rules";
 import { getDict } from "@/lib/i18n";
 
@@ -95,7 +98,9 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("students")
-      .select("id, name, discovery_status, target_level, xp, streak_days")
+      .select(
+        "id, name, discovery_status, target_level, xp, streak_days, native_language"
+      )
       .eq("id", user!.id)
       .maybeSingle(),
     supabase
@@ -204,6 +209,32 @@ export default async function DashboardPage() {
     ? await generateLessonPlan(supabase, user!.id)
     : [];
 
+  // Bilingual rendering for the two student-facing dynamic surfaces:
+  //   - per-skill evidence on the gap-score bars
+  //   - per-recommendation rationale on the lesson-plan card
+  // One Claude call per page render translates everything; English is
+  // shown alongside as deliberate cross-reading practice.
+  const studentNative = (student as { native_language?: string } | null)
+    ?.native_language;
+  const targetLang: LanguageCode | null = isLanguageCode(studentNative)
+    ? studentNative
+    : null;
+  const evidenceStrings = SKILL_KEYS.map((k) => profile?.[k]?.evidence ?? "");
+  const planStrings = lessonPlan.map((r) => r.rationale);
+  const summaryString = profile?.summary ?? "";
+  const [evidenceBilingual, planBilingual, summaryBilingual] = await Promise.all([
+    bilingualize(evidenceStrings, targetLang),
+    bilingualize(planStrings, targetLang),
+    bilingualize([summaryString], targetLang).then((arr) => arr[0]),
+  ]);
+  const evidenceByKey = new Map<string, Bilingual>(
+    SKILL_KEYS.map((k, i) => [k, evidenceBilingual[i]])
+  );
+  const planWithBilingual = lessonPlan.map((rec, i) => ({
+    ...rec,
+    rationaleBilingual: planBilingual[i],
+  }));
+
   const { lang, t } = await getDict();
   const studentXp = (student as { xp?: number | null } | null)?.xp ?? 0;
   const studentStreak =
@@ -266,9 +297,10 @@ export default async function DashboardPage() {
             <CefrBadge label="Now" band={profile.overall_cefr} tone="current" />
             <CefrBadge label="Target" band={profile.target_level} tone="target" />
           </div>
-          <p className="font-serif text-lg leading-relaxed text-navy">
-            {profile.summary}
-          </p>
+          <BilingualText
+            text={summaryBilingual}
+            className="font-serif text-lg leading-relaxed text-navy"
+          />
         </section>
       )}
 
@@ -287,6 +319,7 @@ export default async function DashboardPage() {
             {SKILLS.map((s) => {
               const row = scoreMap.get(s.key);
               const sub = profile ? profile[s.key as SkillKey] : null;
+              const evidenceBi = evidenceByKey.get(s.key);
               return (
                 <ScoreBar
                   key={s.key}
@@ -294,7 +327,11 @@ export default async function DashboardPage() {
                   score={row?.score ?? null}
                   target={row?.target ?? 800}
                   band={sub?.cefr_band}
-                  evidence={sub?.evidence}
+                  evidence={
+                    sub?.evidence
+                      ? evidenceBi ?? { native: sub.evidence, en: sub.evidence, translated: false }
+                      : undefined
+                  }
                 />
               );
             })}
@@ -331,7 +368,7 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      {hasScores && <RecommendedPlan recommendations={lessonPlan} />}
+      {hasScores && <RecommendedPlan recommendations={planWithBilingual} />}
 
       <CertificationCard
         eligibility={eligibility}
@@ -438,7 +475,7 @@ function ScoreBar({
   score: number | null;
   target: number;
   band?: CefrBand;
-  evidence?: string;
+  evidence?: Bilingual;
 }) {
   const SCALE_MAX = 1000;
   const pct = score == null ? 0 : (score / SCALE_MAX) * 100;
@@ -478,9 +515,13 @@ function ScoreBar({
           <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.18em] text-mute hover:text-navy">
             Evidence
           </summary>
-          <p className="mt-1.5 border-l-2 border-cream pl-3 text-xs italic text-mute">
-            {evidence}
-          </p>
+          <div className="mt-1.5 border-l-2 border-cream pl-3 text-xs text-mute">
+            <BilingualText
+              text={evidence}
+              className="text-xs italic text-mute"
+              englishLabel="EN"
+            />
+          </div>
         </details>
       )}
     </div>

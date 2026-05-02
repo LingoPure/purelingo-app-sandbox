@@ -38,10 +38,23 @@ export default async function BatteryPage() {
 
   const { data: studentRow } = await supabase
     .from("students")
-    .select("role_id")
+    .select("role_id, discovery_status")
     .eq("id", user.id)
     .maybeSingle();
-  const roleId = (studentRow as { role_id?: string | null } | null)?.role_id ?? null;
+  const studentInfo = studentRow as
+    | { role_id?: string | null; discovery_status?: string | null }
+    | null;
+  const roleId = studentInfo?.role_id ?? null;
+
+  // Gate: the battery is meaningless without the voice signal it's
+  // calibrated against. If the voice discovery hasn't completed (e.g.
+  // the student deep-linked here, or the post-call webhook hasn't yet
+  // landed), bounce to /onboarding/session. Battery scores written
+  // without a voice profile produce a half-built gap analysis that
+  // misleads both the student and the employer.
+  if (studentInfo?.discovery_status !== "complete") {
+    redirect("/onboarding/session");
+  }
 
   const selected = await selectTasksForStudent(supabase, user.id);
 

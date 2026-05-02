@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
   const signature = request.headers.get("elevenlabs-signature");
   const secret = process.env.ELEVENLABS_WEBHOOK_SECRET;
 
+  // Stay subscribed: ElevenLabs auto-disables a webhook that returns 4xx
+  // (we got bitten by this once — a single 400 silently muted the whole
+  // pipeline). For everything except a true configuration failure we now
+  // log + return 200, so the subscription survives transient or
+  // unexpected payload shapes. Real 5xx errors below get retried by
+  // ElevenLabs; the 200-with-log path makes parsing/data issues visible
+  // in Vercel logs without breaking subsequent deliveries.
   if (!secret) {
     return NextResponse.json(
       { error: "ELEVENLABS_WEBHOOK_SECRET not configured" },
@@ -39,29 +46,43 @@ export async function POST(request: NextRequest) {
     );
   }
   if (!verifyWebhookSignature(rawBody, signature, secret)) {
+    // Genuine auth failure — keep 401 so a misconfigured forwarder
+    // (wrong secret) gets noticed quickly. A real ElevenLabs delivery
+    // never lands here.
+    console.error("[convai/webhook] invalid signature");
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let payload: ReturnType<typeof parsePostCallPayload>;
   try {
     payload = parsePostCallPayload(rawBody);
-  } catch {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+  } catch (err) {
+    // Don't 400 — log and acknowledge. A future ElevenLabs payload shape
+    // change is otherwise an outage we won't see until students complain.
+    console.error(
+      "[convai/webhook] parsePostCallPayload threw — ignoring:",
+      err instanceof Error ? err.message : err,
+      "raw body prefix:",
+      rawBody.slice(0, 400)
+    );
+    return NextResponse.json({ ok: true, ignored: "parse_error" });
   }
   if (!payload) {
-    return NextResponse.json(
-      { error: "Payload was not a post-call event" },
-      { status: 400 }
+    console.warn(
+      "[convai/webhook] non-post-call event — ignoring. raw body prefix:",
+      rawBody.slice(0, 400)
     );
+    return NextResponse.json({ ok: true, ignored: "non_post_call" });
   }
 
   const userId =
     payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
   if (!userId) {
-    return NextResponse.json(
-      { error: "Missing user_id in conversation dynamic_variables" },
-      { status: 400 }
+    console.warn(
+      "[convai/webhook] missing user_id dynamic variable — ignoring conversation",
+      payload.data.conversation_id
     );
+    return NextResponse.json({ ok: true, ignored: "missing_user_id" });
   }
 
   const supabase = adminSupabase();

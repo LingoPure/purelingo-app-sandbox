@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type {
-  PlanRecommendation,
-} from "@/lib/lessons/plan-generator";
+import type { PlanRecommendation } from "@/lib/lessons/plan-generator";
+import type { Bilingual } from "@/lib/i18n/translate";
+import { BilingualText } from "@/components/i18n/bilingual-text";
+
+export type PlanRecommendationBilingual = PlanRecommendation & {
+  rationaleBilingual?: Bilingual;
+};
 
 type Props = {
-  recommendations: PlanRecommendation[];
+  recommendations: PlanRecommendationBilingual[];
 };
 
 /**
@@ -119,9 +123,17 @@ export function RecommendedPlan({ recommendations }: Props) {
                 </p>
               </div>
               <h4 className="mt-1 font-serif text-base text-navy">{rec.title}</h4>
-              <p className="mt-1 text-sm leading-relaxed text-mute">
-                {rec.rationale}
-              </p>
+              {rec.rationaleBilingual ? (
+                <BilingualText
+                  text={rec.rationaleBilingual}
+                  className="mt-1 text-sm leading-relaxed text-mute"
+                  englishLabel="EN"
+                />
+              ) : (
+                <p className="mt-1 text-sm leading-relaxed text-mute">
+                  {rec.rationale}
+                </p>
+              )}
               <div className="mt-3">
                 {rec.kind === "micro_lesson" ? (
                   <button
