@@ -20,6 +20,7 @@ import {
   type GapScoresOutput,
 } from "./rubric";
 import { loadBaselinesForStudent } from "./baselines";
+import { setCanonicalGapScores } from "./set-canonical";
 
 export type TranscriptTurn = {
   role: "agent" | "user";
@@ -102,22 +103,19 @@ export async function scoreDiscoverySession(
   // all read this column.
   const baselines = await loadBaselinesForStudent(supabase, input.studentId);
 
-  // Persist sub-scores. unique (student_id, skill, source) on gap_scores
-  // (since 0017) — the voice scorer always writes source='discovery' and is
-  // canonical until the Phase 0b battery overrides per-skill.
-  const rows = SKILL_KEYS.map((skill) => ({
-    student_id: input.studentId,
-    skill,
-    score: parsed[skill].score,
-    target: baselines[skill],
-    source: "discovery" as const,
-    is_canonical: true,
-  }));
-
-  const { error: gapErr } = await supabase
-    .from("gap_scores")
-    .upsert(rows, { onConflict: "student_id,skill,source" });
-  if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
+  // Persist sub-scores via the shared canonical writer. Discovery is
+  // canonical for every skill at first; battery / lesson scorers later
+  // demote individual skill rows as they produce fresher evidence.
+  await setCanonicalGapScores(
+    supabase,
+    SKILL_KEYS.map((skill) => ({
+      studentId: input.studentId,
+      skill,
+      score: parsed[skill].score,
+      target: baselines[skill],
+      source: "discovery",
+    }))
+  );
 
   // Update discovery_sessions.profile_json with the full structured rubric output
   // (evidence strings, target_level + WHY, learning style, summary).

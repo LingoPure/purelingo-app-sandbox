@@ -595,10 +595,10 @@ export async function seedDemoCohort(
       throw new Error(`students update failed for ${demo.email}: ${studentErr.message}`);
     }
 
-    // 3. Upsert gap_scores (unique student_id+skill). The target per
-    //    skill is read from the role's baseline so the dashboard radar
-    //    + skill bars line up with the buyer's role definition rather
-    //    than a flat 80.
+    // 3. Upsert gap_scores. Target per skill = role baseline so the
+    //    dashboard radar + skill bars line up with the buyer's role
+    //    definition rather than a flat 800. Source-scoped uniqueness
+    //    since migration 0017: (student_id, skill, source).
     const role = DEMO_ROLES.find((r) => r.key === demo.roleKey);
     if (!role) {
       throw new Error(`unknown role for student ${demo.email}`);
@@ -609,10 +609,11 @@ export async function seedDemoCohort(
       score: demo.scores[skill],
       target: role.baselines[skill],
       source: "discovery" as const,
+      is_canonical: true,
     }));
     const { error: scoresErr } = await supabase
       .from("gap_scores")
-      .upsert(scoreRows, { onConflict: "student_id,skill" });
+      .upsert(scoreRows, { onConflict: "student_id,skill,source" });
     if (scoresErr) {
       throw new Error(`gap_scores upsert failed for ${demo.email}: ${scoresErr.message}`);
     }

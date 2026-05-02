@@ -23,6 +23,7 @@ import {
   loadBaselinesForStudent,
   type Baselines,
 } from "@/lib/scoring/baselines";
+import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
 import type { SkillKey } from "@/lib/scoring/rubric";
 
 const MODEL = "claude-sonnet-4-6";
@@ -101,18 +102,16 @@ export async function submitSpeakScore(
     });
   }
 
-  const rows = subSkills.map((s) => ({
-    student_id: input.studentId,
-    skill: s.skill,
-    score: s.score,
-    target: baselines[s.skill],
-    source: "lesson" as const,
-  }));
-
-  const { error: gapErr } = await supabase
-    .from("gap_scores")
-    .upsert(rows, { onConflict: "student_id,skill" });
-  if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
+  await setCanonicalGapScores(
+    supabase,
+    subSkills.map((s) => ({
+      studentId: input.studentId,
+      skill: s.skill,
+      score: s.score,
+      target: baselines[s.skill],
+      source: "lesson",
+    }))
+  );
 
   // 5. score_after = average across what was scored (used for the dashboard delta).
   const scoreAfter = Math.round(

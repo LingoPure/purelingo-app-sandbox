@@ -16,6 +16,7 @@ import {
   type EmailSprintPrompt,
 } from "./email-sprint-rubric";
 import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
+import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -78,18 +79,16 @@ export async function submitEmailSprint(
     { skill: "reading_intent", sub: evaluation.reading_intent },
   ] as const;
 
-  const rows = subSkills.map(({ skill, sub }) => ({
-    student_id: input.studentId,
-    skill,
-    score: sub.score,
-    target: baselines[skill],
-    source: "lesson" as const,
-  }));
-
-  const { error: gapErr } = await supabase
-    .from("gap_scores")
-    .upsert(rows, { onConflict: "student_id,skill" });
-  if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
+  await setCanonicalGapScores(
+    supabase,
+    subSkills.map(({ skill, sub }) => ({
+      studentId: input.studentId,
+      skill,
+      score: sub.score,
+      target: baselines[skill],
+      source: "lesson",
+    }))
+  );
 
   // 4. Compute the post-lesson average for score_after tracking.
   const scoreAfter = Math.round(

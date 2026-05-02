@@ -9,6 +9,8 @@ import {
 } from "@/components/dashboard/certification-card";
 import { GamificationCard } from "@/components/dashboard/gamification-card";
 import { JustFinishedBanner } from "@/components/dashboard/just-finished-banner";
+import { RecommendedPlan } from "@/components/dashboard/recommended-plan";
+import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 import { tierForTarget } from "@/lib/gamification/rules";
@@ -198,6 +200,9 @@ export default async function DashboardPage() {
 
   const discoveryComplete = student?.discovery_status === "complete";
   const hasScores = scores.length > 0;
+  const lessonPlan = hasScores
+    ? await generateLessonPlan(supabase, user!.id)
+    : [];
 
   const { lang, t } = await getDict();
   const studentXp = (student as { xp?: number | null } | null)?.xp ?? 0;
@@ -325,6 +330,8 @@ export default async function DashboardPage() {
           />
         </section>
       )}
+
+      {hasScores && <RecommendedPlan recommendations={lessonPlan} />}
 
       <CertificationCard
         eligibility={eligibility}

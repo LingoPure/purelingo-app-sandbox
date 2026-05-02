@@ -20,6 +20,7 @@ import {
   type SessionScoresOutput,
 } from "./session-rubric";
 import { SKILL_KEYS } from "./rubric";
+import { setCanonicalGapScores } from "./set-canonical";
 
 const MODEL = "claude-sonnet-4-6";
 
@@ -76,29 +77,26 @@ export async function scoreSession(
   const parsed = response.parsed_output;
   if (!parsed) throw new Error("Claude returned no parsed output");
 
-  // Only upsert sub-skills that came back non-null — never overwrite a prior
+  // Only write sub-skills that came back non-null — never overwrite a prior
   // score with "we didn't assess this today".
   const skillsUpdated: string[] = [];
-  const rows = SKILL_KEYS.flatMap((skill) => {
+  const writes = SKILL_KEYS.flatMap((skill) => {
     const sub = parsed[skill];
     if (!sub) return [];
     skillsUpdated.push(skill);
     return [
       {
-        student_id: input.studentId,
+        studentId: input.studentId,
         skill,
         score: sub.score,
-        target: 80,
+        target: 800,
         source: "session" as const,
       },
     ];
   });
 
-  if (rows.length > 0) {
-    const { error: gapErr } = await supabase
-      .from("gap_scores")
-      .upsert(rows, { onConflict: "student_id,skill" });
-    if (gapErr) throw new Error(`gap_scores upsert failed: ${gapErr.message}`);
+  if (writes.length > 0) {
+    await setCanonicalGapScores(supabase, writes);
   }
 
   const { error: sessErr } = await supabase
