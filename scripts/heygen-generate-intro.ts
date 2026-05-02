@@ -42,15 +42,16 @@ loadEnv();
 // professional, warm female coach (Aria's persona in dictionary.ts).
 
 const CONFIG = {
-  // Public-tier avatar. Change after running `--list-avatars` and picking
-  // someone who reads as a friendly female coach. "Daisy" is one of HeyGen's
-  // long-standing public defaults but you may prefer a different look.
+  // Public-tier avatar. "Daisy" is one of HeyGen's long-standing public
+  // defaults — change after running `--list-avatars` if you'd prefer a
+  // different look.
   avatarId: process.env.HEYGEN_AVATAR_ID ?? "Daisy-inskirt-20220818",
 
-  // Voice. Pick something warm and conversational from `--list-voices`.
-  // This is HeyGen's "Anna - Friendly" English (US) — placeholder default.
+  // Voice — "Allison", a real HeyGen English female voice (verified live
+  // 2026-05). Pick a different one from `--list-voices` if you'd rather
+  // a Hope, Cassidy, Jenny, etc.
   voiceId:
-    process.env.HEYGEN_VOICE_ID ?? "1bd001e7e50f421d891986aad5158bc8",
+    process.env.HEYGEN_VOICE_ID ?? "f8c69e517f424cafaecde32dde57096b",
 
   // Roughly 55-65 seconds when read at conversational pace. Keep it tight —
   // students will skip a 90-second intro. Match Aria's tone in the live
