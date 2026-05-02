@@ -65,7 +65,7 @@ const QA_STUDENT = {
   employer_name: "Vinh Hoan Export Co.",
 };
 const QA_FIRST_MESSAGE_TEMPLATE =
-  "Hi {{student_name}}! I'm Aria from Lingo Pure. I've got the basics already — {{role_name}} at {{employer_name}}, aiming for {{target_level}}. We'll spend the next twenty or so minutes getting to know what's behind that — what your week actually looks like, where English shows up. No right or wrong answers. To start: walk me through what a typical day in your role looks like.";
+  "Hi {{student_name}}! I'm Aria from Lingo Pyoor. I've got the basics already — {{role_name}} at {{employer_name}}, aiming for {{target_level}}. We'll spend the next twenty or so minutes getting to know what's behind that — what your week actually looks like, where English shows up. No right or wrong answers. To start: walk me through what a typical day in your role looks like.";
 const QA_DYNAMIC_VARIABLES: Record<string, string> = {
   ...QA_STUDENT,
   first_message_localized: QA_FIRST_MESSAGE_TEMPLATE.replaceAll(
