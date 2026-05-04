@@ -127,9 +127,9 @@ function PathCard({
       <p className={tagClass}>{tag}</p>
       <h2 className={headingClass}>{heading}</h2>
       <p className={bodyClass}>{body}</p>
-      <a href={href} className={ctaClass}>
+      <Link href={href} className={ctaClass}>
         {cta}
-      </a>
+      </Link>
     </div>
   );
 }
