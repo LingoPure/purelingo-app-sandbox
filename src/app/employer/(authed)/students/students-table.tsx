@@ -178,7 +178,7 @@ export function StudentsTable({ rows }: { rows: RosterRow[] }) {
                     className="h-4 w-4 rounded border-cream"
                   />
                 </Th>
-                <Th>Student</Th>
+                <Th>Member</Th>
                 <Th>Target</Th>
                 <Th>Discovery</Th>
                 <Th>Average</Th>

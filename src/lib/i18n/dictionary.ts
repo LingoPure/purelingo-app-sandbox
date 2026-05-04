@@ -44,14 +44,24 @@ const en: Dict = {
   "nav.langPrefix": "Language",
 
   // ── Home ───────────────────────────────────────────────────────────────
-  "home.kicker": "Business English for Southeast Asia",
-  "home.headline": "Close your team's English gap, and prove it.",
+  "home.kicker": "Professional CPD for ASEAN",
+  "home.headline": "Verify professional competency. Issue portable credentials.",
   "home.lead":
-    "An AI-first business English platform for B2B teams in Vietnam and Southeast Asia. Voice assessment, live classes, micro-lessons, and CEFR certification — measurable outcomes, not teaching hours.",
+    "An AI-powered Professional CPD and cross-border competency platform for ASEAN associations. Voice assessment, verified CPD points, and portable credentials — recognised across ASEAN borders.",
   "home.ctaPrimary": "Get started",
   "home.ctaSecondary": "I already have an account",
+  "home.path1Tag": "English Training",
+  "home.path1Heading": "Workplace English Training",
+  "home.path1Body":
+    "AI voice assessment, live coaching classes, and micro-lessons to close your team's English gap. CEFR-certified outcomes.",
+  "home.path1Cta": "Start English training →",
+  "home.path2Tag": "Professional CPD",
+  "home.path2Heading": "Professional CPD & Cross-Border Certification",
+  "home.path2Body":
+    "Associations plug in their members, Aria assesses professional English competency, verified CPD points are issued, and credentials become portable across ASEAN borders.",
+  "home.path2Cta": "Association login →",
   "demo.bannerLead":
-    "This is a strategic platform demo — not the real LingoPure service.",
+    "AIFTIS Demo — LingoPure Professional CPD Platform | Not for distribution",
   "demo.bannerCta": "Visit the real LingoPure →",
 
   // ── Login ──────────────────────────────────────────────────────────────
@@ -179,16 +189,24 @@ const en: Dict = {
     "Complete your discovery session — exam readiness depends on having scores on file.",
 
   // ── Employer chrome ────────────────────────────────────────────────────
-  "emp.brandTag": "Employer",
+  "emp.brandTag": "Association",
   "emp.navOverview": "Overview",
-  "emp.navStudents": "Students",
-  "emp.loginKicker": "Employer access",
-  "emp.loginHeading": "LingoPure pilot dashboard",
+  "emp.navStudents": "Members",
+  "emp.loginKicker": "Association access",
+  "emp.loginHeading": "LingoPure CPD Dashboard",
   "emp.loginLead":
     "Single shared access for the pilot. Production will move to per-admin accounts.",
   "emp.loginField": "Access password",
   "emp.loginSubmit": "Sign in",
   "emp.loginSubmitting": "Signing in…",
+
+  // ── CPD / Member dashboard ─────────────────────────────────────────────
+  "cpd.kicker": "Member dashboard",
+  "cpd.pointsHeading": "CPD Points Earned",
+  "cpd.statusComplete": "Assessment Complete",
+  "cpd.statusInProgress": "Assessment In Progress",
+  "cpd.issuedBy": "Credential issued by",
+  "cpd.badgeVerified": "Verified CPD",
 };
 
 const vi: Dict = {

@@ -52,7 +52,7 @@ type DemoNudge = {
   daysAgo: number;
 };
 
-type RoleKey = "bpo_operator" | "sales_rep" | "tech_specialist";
+type RoleKey = "architect" | "civil_engineer" | "quantity_surveyor";
 
 type DemoStudent = {
   email: string;
@@ -84,8 +84,8 @@ type DemoStudent = {
 // so the per-role coverage rollup has something coherent to render.
 // ─────────────────────────────────────────────────────────────────────
 const DEMO_EMPLOYER = {
-  name: "Acme Pacific BPO (demo)",
-  contactEmail: "lnd@acme-pacific.demo",
+  name: "Malaysian Institute of Architects (MIA) (demo)",
+  contactEmail: "cpd@mia.demo",
   defaultTargetLevel: "B2" as const,
 };
 
@@ -96,48 +96,48 @@ type DemoRole = {
   baselines: Record<SkillKey, number>;
 };
 
-// Three role archetypes spanning the buyer story. Baselines were chosen
-// so the cohort produces a credible "starting state" for the rollup —
-// some roles 0% covered, one role partially covered.
+// Three profession archetypes for ASEAN professional mobility. Baselines
+// chosen so the cohort produces a credible "starting state" for the rollup —
+// some professions 0% covered, one partially covered.
 const DEMO_ROLES: DemoRole[] = [
   {
-    key: "bpo_operator",
-    name: "BPO Operator",
+    key: "architect",
+    name: "Architect",
     description:
-      "Voice + chat support for English-speaking clients. Listening- and speaking-heavy; writing register is functional rather than formal.",
+      "Cross-border project delivery and client presentations. Reading-intent and presentation-delivery are critical for design briefs and planning submissions across ASEAN jurisdictions.",
     baselines: {
-      speaking_fluency: 650,
-      listening_comprehension: 700,
-      writing_formal: 550,
-      reading_intent: 650,
-      business_vocabulary: 600,
-      presentation_delivery: 500,
-    },
-  },
-  {
-    key: "sales_rep",
-    name: "Manufacturing Sales Rep",
-    description:
-      "B2B sales into export markets — negotiation, proposal writing, customer presentations. Even balance across skills, with emphasis on speaking and reading-intent.",
-    baselines: {
-      speaking_fluency: 750,
+      speaking_fluency: 700,
       listening_comprehension: 700,
       writing_formal: 700,
       reading_intent: 750,
-      business_vocabulary: 750,
-      presentation_delivery: 700,
+      business_vocabulary: 650,
+      presentation_delivery: 750,
     },
   },
   {
-    key: "tech_specialist",
-    name: "Technical Specialist",
+    key: "civil_engineer",
+    name: "Civil Engineer",
     description:
-      "Engineering, documentation, technical support. Writing-formal and reading-intent dominate; speaking is for internal calls more than client-facing presentations.",
+      "Technical documentation, tender submissions, and cross-border project coordination. Writing-formal and reading-intent dominate; speaking for client and contractor meetings.",
     baselines: {
       speaking_fluency: 700,
       listening_comprehension: 700,
       writing_formal: 800,
       reading_intent: 800,
+      business_vocabulary: 750,
+      presentation_delivery: 650,
+    },
+  },
+  {
+    key: "quantity_surveyor",
+    name: "Quantity Surveyor",
+    description:
+      "Contract negotiation, cost reporting, and procurement across ASEAN markets. Even balance across skills, with emphasis on writing and business vocabulary for formal cost reports.",
+    baselines: {
+      speaking_fluency: 700,
+      listening_comprehension: 700,
+      writing_formal: 750,
+      reading_intent: 750,
       business_vocabulary: 750,
       presentation_delivery: 650,
     },
@@ -149,7 +149,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "ha.nguyen@vinhhoan-export.demo",
     name: "Nguyễn Thị Hà",
     targetLevel: "B2",
-    roleKey: "sales_rep",
+    roleKey: "quantity_surveyor",
     overallCefr: "B1",
     scores: {
       speaking_fluency: 580,
@@ -162,7 +162,7 @@ const DEMO_COHORT: DemoStudent[] = [
     summary:
       "Solid conversational B1 with strong reading-intent — Hà gets the subtext in business email. Biggest gap is formal writing and presentation delivery; she dreads quarterly slots and falls back on simple vocabulary under pressure.",
     targetWhy:
-      "Employer requirement — Vinh Hoan is opening an Australia desk in Q4 and Hà is a relocation candidate. Needs B2 inside 6 months.",
+      "MIA CPD requirement — registered for cross-border project work in Australia; B2 required for practice recognition under the ASEAN MRA for architectural services.",
     learningStyle:
       "Prefers 15–25 min sessions late evening (kids asleep around 9pm). Competitive — wants leaderboards. Vietnamese literacy excellent; university educated.",
     evidence: {
@@ -212,7 +212,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "minh.tran@hanoi-manuf.demo",
     name: "Trần Văn Minh",
     targetLevel: "B2",
-    roleKey: "tech_specialist",
+    roleKey: "civil_engineer",
     overallCefr: "B2",
     scores: {
       speaking_fluency: 700,
@@ -225,7 +225,7 @@ const DEMO_COHORT: DemoStudent[] = [
     summary:
       "Steady B2 across the board with no glaring weakness. Minh is one polish-pass away from leading regional ops calls in English without code-switching back to Vietnamese for the difficult moments.",
     targetWhy:
-      "Career goal — internal promotion to regional operations head requires English-language reporting. No hard deadline but expected within 12 months.",
+      "MIA CPD requirement — leading a cross-border infrastructure tender in Thailand; English-language technical documentation and client briefings required.",
     learningStyle:
       "Methodical, prefers deep-dive 30-min sessions on weekend mornings. Direct feedback over coaching tone. Strong native literacy.",
     evidence: {
@@ -267,7 +267,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "anh.le@bizdev-sg.demo",
     name: "Lê Hoàng Anh",
     targetLevel: "C1",
-    roleKey: "bpo_operator",
+    roleKey: "architect",
     overallCefr: "B1",
     scores: {
       speaking_fluency: 500,
@@ -280,7 +280,7 @@ const DEMO_COHORT: DemoStudent[] = [
     summary:
       "Junior BD rep with high ambition and a steep gap. Anh is highly motivated — completed five lessons in the first week — but the C1 target before next year's regional summit is aggressive.",
     targetWhy:
-      "Event-driven — pitching at Singapore FinTech Festival in 11 months. Personal career bet, not employer-mandated. Wants to lead the booth solo.",
+      "ASEAN mobility goal — applying for practice registration in Singapore under the ASEAN Architect framework. C1 required for the professional interview panel.",
     learningStyle:
       "High-frequency short bursts (10–15 min) on the morning commute. Fast-paced, low patience for theory — wants drills. Confident in written Vietnamese.",
     evidence: {
@@ -317,7 +317,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "huong.pham@vingroup-hr.demo",
     name: "Phạm Thu Hương",
     targetLevel: "B2",
-    roleKey: "sales_rep",
+    roleKey: "quantity_surveyor",
     overallCefr: "C1",
     scores: {
       speaking_fluency: 860,
@@ -330,7 +330,7 @@ const DEMO_COHORT: DemoStudent[] = [
     summary:
       "Already comfortably above the B2 target. Hương's value from LingoPure is polish — idiom precision, executive-tone register — not gap-closing. Recommend graduating her to Phase 2 advanced track.",
     targetWhy:
-      "Professional development — runs internal English-only HR briefings. Wants confidence speaking with the parent group's UK leadership without thinking twice.",
+      "Professional development — leads quantity surveying presentations to international clients. Wants C1 confidence for ASEAN cross-border project bids.",
     learningStyle:
       "Coaching tone over direct feedback. Once or twice a week is enough — values quality over volume. Comfortable in either Vietnamese or English written form.",
     evidence: {
@@ -375,7 +375,7 @@ const DEMO_COHORT: DemoStudent[] = [
     email: "viet.doan@industrial-eq.demo",
     name: "Đoàn Quốc Việt",
     targetLevel: "B2",
-    roleKey: "bpo_operator",
+    roleKey: "civil_engineer",
     overallCefr: "A2",
     scores: {
       speaking_fluency: 380,
@@ -388,7 +388,7 @@ const DEMO_COHORT: DemoStudent[] = [
     summary:
       "Newly onboarded; struggling at A2/low-B1. Việt's day-to-day is mostly Vietnamese with occasional English over WhatsApp to suppliers. Reaching B2 inside 6 months will require 4–5 lessons per week minimum plus weekly classes.",
     targetWhy:
-      "Employer requirement — new role demands client demos in English. No fixed deadline but progress visibility is needed for HR.",
+      "MIA CPD requirement — new cross-border project role demands English-language site reports and client meetings. Progress visibility required for CPD compliance.",
     learningStyle:
       "Patient pace, prefers visual examples over abstract rules. Better with audio than reading. Confident written Vietnamese.",
     evidence: {

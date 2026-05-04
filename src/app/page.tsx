@@ -38,46 +38,98 @@ export default async function LandingPage() {
             {t("home.headline")}
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-mute">{t("home.lead")}</p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Link
-              href="/signup"
-              className="rounded-md bg-navy px-6 py-3 text-base font-medium text-paper hover:bg-navy-deep"
-            >
-              {t("home.ctaPrimary")}
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-md border border-navy/20 px-6 py-3 text-base font-medium text-navy hover:bg-mist"
-            >
-              {t("home.ctaSecondary")}
-            </Link>
-          </div>
         </div>
 
-        <div className="mt-24 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <PathCard
+            tag={t("home.path1Tag")}
+            heading={t("home.path1Heading")}
+            body={t("home.path1Body")}
+            cta={t("home.path1Cta")}
+            href="/signup"
+            tone="secondary"
+          />
+          <PathCard
+            tag={t("home.path2Tag")}
+            heading={t("home.path2Heading")}
+            body={t("home.path2Body")}
+            cta={t("home.path2Cta")}
+            href="/employer/login"
+            tone="primary"
+          />
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 gap-6 md:grid-cols-3">
           <FeatureCard
             tag="01"
-            title="AI Voice Discovery"
-            body="A 20–35 min conversational assessment surfaces fluency, role, and target level — before a single class."
+            title="AI Voice Assessment"
+            body="Aria, our voice AI, conducts a 20–35 min professional English assessment across six competency dimensions — no human assessor required."
           />
           <FeatureCard
             tag="02"
-            title="ClassIn, Embedded"
-            body="Live virtual classrooms run inside LingoPure — no context switching, no separate logins, full session analytics back."
+            title="Verified CPD Points"
+            body="Completion automatically issues verified CPD points against the member's professional record — association-endorsed and audit-ready."
           />
           <FeatureCard
             tag="03"
-            title="Measurable Gap, Closing"
-            body="Six-dimension gap score updates after every micro-lesson and live class. CEFR certification via TrackTest."
+            title="Portable ASEAN Credentials"
+            body="CEFR-anchored certificates are issued by the member's association and recognised across ASEAN borders for professional mobility."
           />
         </div>
       </main>
 
       <footer className="border-t border-cream py-8">
         <div className="mx-auto max-w-6xl px-6 text-center font-mono text-xs uppercase tracking-[0.2em] text-mute">
-          LingoPure · Strategic Platform Demo · 2026
+          LingoPure · AIFTIS Demo · 2026
         </div>
       </footer>
+    </div>
+  );
+}
+
+function PathCard({
+  tag,
+  heading,
+  body,
+  cta,
+  href,
+  tone,
+}: {
+  tag: string;
+  heading: string;
+  body: string;
+  cta: string;
+  href: string;
+  tone: "primary" | "secondary";
+}) {
+  const cardClass =
+    tone === "primary"
+      ? "rounded-xl border-2 border-navy bg-navy p-8 shadow-sm"
+      : "rounded-xl border border-cream bg-paper p-8 shadow-sm";
+  const tagClass =
+    tone === "primary"
+      ? "mb-3 font-mono text-xs uppercase tracking-[0.2em] text-gold"
+      : "mb-3 font-mono text-xs uppercase tracking-[0.2em] text-gold";
+  const headingClass =
+    tone === "primary"
+      ? "mb-3 font-serif text-2xl text-paper"
+      : "mb-3 font-serif text-2xl text-navy";
+  const bodyClass =
+    tone === "primary"
+      ? "mb-6 text-sm leading-relaxed text-paper/70"
+      : "mb-6 text-sm leading-relaxed text-mute";
+  const ctaClass =
+    tone === "primary"
+      ? "inline-block rounded-md bg-gold px-5 py-2.5 text-sm font-medium text-navy hover:bg-gold/90"
+      : "inline-block rounded-md bg-navy px-5 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep";
+  return (
+    <div className={cardClass}>
+      <p className={tagClass}>{tag}</p>
+      <h2 className={headingClass}>{heading}</h2>
+      <p className={bodyClass}>{body}</p>
+      <a href={href} className={ctaClass}>
+        {cta}
+      </a>
     </div>
   );
 }

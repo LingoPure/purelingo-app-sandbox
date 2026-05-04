@@ -29,11 +29,11 @@ export default async function StudentsPage() {
           <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
             Roster
           </p>
-          <h1 className="font-serif text-3xl text-navy">Students</h1>
+          <h1 className="font-serif text-3xl text-navy">Registered Professionals</h1>
           <p className="mt-2 max-w-2xl text-sm text-mute">
-            Every student in the pilot, with discovery status, current average
-            score, and recent activity. Tick rows to bulk-send invites, or use
-            the per-row Send button. Click any student for the full gap profile.
+            Every professional member in the programme, with assessment status, current average
+            score, and CPD activity. Tick rows to bulk-send invites, or use
+            the per-row Send button. Click any member for the full gap profile.
           </p>
         </div>
         <div className="flex gap-2">
@@ -41,7 +41,7 @@ export default async function StudentsPage() {
             href="/employer/staff/invite"
             className="rounded-full border border-navy bg-paper px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-navy hover:bg-mist/40"
           >
-            Invite one
+            Invite Professional Member
           </Link>
           <Link
             href="/employer/staff/import"

@@ -45,19 +45,19 @@ export default async function EmployerOverviewPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-            Pilot cohort
+            ASEAN CPD Programme
           </p>
-          <h1 className="font-serif text-3xl text-navy">Overview</h1>
+          <h1 className="font-serif text-3xl text-navy">Association Dashboard</h1>
           <p className="mt-2 max-w-2xl text-sm text-mute">
-            Aggregate progress across the cohort. Numbers update in real time as
-            students complete discovery, attend live classes, and finish micro-lessons.
+            Aggregate CPD progress across registered professionals. Numbers update in real time as
+            members complete assessments, attend live classes, and earn CPD points.
           </p>
         </div>
         {summary.studentCount < 5 && <SeedButton />}
       </div>
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
-        <MetricTile label="Active students" value={summary.studentCount} />
+        <MetricTile label="Active members" value={summary.studentCount} />
         <MetricTile
           label="Lessons completed"
           value={summary.totalLessonsCompleted}
@@ -83,17 +83,17 @@ export default async function EmployerOverviewPage() {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-                Coverage by role
+                Coverage by profession
               </p>
               <h2 className="font-serif text-xl text-navy">
-                How the cohort tracks against each role&apos;s baseline
+                How the cohort tracks against each profession&apos;s baseline
               </h2>
             </div>
             <Link
               href="/employer/roles"
               className="font-mono text-[11px] uppercase tracking-[0.18em] text-navy hover:underline"
             >
-              Manage roles →
+              Manage professions →
             </Link>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -110,7 +110,7 @@ export default async function EmployerOverviewPage() {
             Cohort gap profile
           </p>
           <h2 className="mb-4 font-serif text-xl text-navy">
-            Average across all students
+            Average across all members
           </h2>
           <div className="flex justify-center">
             <GapRadar skills={radarSkills} />
@@ -129,7 +129,7 @@ export default async function EmployerOverviewPage() {
           </div>
           {topStudents.length === 0 ? (
             <p className="text-sm text-mute">
-              No students yet — invite a few via signup. They&apos;ll show up
+              No members yet — invite a few via signup. They&apos;ll show up
               here automatically.
             </p>
           ) : (
@@ -141,7 +141,7 @@ export default async function EmployerOverviewPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm text-ink">
-                      {s.name?.trim() || s.email || "Unnamed student"}
+                      {s.name?.trim() || s.email || "Unnamed member"}
                     </p>
                     <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
                       {s.lessonsCompleted} lesson
@@ -175,7 +175,7 @@ export default async function EmployerOverviewPage() {
         <h2 className="mb-4 font-serif text-xl text-navy">Activity feed</h2>
         {activity.length === 0 ? (
           <p className="text-sm text-mute">
-            Nothing yet. As students complete sessions, lessons, and classes,
+            Nothing yet. As members complete assessments, lessons, and classes,
             activity appears here.
           </p>
         ) : (
@@ -262,7 +262,7 @@ function RoleCoverageCard({ role }: { role: RoleCoverage }) {
             {role.roleName}
           </p>
           <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-mute">
-            {role.studentCount} student
+            {role.studentCount} member
             {role.studentCount === 1 ? "" : "s"}
           </p>
         </div>
@@ -276,7 +276,7 @@ function RoleCoverageCard({ role }: { role: RoleCoverage }) {
 
       {role.studentCount === 0 ? (
         <p className="text-xs text-mute">
-          No students assigned to this role yet.
+          No members assigned to this profession yet.
         </p>
       ) : worstLabel && role.worstSkillGap !== null && role.worstSkillGap > 0 ? (
         <div className="rounded-md bg-cream/50 px-3 py-2">
@@ -298,7 +298,7 @@ function RoleCoverageCard({ role }: { role: RoleCoverage }) {
       )}
 
       <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-navy opacity-0 transition group-hover:opacity-100">
-        Open role →
+        Open profession →
       </p>
     </Link>
   );

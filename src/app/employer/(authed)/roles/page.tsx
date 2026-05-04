@@ -21,27 +21,27 @@ export default async function RolesIndexPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-            Job architecture
+            Profession Framework
           </p>
-          <h1 className="font-serif text-3xl text-navy">Roles</h1>
+          <h1 className="font-serif text-3xl text-navy">Professions</h1>
           <p className="mt-2 max-w-2xl text-sm text-mute">
-            Each role has six per-skill baselines — the minimum English level
-            needed for that position. Students get assigned to a role; the
-            scoring engine uses the role&apos;s baseline to calibrate their gap.
+            Each profession has six per-skill baselines — the minimum English level
+            needed for that position. Members get assigned to a profession; the
+            scoring engine uses the profession&apos;s baseline to calibrate their gap.
           </p>
         </div>
         <Link
           href="/employer/roles/new"
           className="rounded-full bg-navy px-4 py-2 font-mono text-[11px] uppercase tracking-[0.2em] text-paper hover:bg-navy/90"
         >
-          + New role
+          + New Profession
         </Link>
       </div>
 
       {roles.length === 0 ? (
         <section className="rounded-lg border border-dashed border-cream bg-paper p-10 text-center">
           <p className="text-sm text-mute">
-            No roles yet. Create your first role to start grouping staff by
+            No professions yet. Create your first profession to start grouping members by
             English requirements.
           </p>
         </section>
@@ -50,8 +50,8 @@ export default async function RolesIndexPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-cream bg-mist/50 text-left">
               <tr>
-                <Th>Role</Th>
-                <Th className="text-center">Staff</Th>
+                <Th>Profession</Th>
+                <Th className="text-center">Members</Th>
                 {SKILL_KEYS.map((k) => (
                   <Th key={k} className="text-center">
                     {SKILL_LABEL[k] ?? k}

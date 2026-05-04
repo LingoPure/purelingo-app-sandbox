@@ -18,7 +18,7 @@ export async function DemoBanner() {
     >
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-2 px-4 py-3 text-center sm:flex-row sm:gap-5 sm:py-4">
         <span className="inline-block rounded bg-navy px-3 py-1.5 font-mono text-xs font-bold uppercase tracking-[0.28em] text-gold sm:text-sm">
-          Strategic Demo
+          AIFTIS Demo
         </span>
         <span className="font-serif text-lg leading-snug sm:text-xl md:text-2xl">
           {t("demo.bannerLead")}

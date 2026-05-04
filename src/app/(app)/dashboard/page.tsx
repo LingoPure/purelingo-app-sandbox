@@ -99,7 +99,7 @@ export default async function DashboardPage() {
     supabase
       .from("students")
       .select(
-        "id, name, discovery_status, target_level, xp, streak_days, native_language"
+        "id, name, discovery_status, target_level, xp, streak_days, native_language, employers(name)"
       )
       .eq("id", user!.id)
       .maybeSingle(),
@@ -240,13 +240,16 @@ export default async function DashboardPage() {
   const studentStreak =
     (student as { streak_days?: number | null } | null)?.streak_days ?? 0;
   const studentTier = tierForTarget(student?.target_level);
+  const associationName = (student as { employers?: { name: string } | null } | null)
+    ?.employers?.name ?? null;
+  const cpdPoints = Math.floor(studentXp / 10);
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-            Student dashboard
+            Member dashboard
           </p>
           <h1 className="font-serif text-3xl text-navy">Your gap profile</h1>
         </div>
@@ -268,6 +271,13 @@ export default async function DashboardPage() {
           streakUnitOne: t("gamify.streakUnitOne"),
           cta: t("gamify.cta"),
         }}
+      />
+
+      <CpdCard
+        cpdPoints={cpdPoints}
+        discoveryComplete={discoveryComplete}
+        hasCert={!!latestPassed}
+        associationName={associationName}
       />
 
       {!discoveryComplete && (
@@ -612,6 +622,59 @@ function NextClassCard({ nextClass }: { nextClass: NextClass | null }) {
         Enter class →
       </Link>
     </div>
+  );
+}
+
+function CpdCard({
+  cpdPoints,
+  discoveryComplete,
+  hasCert,
+  associationName,
+}: {
+  cpdPoints: number;
+  discoveryComplete: boolean;
+  hasCert: boolean;
+  associationName: string | null;
+}) {
+  const statusLabel = discoveryComplete ? "Assessment Complete" : "Assessment In Progress";
+  const statusStyle = discoveryComplete
+    ? "border-teal/30 bg-teal/5 text-teal"
+    : "border-gold/30 bg-gold/5 text-gold";
+  return (
+    <section className="rounded-lg border border-cream bg-paper p-6">
+      <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+        Professional CPD
+      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+            CPD Points Earned
+          </p>
+          <p className="mt-1 font-serif text-4xl text-navy">{cpdPoints}</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] ${statusStyle}`}
+          >
+            {hasCert && (
+              <span aria-hidden>✓</span>
+            )}
+            {statusLabel}
+          </span>
+          {hasCert && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-navy/20 bg-navy/5 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-navy">
+              Verified CPD
+            </span>
+          )}
+        </div>
+      </div>
+      {associationName && (
+        <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.2em] text-mute">
+          Credential issued by:{" "}
+          <span className="text-ink">{associationName.replace(" (demo)", "")}</span>
+        </p>
+      )}
+    </section>
   );
 }
 
