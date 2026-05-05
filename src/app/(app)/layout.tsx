@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { MobileNav, type MobileNavItem } from "@/components/nav/mobile-nav";
 import { getDict } from "@/lib/i18n";
+import { getReturnTo } from "@/lib/cross-app/return-link";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   // If Supabase env vars are missing the createClient() call throws — fall back
@@ -17,6 +18,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const { lang, t } = await getDict();
+  // If the student arrived from a partner app (AIFTIS-Demo today) we
+  // surface a "Back to AIFTIS" pill until the cookie expires. Cookie
+  // is set in middleware after the returnTo origin is allowlisted.
+  const returnTo = await getReturnTo();
 
   const navItems: MobileNavItem[] = [
     { href: "/dashboard", label: t("nav.dashboard") },
@@ -55,6 +60,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            {returnTo && (
+              <a
+                href={returnTo}
+                className="hidden rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-medium text-navy hover:bg-gold/20 sm:inline-flex"
+              >
+                ← Back to AIFTIS
+              </a>
+            )}
             <LanguagePill current={lang} tone="dark" />
             <span className="hidden text-xs text-mute sm:inline">
               {user?.email ?? "demo mode"}
