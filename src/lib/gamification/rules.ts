@@ -64,6 +64,11 @@ export function tierLabel(tier: Tier, lang: LanguageCode): string {
     tl: { bronze: "Bronze tier", silver: "Silver tier", gold: "Gold tier" },
     id: { bronze: "Tingkat Perunggu", silver: "Tingkat Perak", gold: "Tingkat Emas" },
     ms: { bronze: "Tingkat Gangsa", silver: "Tingkat Perak", gold: "Tingkat Emas" },
+    th: { bronze: "ระดับบรอนซ์", silver: "ระดับเงิน", gold: "ระดับทอง" },
+    km: { bronze: "កម្រិតលង្ហិន", silver: "កម្រិតប្រាក់", gold: "កម្រិតមាស" },
+    lo: { bronze: "ລະດັບທອງແດງ", silver: "ລະດັບເງິນ", gold: "ລະດັບຄຳ" },
+    my: { bronze: "ကြေးဆုအဆင့်", silver: "ငွေဆုအဆင့်", gold: "ရွှေဆုအဆင့်" },
+    ta: { bronze: "வெண்கல நிலை", silver: "வெள்ளி நிலை", gold: "தங்க நிலை" },
     zh: { bronze: "铜级", silver: "银级", gold: "金级" },
   };
   return map[lang]?.[tier] ?? map.en[tier];

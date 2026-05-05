@@ -17,7 +17,12 @@ export const SUPPORTED_LANGUAGES = [
   { code: "tl", name: "Tagalog", flag: "🇵🇭" },
   { code: "id", name: "Bahasa Indonesia", flag: "🇮🇩" },
   { code: "ms", name: "Bahasa Melayu", flag: "🇲🇾" },
-  { code: "zh", name: "中文", flag: "🇨🇳" },
+  { code: "th", name: "ภาษาไทย", flag: "🇹🇭" },
+  { code: "km", name: "ភាសាខ្មែរ", flag: "🇰🇭" },
+  { code: "lo", name: "ພາສາລາວ", flag: "🇱🇦" },
+  { code: "my", name: "မြန်မာ", flag: "🇲🇲" },
+  { code: "ta", name: "தமிழ்", flag: "🇸🇬" },
+  { code: "zh", name: "中文 (简体)", flag: "🇨🇳" },
   { code: "en", name: "English", flag: "🇬🇧" },
 ] as const;
 
@@ -653,7 +658,423 @@ const zh: Dict = {
   "emp.loginSubmitting": "登录中…",
 };
 
-const DICTS: Record<LanguageCode, Dict> = { en, vi, tl, id, ms, zh };
+const th: Dict = {
+  "nav.dashboard": "แดชบอร์ด",
+  "nav.lessons": "บทเรียน",
+  "nav.signOut": "ออกจากระบบ",
+  "nav.signIn": "เข้าสู่ระบบ",
+  "nav.signUp": "สร้างบัญชี",
+  "nav.langPrefix": "ภาษา",
+
+  "home.kicker": "ภาษาอังกฤษเชิงธุรกิจสำหรับเอเชียตะวันออกเฉียงใต้",
+  "home.headline": "ปิดช่องว่างภาษาอังกฤษของทีมคุณ และพิสูจน์มันได้",
+  "home.lead":
+    "แพลตฟอร์มภาษาอังกฤษเชิงธุรกิจที่ขับเคลื่อนด้วย AI สำหรับทีม B2B ในเวียดนามและเอเชียตะวันออกเฉียงใต้ การประเมินด้วยเสียง คลาสสด บทเรียนสั้น และการรับรอง CEFR — ผลลัพธ์ที่วัดได้ ไม่ใช่จำนวนชั่วโมงสอน",
+  "home.ctaPrimary": "เริ่มต้น",
+  "home.ctaSecondary": "ฉันมีบัญชีอยู่แล้ว",
+  "demo.bannerLead":
+    "นี่คือเดโมแพลตฟอร์มเชิงกลยุทธ์ — ไม่ใช่บริการ LingoPure จริง",
+  "demo.bannerCta": "เยี่ยมชม LingoPure จริง →",
+
+  "login.heading": "ยินดีต้อนรับกลับมา",
+  "login.lead": "เข้าสู่ระบบเพื่อเรียนรู้ต่อ",
+  "login.fieldEmail": "อีเมล",
+  "login.fieldPassword": "รหัสผ่าน",
+  "login.submit": "เข้าสู่ระบบ",
+  "login.signupPrompt": "ใหม่กับ LingoPure?",
+  "login.signupLink": "สร้างบัญชี",
+
+  "signup.heading": "สร้างบัญชีของคุณ",
+  "signup.lead":
+    "ตั้งค่าใช้เวลาสองนาที เซสชันค้นพบของคุณจะเริ่มทันทีหลังจากนั้น",
+  "signup.fieldFullName": "ชื่อ-นามสกุล",
+  "signup.fieldEmail": "อีเมล",
+  "signup.fieldPassword": "รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)",
+  "signup.submit": "สร้างบัญชี",
+  "signup.loginPrompt": "มีบัญชีแล้ว?",
+  "signup.loginLink": "เข้าสู่ระบบ",
+
+  "onboarding.kicker": "เฟส 0 — เซสชันค้นพบ",
+  "onboarding.heading": "การสนทนา 20–35 นาที ไม่ใช่การทดสอบ",
+  "onboarding.lead":
+    "AI เสียงของเราจะนำคุณผ่านหกมิติเพื่อสร้างโปรไฟล์ช่องว่างเริ่มต้นของคุณ พูดอย่างเป็นธรรมชาติ — ไม่มีคำตอบที่ผิด มีแต่ข้อมูลที่เราใช้เพื่อปรับแต่งทุกอย่างที่จะตามมา",
+  "onboarding.coverHeading": "สิ่งที่เราจะครอบคลุม",
+  "onboarding.dim1Label": "ความสามารถทางภาษา",
+  "onboarding.dim1Body": "การพูด การฟัง การอ่าน ความเข้าใจเจตนา",
+  "onboarding.dim2Label": "บทบาทและระดับ",
+  "onboarding.dim2Body": "ตำแหน่งงาน แผนก ระดับการตัดสินใจ",
+  "onboarding.dim3Label": "ความรับผิดชอบ",
+  "onboarding.dim3Body": "งานประจำวันที่ใช้ภาษาอังกฤษ; สายการรายงาน",
+  "onboarding.dim4Label": "การตรวจสอบการโต้ตอบ",
+  "onboarding.dim4Body": "อีเมล โทรศัพท์ การประชุม การนำเสนอ รายงาน",
+  "onboarding.dim5Label": "ระดับเป้าหมาย",
+  "onboarding.dim5Body": "ข้อกำหนดของนายจ้างหรือเป้าหมายอาชีพ",
+  "onboarding.dim6Label": "สไตล์การเรียน",
+  "onboarding.dim6Body": "ความชอบในการรับฟีดแบ็ก ความยาวเซสชัน เวลาที่มี",
+  "onboarding.readyHeading": "พร้อมเมื่อคุณพร้อม",
+  "onboarding.readyLead":
+    "เสียบหูฟัง หาที่เงียบ และคลิกด้านล่างเพื่อเริ่ม การสนทนาทำงานในเบราว์เซอร์ของคุณ",
+  "onboarding.startButton": "เริ่มเซสชันค้นพบ",
+  "onboarding.connecting": "กำลังเชื่อมต่อ…",
+  "onboarding.headphonesNote":
+    "เสียบหูฟัง · ~25 นาที · ภาษาอังกฤษหลังจากบทนำ",
+  "onboarding.languagePickerLabel": "ภาษาแม่ของฉันคือ",
+  "onboarding.langExplain":
+    "Aria จะทักทายคุณในภาษาของคุณประมาณ 30 วินาที จากนั้นเปลี่ยนเป็นภาษาอังกฤษสำหรับการประเมิน",
+
+  "discovery.firstMessage":
+    "สวัสดี {{student_name}}! ฉันคือ Aria จาก Lingo Pyoor ฉันมีข้อมูลพื้นฐานแล้ว — คุณเป็น {{role_name}} ที่ {{employer_name}} ตั้งเป้าหมายที่ {{target_level}} ในยี่สิบนาทีถัดไป มาทำความเข้าใจงานของคุณให้ลึกขึ้น และที่ที่ภาษาอังกฤษเข้ามามีบทบาท ไม่มีคำตอบที่ถูกหรือผิด ตอนนี้เราเปลี่ยนไปใช้ภาษาอังกฤษ — พูดอย่างเป็นธรรมชาติ และไม่ต้องกังวลเกี่ยวกับข้อผิดพลาด To start: walk me through what a typical day in your role looks like.",
+
+  "emp.brandTag": "นายจ้าง",
+  "emp.navOverview": "ภาพรวม",
+  "emp.navStudents": "นักเรียน",
+  "emp.loginKicker": "การเข้าถึงนายจ้าง",
+  "emp.loginHeading": "แดชบอร์ดนำร่อง LingoPure",
+  "emp.loginLead":
+    "การเข้าถึงร่วมสำหรับการนำร่อง การผลิตจะเปลี่ยนไปใช้บัญชีต่อผู้ดูแล",
+  "emp.loginField": "รหัสผ่านการเข้าถึง",
+  "emp.loginSubmit": "เข้าสู่ระบบ",
+  "emp.loginSubmitting": "กำลังเข้าสู่ระบบ…",
+};
+
+const km: Dict = {
+  "nav.dashboard": "ផ្ទាំងគ្រប់គ្រង",
+  "nav.lessons": "មេរៀន",
+  "nav.signOut": "ចេញ",
+  "nav.signIn": "ចូល",
+  "nav.signUp": "បង្កើតគណនី",
+  "nav.langPrefix": "ភាសា",
+
+  "home.kicker": "ភាសាអង់គ្លេសអាជីវកម្មសម្រាប់អាស៊ីអាគ្នេយ៍",
+  "home.headline":
+    "បំពេញគម្លាតភាសាអង់គ្លេសរបស់ក្រុមអ្នក និងបញ្ជាក់វា។",
+  "home.lead":
+    "វេទិកាភាសាអង់គ្លេសអាជីវកម្មដឹកនាំដោយ AI សម្រាប់ក្រុម B2B នៅវៀតណាមនិងអាស៊ីអាគ្នេយ៍។ ការវាយតម្លៃតាមសំឡេង ថ្នាក់ផ្ទាល់ មេរៀនខ្នាតតូច និងវិញ្ញាបនបត្រ CEFR — លទ្ធផលដែលអាចវាស់វែងបាន មិនមែនជាម៉ោងបង្រៀន។",
+  "home.ctaPrimary": "ចាប់ផ្តើម",
+  "home.ctaSecondary": "ខ្ញុំមានគណនីរួចហើយ",
+  "demo.bannerLead":
+    "នេះគឺជាការបង្ហាញវេទិកាយុទ្ធសាស្ត្រ — មិនមែនជាសេវាកម្ម LingoPure ពិតប្រាកដទេ។",
+  "demo.bannerCta": "ទស្សនា LingoPure ពិតប្រាកដ →",
+
+  "login.heading": "សូមស្វាគមន៍ការត្រឡប់មកវិញ",
+  "login.lead": "ចូលដើម្បីបន្តដំណើរការសិក្សារបស់អ្នក។",
+  "login.fieldEmail": "អ៊ីមែល",
+  "login.fieldPassword": "ពាក្យសម្ងាត់",
+  "login.submit": "ចូល",
+  "login.signupPrompt": "ថ្មីនៅ LingoPure?",
+  "login.signupLink": "បង្កើតគណនី",
+
+  "signup.heading": "បង្កើតគណនីរបស់អ្នក",
+  "signup.lead":
+    "ប្រើពេលពីរនាទីដើម្បីរៀបចំ។ វគ្គរុករករបស់អ្នកនឹងចាប់ផ្តើមភ្លាមៗបន្ទាប់មក។",
+  "signup.fieldFullName": "ឈ្មោះពេញ",
+  "signup.fieldEmail": "អ៊ីមែល",
+  "signup.fieldPassword": "ពាក្យសម្ងាត់ (8+ តួអក្សរ)",
+  "signup.submit": "បង្កើតគណនី",
+  "signup.loginPrompt": "មានគណនីរួចហើយ?",
+  "signup.loginLink": "ចូល",
+
+  "onboarding.kicker": "ដំណាក់កាល 0 — វគ្គរុករក",
+  "onboarding.heading": "ការសន្ទនា 20–35 នាទី មិនមែនជាការប្រឡងទេ",
+  "onboarding.lead":
+    "AI សំឡេងរបស់យើងនឹងណែនាំអ្នកឆ្លងកាត់ប្រាំមួយវិមាត្រដើម្បីបង្កើតប្រវត្តិរូបគម្លាតដំបូងរបស់អ្នក។ និយាយដោយធម្មជាតិ — គ្មានចម្លើយខុសទេ មានតែទិន្នន័យដែលយើងប្រើដើម្បីកំណត់ជាលក្ខណៈផ្ទាល់ខ្លួននូវអ្វីៗដែលមកដល់បន្ទាប់។",
+  "onboarding.coverHeading": "អ្វីដែលយើងនឹងពិភាក្សា",
+  "onboarding.dim1Label": "សមត្ថភាពភាសា",
+  "onboarding.dim1Body": "និយាយ ស្តាប់ អាន ការយល់ដឹងពីបំណង។",
+  "onboarding.dim2Label": "តួនាទី និងកម្រិត",
+  "onboarding.dim2Body": "មុខតំណែង នាយកដ្ឋាន កម្រិតធ្វើការសម្រេចចិត្ត។",
+  "onboarding.dim3Label": "ទំនួលខុសត្រូវ",
+  "onboarding.dim3Body":
+    "កិច្ចការប្រចាំថ្ងៃដែលត្រូវការភាសាអង់គ្លេស; ខ្សែរាយការណ៍។",
+  "onboarding.dim4Label": "ការពិនិត្យអន្តរកម្ម",
+  "onboarding.dim4Body":
+    "អ៊ីមែល ការទូរស័ព្ទ កិច្ចប្រជុំ ការធ្វើបទបង្ហាញ របាយការណ៍។",
+  "onboarding.dim5Label": "កម្រិតគោលដៅ",
+  "onboarding.dim5Body": "តម្រូវការនិយោជក ឬគោលដៅអាជីព។",
+  "onboarding.dim6Label": "រចនាប័ទ្មការសិក្សា",
+  "onboarding.dim6Body":
+    "ចំណូលចិត្តមតិត្រឡប់ ប្រវែងវគ្គ ពេលវេលាដែលអាចរកបាន។",
+  "onboarding.readyHeading": "រួចរាល់នៅពេលអ្នករួចរាល់",
+  "onboarding.readyLead":
+    "ដោតកាសត្រចៀក ស្វែងរកកន្លែងស្ងាត់ និងចុចខាងក្រោមដើម្បីចាប់ផ្តើម។ ការសន្ទនាដំណើរការនៅក្នុងកម្មវិធីរុករករបស់អ្នក។",
+  "onboarding.startButton": "ចាប់ផ្តើមវគ្គរុករក",
+  "onboarding.connecting": "កំពុងភ្ជាប់…",
+  "onboarding.headphonesNote":
+    "ដោតកាសត្រចៀក · ~25 នាទី · ភាសាអង់គ្លេសបន្ទាប់ពីការណែនាំ",
+  "onboarding.languagePickerLabel": "ភាសាកំណើតរបស់ខ្ញុំគឺ",
+  "onboarding.langExplain":
+    "Aria នឹងស្វាគមន៍អ្នកជាភាសារបស់អ្នកប្រហែល 30 វិនាទី បន្ទាប់មកប្តូរទៅភាសាអង់គ្លេសសម្រាប់ការវាយតម្លៃ។",
+
+  "discovery.firstMessage":
+    "សួស្តី {{student_name}}! ខ្ញុំជា Aria មកពី Lingo Pyoor។ ខ្ញុំមានព័ត៌មានមូលដ្ឋានរួចហើយ — អ្នកជា {{role_name}} នៅ {{employer_name}} មានគោលដៅ {{target_level}}។ ក្នុងម្ភៃនាទីខាងមុខ យើងនឹងស្វែងយល់ឱ្យកាន់តែស៊ីជម្រៅអំពីការងាររបស់អ្នក និងកន្លែងណាដែលភាសាអង់គ្លេសត្រូវបានប្រើ។ គ្មានចម្លើយត្រឹមត្រូវ ឬខុសទេ។ ឥឡូវនេះយើងប្តូរទៅភាសាអង់គ្លេស — និយាយដោយធម្មជាតិ មិនបាច់ព្រួយបារម្ភពីកំហុសទេ។ To start: walk me through what a typical day in your role looks like.",
+
+  "emp.brandTag": "និយោជក",
+  "emp.navOverview": "ទិដ្ឋភាពទូទៅ",
+  "emp.navStudents": "សិស្ស",
+  "emp.loginKicker": "ការចូលប្រើនិយោជក",
+  "emp.loginHeading": "ផ្ទាំងគ្រប់គ្រងសាកល្បង LingoPure",
+  "emp.loginLead":
+    "ការចូលប្រើរួមគ្នាសម្រាប់ការសាកល្បង។ កំណែផលិតកម្មនឹងប្តូរទៅគណនីអ្នកគ្រប់គ្រងផ្ទាល់ខ្លួន។",
+  "emp.loginField": "ពាក្យសម្ងាត់ចូលប្រើ",
+  "emp.loginSubmit": "ចូល",
+  "emp.loginSubmitting": "កំពុងចូល…",
+};
+
+const lo: Dict = {
+  "nav.dashboard": "ແຜງຄວບຄຸມ",
+  "nav.lessons": "ບົດຮຽນ",
+  "nav.signOut": "ອອກລະບົບ",
+  "nav.signIn": "ເຂົ້າສູ່ລະບົບ",
+  "nav.signUp": "ສ້າງບັນຊີ",
+  "nav.langPrefix": "ພາສາ",
+
+  "home.kicker": "ພາສາອັງກິດທຸລະກິດສຳລັບອາຊີຕາເວັນອອກສຽງໃຕ້",
+  "home.headline": "ປິດຊ່ອງຫວ່າງພາສາອັງກິດຂອງທີມເຈົ້າ ແລະພິສູດມັນ",
+  "home.lead":
+    "ແພລດຟອມພາສາອັງກິດທຸລະກິດທີ່ຂັບເຄື່ອນດ້ວຍ AI ສຳລັບທີມ B2B ໃນຫວຽດນາມແລະອາຊີຕາເວັນອອກສຽງໃຕ້. ການປະເມີນດ້ວຍສຽງ ຫ້ອງຮຽນສົດ ບົດຮຽນສັ້ນ ແລະການຮັບຮອງ CEFR — ຜົນໄດ້ຮັບທີ່ວັດແທກໄດ້ ບໍ່ແມ່ນຊົ່ວໂມງສອນ.",
+  "home.ctaPrimary": "ເລີ່ມຕົ້ນ",
+  "home.ctaSecondary": "ຂ້ອຍມີບັນຊີແລ້ວ",
+  "demo.bannerLead":
+    "ນີ້ແມ່ນເດໂມແພລດຟອມຍຸດທະສາດ — ບໍ່ແມ່ນບໍລິການ LingoPure ແທ້",
+  "demo.bannerCta": "ເຂົ້າເບິ່ງ LingoPure ແທ້ →",
+
+  "login.heading": "ຍິນດີຕ້ອນຮັບກັບ",
+  "login.lead": "ເຂົ້າສູ່ລະບົບເພື່ອສືບຕໍ່ການຮຽນຮູ້ຂອງເຈົ້າ.",
+  "login.fieldEmail": "ອີເມວ",
+  "login.fieldPassword": "ລະຫັດຜ່ານ",
+  "login.submit": "ເຂົ້າສູ່ລະບົບ",
+  "login.signupPrompt": "ໃໝ່ຢູ່ LingoPure?",
+  "login.signupLink": "ສ້າງບັນຊີ",
+
+  "signup.heading": "ສ້າງບັນຊີຂອງເຈົ້າ",
+  "signup.lead":
+    "ສອງນາທີເພື່ອຕັ້ງຄ່າ. ເຊດຊັນຄົ້ນພົບຂອງເຈົ້າຈະເລີ່ມທັນທີຫຼັງຈາກນັ້ນ.",
+  "signup.fieldFullName": "ຊື່ເຕັມ",
+  "signup.fieldEmail": "ອີເມວ",
+  "signup.fieldPassword": "ລະຫັດຜ່ານ (8+ ຕົວອັກສອນ)",
+  "signup.submit": "ສ້າງບັນຊີ",
+  "signup.loginPrompt": "ມີບັນຊີແລ້ວ?",
+  "signup.loginLink": "ເຂົ້າສູ່ລະບົບ",
+
+  "onboarding.kicker": "ໄລຍະ 0 — ເຊດຊັນຄົ້ນພົບ",
+  "onboarding.heading": "ການສົນທະນາ 20–35 ນາທີ ບໍ່ແມ່ນການທົດສອບ",
+  "onboarding.lead":
+    "AI ສຽງຂອງພວກເຮົາຈະນຳເຈົ້າຜ່ານຫົກມິຕິເພື່ອສ້າງໂປຣໄຟລ໌ຊ່ອງຫວ່າງເບື້ອງຕົ້ນຂອງເຈົ້າ. ເວົ້າແບບທຳມະຊາດ — ບໍ່ມີຄຳຕອບທີ່ຜິດ ມີແຕ່ຂໍ້ມູນທີ່ພວກເຮົາໃຊ້ເພື່ອປັບແຕ່ງທຸກຢ່າງທີ່ຈະຕາມມາ.",
+  "onboarding.coverHeading": "ສິ່ງທີ່ພວກເຮົາຈະຄອບຄຸມ",
+  "onboarding.dim1Label": "ຄວາມສາມາດທາງພາສາ",
+  "onboarding.dim1Body": "ການເວົ້າ ການຟັງ ການອ່ານ ຄວາມເຂົ້າໃຈເຈດຕະນາ.",
+  "onboarding.dim2Label": "ບົດບາດ ແລະ ລະດັບ",
+  "onboarding.dim2Body": "ຕຳແໜ່ງງານ ພະແນກ ລະດັບການຕັດສິນໃຈ.",
+  "onboarding.dim3Label": "ຄວາມຮັບຜິດຊອບ",
+  "onboarding.dim3Body": "ວຽກປະຈຳວັນທີ່ໃຊ້ພາສາອັງກິດ; ສາຍການລາຍງານ.",
+  "onboarding.dim4Label": "ການກວດສອບການໂຕ້ຕອບ",
+  "onboarding.dim4Body": "ອີເມວ ໂທລະສັບ ກອງປະຊຸມ ການນຳສະເໜີ ບົດລາຍງານ.",
+  "onboarding.dim5Label": "ລະດັບເປົ້າໝາຍ",
+  "onboarding.dim5Body": "ຄວາມຕ້ອງການຂອງນາຍຈ້າງ ຫຼື ເປົ້າໝາຍອາຊີບ.",
+  "onboarding.dim6Label": "ສະໄຕລ໌ການຮຽນ",
+  "onboarding.dim6Body": "ຄວາມມັກຂອງຄຳຕິຊົມ ຄວາມຍາວເຊດຊັນ ເວລາທີ່ມີ.",
+  "onboarding.readyHeading": "ພ້ອມເມື່ອເຈົ້າພ້ອມ",
+  "onboarding.readyLead":
+    "ສຽບຫູຟັງ ຫາບ່ອນງຽບ ແລະຄລິກລຸ່ມເພື່ອເລີ່ມ. ການສົນທະນາແລ່ນໃນບຣາວເຊີຂອງເຈົ້າ.",
+  "onboarding.startButton": "ເລີ່ມເຊດຊັນຄົ້ນພົບ",
+  "onboarding.connecting": "ກຳລັງເຊື່ອມຕໍ່…",
+  "onboarding.headphonesNote":
+    "ສຽບຫູຟັງ · ~25 ນາທີ · ພາສາອັງກິດຫຼັງຈາກບົດແນະນຳ",
+  "onboarding.languagePickerLabel": "ພາສາແມ່ຂອງຂ້ອຍແມ່ນ",
+  "onboarding.langExplain":
+    "Aria ຈະທັກທາຍເຈົ້າດ້ວຍພາສາຂອງເຈົ້າປະມານ 30 ວິນາທີ ຈາກນັ້ນປ່ຽນເປັນພາສາອັງກິດສຳລັບການປະເມີນ.",
+
+  "discovery.firstMessage":
+    "ສະບາຍດີ {{student_name}}! ຂ້ອຍຄື Aria ຈາກ Lingo Pyoor. ຂ້ອຍມີຂໍ້ມູນພື້ນຖານແລ້ວ — ເຈົ້າເປັນ {{role_name}} ຢູ່ {{employer_name}} ຕັ້ງເປົ້າໝາຍທີ່ {{target_level}}. ໃນຊາວນາທີຕໍ່ໄປ ມາທຳຄວາມເຂົ້າໃຈວຽກຂອງເຈົ້າໃຫ້ເລິກຂຶ້ນ ແລະບ່ອນທີ່ພາສາອັງກິດເຂົ້າມາມີບົດບາດ. ບໍ່ມີຄຳຕອບທີ່ຖືກຫຼືຜິດ. ດຽວນີ້ພວກເຮົາປ່ຽນເປັນພາສາອັງກິດ — ເວົ້າແບບທຳມະຊາດ ແລະບໍ່ຕ້ອງເປັນຫ່ວງເລື່ອງຄວາມຜິດ. To start: walk me through what a typical day in your role looks like.",
+
+  "emp.brandTag": "ນາຍຈ້າງ",
+  "emp.navOverview": "ພາບລວມ",
+  "emp.navStudents": "ນັກຮຽນ",
+  "emp.loginKicker": "ການເຂົ້າເຖິງນາຍຈ້າງ",
+  "emp.loginHeading": "ແຜງຄວບຄຸມນຳຮ່ອງ LingoPure",
+  "emp.loginLead":
+    "ການເຂົ້າເຖິງຮ່ວມສຳລັບການນຳຮ່ອງ. ການຜະລິດຈະປ່ຽນເປັນບັນຊີຕໍ່ຜູ້ດູແລ.",
+  "emp.loginField": "ລະຫັດຜ່ານການເຂົ້າເຖິງ",
+  "emp.loginSubmit": "ເຂົ້າສູ່ລະບົບ",
+  "emp.loginSubmitting": "ກຳລັງເຂົ້າສູ່ລະບົບ…",
+};
+
+const my: Dict = {
+  "nav.dashboard": "ဒက်ရှ်ဘုတ်",
+  "nav.lessons": "သင်ခန်းစာများ",
+  "nav.signOut": "ထွက်မည်",
+  "nav.signIn": "ဝင်မည်",
+  "nav.signUp": "အကောင့်ဖန်တီးမည်",
+  "nav.langPrefix": "ဘာသာစကား",
+
+  "home.kicker": "အရှေ့တောင်အာရှအတွက် စီးပွားရေးအင်္ဂလိပ်",
+  "home.headline":
+    "သင့်အသင်း၏ အင်္ဂလိပ်ကွာဟမှုကို ပိတ်ပစ်ပါ၊ သက်သေပြပါ။",
+  "home.lead":
+    "ဗီယက်နမ်နှင့် အရှေ့တောင်အာရှရှိ B2B အသင်းများအတွက် AI-အရင်ပေးထားသော စီးပွားရေးအင်္ဂလိပ် ပလက်ဖောင်း။ အသံအကဲဖြတ်ခြင်း၊ တိုက်ရိုက်အတန်းများ၊ မိုက်ခရိုသင်ခန်းစာများ၊ နှင့် CEFR အသိအမှတ်ပြုလက်မှတ် — တိုင်းတာနိုင်သော ရလဒ်များ၊ သင်ကြားချိန်နာရီများ မဟုတ်ပါ။",
+  "home.ctaPrimary": "စတင်ပါ",
+  "home.ctaSecondary": "ကျွန်ုပ်တွင် အကောင့်ရှိပြီးဖြစ်သည်",
+  "demo.bannerLead":
+    "ဤသည်မှာ ဗျူဟာမြောက်ပလက်ဖောင်းဒီမို — တကယ့် LingoPure ဝန်ဆောင်မှု မဟုတ်ပါ။",
+  "demo.bannerCta": "တကယ့် LingoPure သို့ သွားမည် →",
+
+  "login.heading": "ပြန်လည်ကြိုဆိုပါသည်",
+  "login.lead": "သင်၏ သင်ယူခရီးကို ဆက်လက်ရန် ဝင်ပါ။",
+  "login.fieldEmail": "အီးမေးလ်",
+  "login.fieldPassword": "စကားဝှက်",
+  "login.submit": "ဝင်မည်",
+  "login.signupPrompt": "LingoPure တွင် အသစ်လား?",
+  "login.signupLink": "အကောင့်ဖန်တီးမည်",
+
+  "signup.heading": "သင်၏အကောင့်ကို ဖန်တီးပါ",
+  "signup.lead":
+    "သတ်မှတ်ရန် နှစ်မိနစ်။ သင်၏ ရှာဖွေတွေ့ရှိမှုစက်ရှင်ကို ထိုနောက် ချက်ချင်း စတင်မည်။",
+  "signup.fieldFullName": "အမည်အပြည့်အစုံ",
+  "signup.fieldEmail": "အီးမေးလ်",
+  "signup.fieldPassword": "စကားဝှက် (8+ စာလုံး)",
+  "signup.submit": "အကောင့်ဖန်တီးမည်",
+  "signup.loginPrompt": "အကောင့်ရှိပြီးသားလား?",
+  "signup.loginLink": "ဝင်မည်",
+
+  "onboarding.kicker": "အဆင့် 0 — ရှာဖွေတွေ့ရှိမှုစက်ရှင်",
+  "onboarding.heading": "20–35 မိနစ် စကားဝိုင်း၊ စမ်းသပ်မှု မဟုတ်",
+  "onboarding.lead":
+    "ကျွန်ုပ်တို့၏ အသံ AI က သင့်ကို ကွာဟမှုပရိုဖိုင်ဖန်တီးရန် အတွက် ခြောက်ဘက် ဖြတ်သန်းစေမည်။ သဘာဝအတိုင်း ပြောပါ — အမှားအဖြေ မရှိပါ၊ နောက်ပိုင်းအရာအားလုံးကို စိတ်ကြိုက်ပြောင်းရန် အသုံးပြုသော ဒေတာသာရှိသည်။",
+  "onboarding.coverHeading": "ကျွန်ုပ်တို့ ဆွေးနွေးမည့်အရာ",
+  "onboarding.dim1Label": "ဘာသာစကားစွမ်းရည်",
+  "onboarding.dim1Body": "ပြောခြင်း၊ နားထောင်ခြင်း၊ ဖတ်ခြင်း၊ ရည်ရွယ်ချက်နားလည်မှု။",
+  "onboarding.dim2Label": "အခန်းကဏ္ဍ နှင့် အဆင့်",
+  "onboarding.dim2Body": "ရာထူး၊ ဌာန၊ ဆုံးဖြတ်ချက်ချနိုင်သည့်အဆင့်။",
+  "onboarding.dim3Label": "တာဝန်များ",
+  "onboarding.dim3Body": "အင်္ဂလိပ်လိုအပ်သော နေ့စဉ်လုပ်ငန်း; အစီရင်ခံလမ်းကြောင်း။",
+  "onboarding.dim4Label": "အပြန်အလှန်ဆက်ဆံမှု စစ်ဆေးခြင်း",
+  "onboarding.dim4Body": "အီးမေးလ်၊ ဖုန်း၊ အစည်းအဝေး၊ တင်ပြခြင်း၊ အစီရင်ခံစာ။",
+  "onboarding.dim5Label": "ပစ်မှတ်အဆင့်",
+  "onboarding.dim5Body": "အလုပ်ရှင်ဆိုင်ရာ လိုအပ်ချက် သို့မဟုတ် အသက်မွေးဝမ်းကြောင်း ပစ်မှတ်။",
+  "onboarding.dim6Label": "သင်ယူပုံစံ",
+  "onboarding.dim6Body": "တုံ့ပြန်ချက် နှစ်သက်မှု၊ စက်ရှင်အရှည်၊ ရရှိနိုင်သောအချိန်။",
+  "onboarding.readyHeading": "သင်အဆင်သင့်ဖြစ်ချိန် အဆင်သင့်",
+  "onboarding.readyLead":
+    "နားကြပ်ထိုးပါ၊ ငြိမ်သက်သောနေရာရှာပါ၊ စတင်ရန် အောက်ကိုနှိပ်ပါ။ စကားဝိုင်းသည် သင့်ဘရောက်ဇာတွင် လည်ပတ်နေသည်။",
+  "onboarding.startButton": "ရှာဖွေတွေ့ရှိမှု စတင်ပါ",
+  "onboarding.connecting": "ချိတ်ဆက်နေသည်…",
+  "onboarding.headphonesNote":
+    "နားကြပ်ထိုးပါ · ~25 မိနစ် · မိတ်ဆက်အပြီး အင်္ဂလိပ်",
+  "onboarding.languagePickerLabel": "ကျွန်ုပ်၏ မိခင်ဘာသာစကားမှာ",
+  "onboarding.langExplain":
+    "Aria က သင့်ကို သင့်ဘာသာစကားဖြင့် 30 စက္ကန့်ခန့် နှုတ်ဆက်မည်၊ ပြီးနောက် အကဲဖြတ်မှုအတွက် အင်္ဂလိပ်ဘာသာသို့ ပြောင်းမည်။",
+
+  "discovery.firstMessage":
+    "မင်္ဂလာပါ {{student_name}}! ကျွန်မက Lingo Pyoor မှ Aria ပါ။ ကျွန်မ အခြေခံအချက်အလက်များ ရှိပြီးပြီ — သင်က {{employer_name}} တွင် {{role_name}} ၊ ရည်မှန်းချက် {{target_level}}။ နောက်အချိန်နှစ်ဆယ်မိနစ်အတွင်း သင်၏အလုပ်နှင့် အင်္ဂလိပ်ဘယ်နေရာတွင် ပါဝင်လာသည်ကို ပိုမိုနက်ရှိုင်းစွာ နားလည်ကြရအောင်။ မှန် မမှန် အဖြေ မရှိပါ။ အခု အင်္ဂလိပ်သို့ ပြောင်းကြရအောင် — သဘာဝအတိုင်းပြောပြီး အမှားများကို စိုးရိမ်စရာမလိုပါ။ To start: walk me through what a typical day in your role looks like.",
+
+  "emp.brandTag": "အလုပ်ရှင်",
+  "emp.navOverview": "ခြုံငုံသုံးသပ်ချက်",
+  "emp.navStudents": "ကျောင်းသားများ",
+  "emp.loginKicker": "အလုပ်ရှင်ဝင်ရောက်ခွင့်",
+  "emp.loginHeading": "LingoPure စမ်းသပ်ဒက်ရှ်ဘုတ်",
+  "emp.loginLead":
+    "စမ်းသပ်ခြင်းအတွက် မျှဝေထားသော ဝင်ရောက်ခွင့်။ ထုတ်လုပ်မှု အခါ စီမံခန့်ခွဲသူတစ်ဦးချင်း အကောင့်များသို့ ပြောင်းရွှေ့မည်။",
+  "emp.loginField": "ဝင်ရောက်ခွင့်စကားဝှက်",
+  "emp.loginSubmit": "ဝင်မည်",
+  "emp.loginSubmitting": "ဝင်နေသည်…",
+};
+
+const ta: Dict = {
+  "nav.dashboard": "டாஷ்போர்டு",
+  "nav.lessons": "பாடங்கள்",
+  "nav.signOut": "வெளியேறு",
+  "nav.signIn": "உள்நுழை",
+  "nav.signUp": "கணக்கு உருவாக்கு",
+  "nav.langPrefix": "மொழி",
+
+  "home.kicker": "தென்கிழக்காசியாவிற்கான வணிக ஆங்கிலம்",
+  "home.headline":
+    "உங்கள் குழுவின் ஆங்கில இடைவெளியை மூடுங்கள், அதை நிரூபியுங்கள்.",
+  "home.lead":
+    "வியட்நாம் மற்றும் தென்கிழக்காசியாவில் உள்ள B2B குழுக்களுக்கான AI-முதன்மை வணிக ஆங்கில மேடை. குரல் மதிப்பீடு, நேரடி வகுப்புகள், சிறு பாடங்கள் மற்றும் CEFR சான்றிதழ் — அளவிடக்கூடிய முடிவுகள், கற்பித்தல் மணிநேரங்கள் அல்ல.",
+  "home.ctaPrimary": "தொடங்கு",
+  "home.ctaSecondary": "எனக்கு ஏற்கனவே கணக்கு உள்ளது",
+  "demo.bannerLead":
+    "இது ஒரு மூலோபாய மேடை டெமோ — உண்மையான LingoPure சேவை அல்ல.",
+  "demo.bannerCta": "உண்மையான LingoPure-ஐ பார்க்கவும் →",
+
+  "login.heading": "மீண்டும் வருக",
+  "login.lead": "உங்கள் கற்றல் பயணத்தைத் தொடர உள்நுழையவும்.",
+  "login.fieldEmail": "மின்னஞ்சல்",
+  "login.fieldPassword": "கடவுச்சொல்",
+  "login.submit": "உள்நுழை",
+  "login.signupPrompt": "LingoPure-க்கு புதியவரா?",
+  "login.signupLink": "கணக்கு உருவாக்கு",
+
+  "signup.heading": "உங்கள் கணக்கை உருவாக்கவும்",
+  "signup.lead":
+    "அமைக்க இரண்டு நிமிடங்கள். உங்கள் கண்டுபிடிப்பு அமர்வு உடனடியாகத் தொடங்கும்.",
+  "signup.fieldFullName": "முழு பெயர்",
+  "signup.fieldEmail": "மின்னஞ்சல்",
+  "signup.fieldPassword": "கடவுச்சொல் (8+ எழுத்துகள்)",
+  "signup.submit": "கணக்கு உருவாக்கு",
+  "signup.loginPrompt": "ஏற்கனவே கணக்கு உள்ளதா?",
+  "signup.loginLink": "உள்நுழை",
+
+  "onboarding.kicker": "கட்டம் 0 — கண்டுபிடிப்பு அமர்வு",
+  "onboarding.heading": "20–35 நிமிட உரையாடல், சோதனை அல்ல",
+  "onboarding.lead":
+    "எங்கள் குரல் AI உங்கள் தொடக்க இடைவெளி சுயவிவரத்தை உருவாக்க ஆறு பரிமாணங்கள் வழியாக உங்களை வழிநடத்தும். இயற்கையாகப் பேசவும் — தவறான பதில்கள் இல்லை, அடுத்து வரும் அனைத்தையும் தனிப்பயனாக்க நாங்கள் பயன்படுத்தும் தரவு மட்டுமே.",
+  "onboarding.coverHeading": "நாங்கள் என்ன கவர் செய்வோம்",
+  "onboarding.dim1Label": "மொழி திறன்",
+  "onboarding.dim1Body": "பேசுதல், கேட்டல், படித்தல், நோக்கம் புரிதல்.",
+  "onboarding.dim2Label": "பங்கு & மட்டம்",
+  "onboarding.dim2Body": "பதவி, துறை, முடிவெடுக்கும் மட்டம்.",
+  "onboarding.dim3Label": "பொறுப்புகள்",
+  "onboarding.dim3Body":
+    "ஆங்கிலம் தேவைப்படும் தினசரி பணிகள்; புகாரளிப்பு வரிசை.",
+  "onboarding.dim4Label": "தொடர்பு தணிக்கை",
+  "onboarding.dim4Body":
+    "மின்னஞ்சல், அழைப்புகள், கூட்டங்கள், விளக்கக்காட்சிகள், அறிக்கைகள்.",
+  "onboarding.dim5Label": "இலக்கு மட்டம்",
+  "onboarding.dim5Body": "முதலாளியின் தேவை அல்லது தொழில் இலக்கு.",
+  "onboarding.dim6Label": "கற்றல் பாணி",
+  "onboarding.dim6Body":
+    "கருத்து விருப்பம், அமர்வு நீளம், கிடைக்கக்கூடிய நேரம்.",
+  "onboarding.readyHeading": "நீங்கள் தயாராக இருக்கும்போது தயார்",
+  "onboarding.readyLead":
+    "ஹெட்செட் சொருகவும், அமைதியான இடத்தைத் தேடவும், தொடங்க கீழே கிளிக் செய்யவும். உரையாடல் உங்கள் உலாவியில் நடக்கிறது.",
+  "onboarding.startButton": "கண்டுபிடிப்பு அமர்வைத் தொடங்கு",
+  "onboarding.connecting": "இணைக்கிறது…",
+  "onboarding.headphonesNote":
+    "ஹெட்போன்களை சொருகவும் · ~25 நிமிடங்கள் · அறிமுகத்திற்குப் பின் ஆங்கிலம்",
+  "onboarding.languagePickerLabel": "எனது தாய்மொழி",
+  "onboarding.langExplain":
+    "Aria உங்களை உங்கள் மொழியில் ~30 விநாடிகள் வாழ்த்துவார், பின்னர் மதிப்பீட்டிற்கு ஆங்கிலத்திற்கு மாறும்.",
+
+  "discovery.firstMessage":
+    "வணக்கம் {{student_name}}! நான் Lingo Pyoor-இலிருந்து Aria. எனக்கு அடிப்படை விவரங்கள் ஏற்கனவே உள்ளன — நீங்கள் {{employer_name}}-இல் {{role_name}}, இலக்கு {{target_level}}. அடுத்த இருபது நிமிடங்களில், உங்கள் வேலை மற்றும் ஆங்கிலம் எங்கே ஈடுபடுகிறது என்பதைப் பற்றி ஆழமாகப் புரிந்துகொள்வோம். சரியான அல்லது தவறான பதில்கள் இல்லை. இப்போது ஆங்கிலத்திற்கு மாறுவோம் — இயற்கையாகப் பேசவும், தவறுகளைப் பற்றி கவலைப்பட வேண்டாம். To start: walk me through what a typical day in your role looks like.",
+
+  "emp.brandTag": "முதலாளி",
+  "emp.navOverview": "மேலோட்டம்",
+  "emp.navStudents": "மாணவர்கள்",
+  "emp.loginKicker": "முதலாளி அணுகல்",
+  "emp.loginHeading": "LingoPure முன்னோடி டாஷ்போர்டு",
+  "emp.loginLead":
+    "முன்னோடிக்கான பகிரப்பட்ட அணுகல். உற்பத்தியில் ஒவ்வொரு நிர்வாகியின் கணக்குக்கு மாறும்.",
+  "emp.loginField": "அணுகல் கடவுச்சொல்",
+  "emp.loginSubmit": "உள்நுழை",
+  "emp.loginSubmitting": "உள்நுழைகிறது…",
+};
+
+const DICTS: Record<LanguageCode, Dict> = {
+  en,
+  vi,
+  tl,
+  id,
+  ms,
+  th,
+  km,
+  lo,
+  my,
+  ta,
+  zh,
+};
 
 export function dict(code: LanguageCode): Dict {
   return DICTS[code] ?? en;
