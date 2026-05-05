@@ -88,6 +88,11 @@ const LANGUAGE_NAMES: Record<LanguageCode, string> = {
   tl: "Tagalog",
   id: "Indonesian",
   ms: "Malay",
+  th: "Thai",
+  km: "Khmer",
+  lo: "Lao",
+  my: "Burmese",
+  ta: "Tamil",
   zh: "Mandarin Chinese (Simplified)",
 };
 
