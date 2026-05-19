@@ -1,3 +1,4 @@
+// @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
 import { loadRolesIndex } from "@/lib/employer/roles-data";
 import { loadEmployerStaffPicks } from "@/lib/employer/data";

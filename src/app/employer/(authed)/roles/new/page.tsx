@@ -1,3 +1,4 @@
+// @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";

@@ -1,3 +1,4 @@
+// @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadTeacherDetail } from "@/lib/employer/teachers-data";

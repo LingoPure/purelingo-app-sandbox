@@ -1,3 +1,4 @@
+// @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DiscoverySession } from "../discovery-session";

@@ -1,3 +1,4 @@
+// @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 /**
  * Demo path for exercising the post-session scoring pipeline before EEO ships
  * ClassIn SDK credentials. The tester pastes a session transcript, submits,
