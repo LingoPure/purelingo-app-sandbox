@@ -29,9 +29,9 @@ export const EmailSprintPromptSchema = z.object({
   task: z
     .string()
     .min(1)
-    .max(300)
+    .max(600)
     .describe(
-      "What the student must write — to whom, with what tone, hitting which beats."
+      "What the student must write — to whom, with what tone, hitting which beats. Keep to 2-3 sentences."
     ),
   recipient: z
     .string()

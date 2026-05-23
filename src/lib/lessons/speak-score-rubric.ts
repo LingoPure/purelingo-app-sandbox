@@ -32,8 +32,8 @@ export const SpeakScorePromptSchema = z.object({
   task: z
     .string()
     .min(1)
-    .max(300)
-    .describe("What the student must say — to whom, hitting which beats."),
+    .max(600)
+    .describe("What the student must say — to whom, hitting which beats. Keep to 2-3 sentences."),
   expected_seconds: z
     .number()
     .int()

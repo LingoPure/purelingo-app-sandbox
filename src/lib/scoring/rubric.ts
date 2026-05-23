@@ -66,7 +66,7 @@ export const GapScoresSchema = z.object({
   target_why: z
     .string()
     .min(1)
-    .max(300)
+    .max(400)
     .describe(
       "One sentence: WHY they need that level — employer requirement, event-driven, personal goal, etc."
     ),
