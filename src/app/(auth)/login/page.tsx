@@ -41,6 +41,12 @@ export default async function LoginPage({
           required
           minLength={6}
         />
+        <Link
+          href="/forgot-password"
+          className="-mt-1 self-end text-xs font-medium text-navy hover:underline"
+        >
+          Forgot password?
+        </Link>
         <button
           type="submit"
           className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
