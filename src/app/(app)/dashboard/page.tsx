@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GapRadar } from "@/components/dashboard/gap-radar";
-import { RescoreButton } from "@/components/dashboard/rescore-button";
 import { ScheduleClassButton } from "@/components/dashboard/schedule-class-button";
 import {
   CertificationCard,
@@ -251,16 +250,13 @@ export default async function DashboardPage() {
           <h1 className="font-serif text-3xl text-navy">Your gap profile</h1>
         </div>
         {hasScores && (
-          <div className="flex flex-col items-end gap-2">
-            <Link
-              href="/onboarding"
-              title="Start a fresh discovery conversation with Aria — re-baselines all your scores. Use this if your role changed or your English has moved on. Your previous scores are kept as history."
-              className="rounded-md border border-navy bg-navy px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition hover:bg-navy-deep"
-            >
-              Re-take discovery
-            </Link>
-            <RescoreButton />
-          </div>
+          <Link
+            href="/onboarding"
+            title="See where you are now versus before. Starts a fresh check-in with Aria and re-measures your level — use it when your role changes or your English moves on. Past scores are kept so you and your employer can track progress."
+            className="rounded-md border border-navy bg-navy px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition hover:bg-navy-deep"
+          >
+            Progress check-in
+          </Link>
         )}
       </div>
 
