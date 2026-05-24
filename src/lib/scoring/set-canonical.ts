@@ -78,20 +78,40 @@ export async function setCanonicalGapScore(
     throw new Error(`gap_scores upsert failed: ${upsertErr.message}`);
   }
 
-  // Append to the immutable progress trail (gap_score_history). One row per scoring
-  // event — never overwritten — so the dashboard can chart score-over-time. Non-fatal:
-  // a failed history insert must not break the canonical score write above.
-  const { error: historyErr } = await supabase
+  // Append to the immutable progress trail (gap_score_history) — but only when this
+  // skill's score actually moved since its last trail point. Repeated check-ins that
+  // leave a skill unchanged would otherwise add flat-line duplicates; we collapse them
+  // at the source here (the chart also collapses consecutive duplicates on read, so
+  // pre-existing rows still render cleanly). Non-fatal throughout: a failed history
+  // read/insert must never break the canonical score write above.
+  const { data: lastTrail, error: lastErr } = await supabase
     .from("gap_score_history")
-    .insert({
-      student_id: args.studentId,
-      skill: args.skill,
-      score: args.score,
-      target: args.target,
-      source: args.source,
-    });
-  if (historyErr) {
-    console.error(`gap_score_history insert failed: ${historyErr.message}`);
+    .select("score")
+    .eq("student_id", args.studentId)
+    .eq("skill", args.skill)
+    .order("scored_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastErr) {
+    console.error(`gap_score_history read failed: ${lastErr.message}`);
+  }
+
+  const scoreUnchanged =
+    lastTrail != null && (lastTrail as { score: number }).score === args.score;
+
+  if (!scoreUnchanged) {
+    const { error: historyErr } = await supabase
+      .from("gap_score_history")
+      .insert({
+        student_id: args.studentId,
+        skill: args.skill,
+        score: args.score,
+        target: args.target,
+        source: args.source,
+      });
+    if (historyErr) {
+      console.error(`gap_score_history insert failed: ${historyErr.message}`);
+    }
   }
 }
 
