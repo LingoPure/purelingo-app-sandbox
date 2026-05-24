@@ -77,6 +77,22 @@ export async function setCanonicalGapScore(
   if (upsertErr) {
     throw new Error(`gap_scores upsert failed: ${upsertErr.message}`);
   }
+
+  // Append to the immutable progress trail (gap_score_history). One row per scoring
+  // event — never overwritten — so the dashboard can chart score-over-time. Non-fatal:
+  // a failed history insert must not break the canonical score write above.
+  const { error: historyErr } = await supabase
+    .from("gap_score_history")
+    .insert({
+      student_id: args.studentId,
+      skill: args.skill,
+      score: args.score,
+      target: args.target,
+      source: args.source,
+    });
+  if (historyErr) {
+    console.error(`gap_score_history insert failed: ${historyErr.message}`);
+  }
 }
 
 /**
