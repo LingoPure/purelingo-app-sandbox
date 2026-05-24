@@ -120,6 +120,14 @@ export async function POST(request: NextRequest) {
   );
 
   if (!result.success) {
+    // DIAGNOSTIC: surface WHY handlePostCallWebhook failed (was silently 500ing).
+    console.error("[convai/webhook] handlePostCallWebhook failed:", {
+      error: result.error,
+      agentId: payload.data.agent_id,
+      conversationId: payload.data.conversation_id,
+      userId,
+      messageCount: messages.length,
+    });
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
