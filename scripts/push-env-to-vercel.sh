@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Push every var in .env.local up to the linked Vercel project across all three
-# environments (production, preview, development). Idempotent: --force overwrites
-# existing values so re-running is safe after rotating a key.
+# Push every var in .env.local up to the linked Vercel project. Secrets (API
+# keys, tokens, service-role keys, connection strings, etc.) are pushed
+# --sensitive to production+preview only; public NEXT_PUBLIC_* and plain config
+# vars go to all three environments. Idempotent: removes then re-adds, so
+# re-running is safe after rotating a key.
 #
 # Usage:
 #   bash scripts/push-env-to-vercel.sh                # push all
@@ -55,12 +57,25 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     [[ $match -eq 0 ]] && continue
   fi
 
+  # Secrets are pushed --sensitive (non-readable, which clears Vercel's
+  # post-April-2026 "Needs Attention" flag) and only to production+preview,
+  # because sensitive vars cannot target the development environment. Public
+  # (NEXT_PUBLIC_*) and plain config vars stay readable across all three envs.
+  # Local dev reads every var from .env.local regardless of this.
+  if [[ "$key" != NEXT_PUBLIC_* ]] && \
+     [[ "$key" =~ (KEY|SECRET|TOKEN|PASSWORD|PASSPHRASE|PRIVATE|SERVICE_ROLE|WEBHOOK|CREDENTIAL|ACCESS_KEY|_DSN|POSTGRES_URL|DATABASE_URL|REDIS_URL|MONGO|CONNECTION_STRING) ]]; then
+    target_envs=(production preview)
+    sensitive_flag="--sensitive"
+  else
+    target_envs=(production preview development)
+    sensitive_flag=""
+  fi
   # Remove existing (ignore errors if absent), then add fresh per environment.
-  for env in production preview development; do
+  for env in "${target_envs[@]}"; do
     vercel env rm "$key" "$env" --yes >/dev/null 2>&1 || true
-    printf '%s' "$value" | vercel env add "$key" "$env" >/dev/null 2>&1 || true
+    printf '%s' "$value" | vercel env add "$key" "$env" $sensitive_flag >/dev/null 2>&1 || true
   done
-  echo "✓  $key  →  production, preview, development"
+  echo "✓  $key  →  ${target_envs[*]}$([ -n "$sensitive_flag" ] && echo '  (sensitive)')"
   pushed=$((pushed+1))
 done < "$ENV_FILE"
 
