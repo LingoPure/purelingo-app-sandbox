@@ -67,3 +67,5 @@ next-env.d.ts
 /supabase/.branches/
 /supabase/.env
 tmp/
+
+.env.lingopure.tmp
