@@ -25,14 +25,12 @@ export const SpeakScorePromptSchema = z.object({
   scenario: z
     .string()
     .min(1)
-    .max(700)
     .describe(
       "The business situation in one paragraph. Specific, named characters; realistic stakes."
     ),
   task: z
     .string()
     .min(1)
-    .max(600)
     .describe("What the student must say — to whom, hitting which beats. Keep to 2-3 sentences."),
   expected_seconds: z
     .number()
@@ -49,7 +47,7 @@ export const SpeakScorePromptSchema = z.object({
       "True if the prompt asks for a structured / extended answer (an elevator pitch, a customer presentation, a status update). False for short conversational prompts (responding to a complaint, answering a single question)."
     ),
   success_criteria: z
-    .array(z.string().min(1).max(160))
+    .array(z.string().min(1))
     .min(2)
     .max(4)
     .describe(
@@ -70,19 +68,19 @@ export const SpeakScoreEvaluationSchema = z.object({
   hit_criteria: z
     .array(
       z.object({
-        criterion: z.string().min(1).max(160),
+        criterion: z.string().min(1),
         hit: z.boolean(),
-        note: z.string().min(1).max(160),
+        note: z.string().min(1),
       })
     )
     .describe("One entry per success_criterion in the prompt."),
   strengths: z
-    .array(z.string().min(1).max(160))
+    .array(z.string().min(1))
     .min(1)
     .max(3)
     .describe("Up to 3 things the student did well, addressed to them as 'you'."),
   improvements: z
-    .array(z.string().min(1).max(180))
+    .array(z.string().min(1))
     .min(1)
     .max(3)
     .describe(
@@ -91,7 +89,6 @@ export const SpeakScoreEvaluationSchema = z.object({
   model_script: z
     .string()
     .min(1)
-    .max(1000)
     .describe(
       "A C1-quality model spoken response to the same prompt — what 'good' sounds like for THIS scenario."
     ),

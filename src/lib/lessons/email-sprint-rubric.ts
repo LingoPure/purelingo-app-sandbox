@@ -22,26 +22,22 @@ export const EmailSprintPromptSchema = z.object({
   scenario: z
     .string()
     .min(1)
-    .max(800)
     .describe(
       "The business situation in one paragraph. Specific, named characters (names + companies + roles), realistic stakes."
     ),
   task: z
     .string()
     .min(1)
-    .max(600)
     .describe(
       "What the student must write — to whom, with what tone, hitting which beats. Keep to 2-3 sentences."
     ),
   recipient: z
     .string()
     .min(1)
-    .max(120)
     .describe("Recipient name + role. Used as the To: line."),
   subject_hint: z
     .string()
     .min(1)
-    .max(120)
     .describe("Suggested subject line — student can override."),
   difficulty_band: z
     .enum(CEFR_BANDS)
@@ -53,7 +49,7 @@ export const EmailSprintPromptSchema = z.object({
     .max(250)
     .describe("Target word count for a strong response."),
   success_criteria: z
-    .array(z.string().min(1).max(160))
+    .array(z.string().min(1))
     .min(2)
     .max(5)
     .describe(
@@ -74,21 +70,21 @@ export const EmailSprintEvaluationSchema = z.object({
   hit_criteria: z
     .array(
       z.object({
-        criterion: z.string().min(1).max(160),
+        criterion: z.string().min(1),
         hit: z.boolean(),
-        note: z.string().min(1).max(160),
+        note: z.string().min(1),
       })
     )
     .describe(
       "One entry per success_criterion in the prompt — was it hit, plus a one-line note."
     ),
   strengths: z
-    .array(z.string().min(1).max(160))
+    .array(z.string().min(1))
     .min(1)
     .max(3)
     .describe("Up to 3 things the student did well, in plain English to them."),
   improvements: z
-    .array(z.string().min(1).max(180))
+    .array(z.string().min(1))
     .min(1)
     .max(3)
     .describe(
@@ -97,7 +93,6 @@ export const EmailSprintEvaluationSchema = z.object({
   rewrite_suggestion: z
     .string()
     .min(1)
-    .max(800)
     .describe(
       "A model-quality rewrite of the email demonstrating what a C1-grade response looks like for THIS prompt."
     ),

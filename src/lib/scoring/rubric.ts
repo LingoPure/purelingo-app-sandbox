@@ -40,7 +40,6 @@ export const SubScore = z.object({
   evidence: z
     .string()
     .min(1)
-    .max(400)
     .describe(
       "One short sentence quoting or paraphrasing the moment in the transcript that drove this score."
     ),
@@ -66,21 +65,18 @@ export const GapScoresSchema = z.object({
   target_why: z
     .string()
     .min(1)
-    .max(400)
     .describe(
       "One sentence: WHY they need that level — employer requirement, event-driven, personal goal, etc."
     ),
   learning_style_notes: z
     .string()
     .min(1)
-    .max(400)
     .describe(
       "Concise notes on feedback preference, session length tolerance, time windows, native-language literacy."
     ),
   summary: z
     .string()
     .min(1)
-    .max(600)
     .describe(
       "Two-sentence summary the dashboard can show: where the student is now, the biggest gap, and the first action."
     ),
