@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { MobileNav, type MobileNavItem } from "@/components/nav/mobile-nav";
+import { SideNav } from "@/components/nav/side-nav";
 import { getDict } from "@/lib/i18n";
 import { getReturnTo } from "@/lib/cross-app/return-link";
 
@@ -18,14 +19,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const { lang, t } = await getDict();
-  // If the student arrived from a partner app (AIFTIS-Demo today) we
-  // surface a "Back to AIFTIS" pill until the cookie expires. Cookie
-  // is set in middleware after the returnTo origin is allowlisted.
   const returnTo = await getReturnTo();
 
+  // Standard authenticated nav — Dashboard, Lessons, Settings. Used by both the
+  // desktop SideNav (left rail) and the mobile drawer (MobileNav).
   const navItems: MobileNavItem[] = [
     { href: "/dashboard", label: t("nav.dashboard") },
     { href: "/lessons", label: t("nav.lessons") },
+    { href: "/settings", label: "Settings" },
   ];
 
   const signOutForm = (
@@ -40,55 +41,50 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div className="flex min-h-screen flex-1 flex-col bg-mist">
-      <header className="sticky top-0 z-20 border-b border-cream bg-paper">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-6">
-            <Link href="/dashboard" className="font-serif text-xl text-navy">
-              LingoPure<span className="text-gold">.</span>
-            </Link>
-            <nav className="hidden items-center gap-5 sm:flex">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="font-mono text-[11px] uppercase tracking-[0.22em] text-navy/70 hover:text-navy"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {returnTo && (
-              <a
-                href={returnTo}
-                className="hidden rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-medium text-navy hover:bg-gold/20 sm:inline-flex"
-              >
-                ← Back to AIFTIS
-              </a>
-            )}
+    <div className="flex min-h-screen bg-mist">
+      {/* Desktop: persistent left sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-56 flex-col border-r border-cream bg-paper sm:flex">
+        <div className="border-b border-cream px-5 py-5">
+          <Link href="/dashboard" className="font-serif text-xl text-navy">
+            LingoPure<span className="text-gold">.</span>
+          </Link>
+        </div>
+
+        <SideNav items={navItems} />
+
+        <div className="mt-auto flex flex-col gap-3 border-t border-cream px-3 py-4">
+          {returnTo && (
+            <a
+              href={returnTo}
+              className="rounded-md border border-gold/40 bg-gold/10 px-3 py-1.5 text-center text-xs font-medium text-navy hover:bg-gold/20"
+            >
+              ← Back to AIFTIS
+            </a>
+          )}
+          <div className="px-1">
             <LanguagePill current={lang} tone="dark" />
-            <span className="hidden text-xs text-mute sm:inline">
-              {user?.email ?? "demo mode"}
-            </span>
-            <div className="hidden sm:block">
-              <form action="/auth/signout" method="post">
-                <button
-                  type="submit"
-                  className="rounded-md border border-navy/20 px-3 py-1.5 text-xs font-medium text-navy hover:bg-mist"
-                >
-                  {t("nav.signOut")}
-                </button>
-              </form>
-            </div>
+          </div>
+          <p className="truncate px-1 text-xs text-mute">{user?.email ?? "demo mode"}</p>
+          {signOutForm}
+        </div>
+      </aside>
+
+      {/* Right column: mobile top bar (drawer) + page content */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-cream bg-paper px-4 sm:hidden">
+          <Link href="/dashboard" className="font-serif text-xl text-navy">
+            LingoPure<span className="text-gold">.</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <LanguagePill current={lang} tone="dark" />
             <MobileNav items={navItems} tone="dark" signOut={signOutForm} />
           </div>
-        </div>
-      </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
-        {children}
-      </main>
+        </header>
+
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-8 sm:py-10">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
