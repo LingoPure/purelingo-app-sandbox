@@ -56,3 +56,11 @@ export async function updatePassword(formData: FormData) {
   revalidatePath("/", "layout");
   redirect("/settings?updated=password");
 }
+
+/** Revoke ALL sessions for this account (every device), then send to login. */
+export async function signOutEverywhere() {
+  const supabase = await createClient();
+  await supabase.auth.signOut({ scope: "global" });
+  revalidatePath("/", "layout");
+  redirect(`/login?message=${encodeURIComponent("Signed out on all devices. Sign in again to continue.")}`);
+}

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { updateProfile } from "./actions";
+import { updateProfile, signOutEverywhere } from "./actions";
 import { PasswordSection } from "./password-section";
 
 export default async function SettingsPage({
@@ -89,6 +89,23 @@ export default async function SettingsPage({
       <section className="rounded-lg border border-cream bg-paper p-6">
         <h2 className="mb-4 font-serif text-xl text-navy">Password</h2>
         <PasswordSection />
+      </section>
+
+      {/* Account */}
+      <section className="rounded-lg border border-cream bg-paper p-6">
+        <h2 className="mb-4 font-serif text-xl text-navy">Account</h2>
+        <p className="mb-4 text-sm text-mute">
+          Sign out of LingoPure on every device. Use this if you signed in on a shared
+          or lost device — it ends all your active sessions, including this one.
+        </p>
+        <form action={signOutEverywhere}>
+          <button
+            type="submit"
+            className="rounded-md border border-navy/30 px-4 py-2.5 text-sm font-medium text-navy hover:bg-mist"
+          >
+            Sign out everywhere
+          </button>
+        </form>
       </section>
     </div>
   );
