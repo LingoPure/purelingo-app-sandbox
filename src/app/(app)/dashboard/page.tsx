@@ -9,6 +9,7 @@ import {
 import { GamificationCard } from "@/components/dashboard/gamification-card";
 import { JustFinishedBanner } from "@/components/dashboard/just-finished-banner";
 import { RecommendedPlan } from "@/components/dashboard/recommended-plan";
+import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
@@ -204,6 +205,19 @@ export default async function DashboardPage() {
 
   const discoveryComplete = student?.discovery_status === "complete";
   const hasScores = scores.length > 0;
+
+  // Progress trail (read-only) for the score-over-time chart. RLS limits this to the
+  // student's own rows. Only queried when there are scores to chart.
+  let progressHistory: { skill: string; score: number; scored_at: string }[] = [];
+  if (hasScores) {
+    const { data: histData } = await supabase
+      .from("gap_score_history")
+      .select("skill, score, scored_at")
+      .eq("student_id", user!.id)
+      .order("scored_at", { ascending: true });
+    progressHistory = (histData ?? []) as typeof progressHistory;
+  }
+
   const lessonPlan = hasScores
     ? await generateLessonPlan(supabase, user!.id)
     : [];
@@ -346,11 +360,12 @@ export default async function DashboardPage() {
         </div>
         {!hasScores && discoveryComplete && (
           <p className="mt-5 text-sm text-mute">
-            Discovery complete but scoring hasn&apos;t finished yet. Try{" "}
+            Discovery complete — scoring is being finalised. If your scores don&apos;t
+            appear shortly, run a fresh{" "}
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-navy">
-              Re-score
+              Progress check-in
             </span>{" "}
-            in the top right.
+            from the top right.
           </p>
         )}
         {!hasScores && !discoveryComplete && (
@@ -359,6 +374,19 @@ export default async function DashboardPage() {
           </p>
         )}
       </section>
+
+      {hasScores && (
+        <section className="rounded-lg border border-cream bg-paper p-6">
+          <div className="mb-4">
+            <h2 className="font-serif text-xl text-navy">Progress over time</h2>
+            <p className="mt-1 text-sm text-mute">
+              How your scores have moved across check-ins. Each Progress check-in adds a
+              point to the trend; lessons nudge individual skills between check-ins.
+            </p>
+          </div>
+          <ProgressChart history={progressHistory} skills={SKILLS} />
+        </section>
+      )}
 
       {profile && (
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
