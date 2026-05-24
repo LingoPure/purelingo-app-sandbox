@@ -120,15 +120,20 @@ export async function POST(request: NextRequest) {
   );
 
   if (!result.success) {
-    // DIAGNOSTIC: surface WHY handlePostCallWebhook failed (was silently 500ing).
-    console.error("[convai/webhook] handlePostCallWebhook failed:", {
+    // The @caistech/elevenlabs-convai package can't persist into convai_* here: there is no
+    // convai_agents row for the shared discovery agent (it's provisioned in ElevenLabs but
+    // never mirrored into the DB), so the package returns "Agent not found". That persistence
+    // is redundant for LingoPure anyway — discovery scoring below works off
+    // payload.data.transcript and writes discovery_sessions + gap_scores. So LOG and CONTINUE
+    // rather than 500: returning 500 here skipped scoring entirely (discovery never completed),
+    // and ElevenLabs auto-disables a webhook that keeps returning 5xx.
+    console.warn("[convai/webhook] convai persist skipped, continuing to scoring:", {
       error: result.error,
       agentId: payload.data.agent_id,
       conversationId: payload.data.conversation_id,
       userId,
       messageCount: messages.length,
     });
-    return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
   // 2. Mirror to LingoPure's domain table so /dashboard can show "discovery complete"
