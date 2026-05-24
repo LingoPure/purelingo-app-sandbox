@@ -67,7 +67,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     target_envs=(production preview)
     sensitive_flag="--sensitive"
   else
-    target_envs=(production preview development)
+    target_envs=(production preview)
     sensitive_flag=""
   fi
   # Remove existing (ignore errors if absent), then add fresh per environment.
