@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SayFixWidget } from "@caistech/sayfix-embed";
 import { Plus_Jakarta_Sans, DM_Serif_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { getActiveLanguage } from "@/lib/i18n";
@@ -42,7 +43,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
         <DemoBanner />
-        {children}
+        {children}<SayFixWidget repo="lingopureai" />
       </body>
     </html>
   );
