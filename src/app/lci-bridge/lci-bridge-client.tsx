@@ -105,15 +105,20 @@ export function LciBridgeClient() {
       recorder.start();
       setStatus("listening");
     } catch (err) {
-      // The critical-gap fix: mic-denied is explicit, never a silent dead-end.
+      // The critical-gap fix: mic problems are explicit AND actionable, never a
+      // silent dead-end. Reset to idle so the button stays ready to retry — the
+      // error message tells them exactly what to do.
+      const name = err instanceof DOMException ? err.name : "";
       const msg =
-        err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Microphone blocked. Tap the lock icon in your browser bar and allow the mic, then try again."
-          : err instanceof Error
-            ? `Microphone error: ${err.message}`
-            : "Could not access the microphone.";
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "Microphone blocked. Allow mic access for this site, then hold to talk again."
+          : name === "NotFoundError" || name === "NotSupportedError"
+            ? "No microphone found on this device. Open this on your phone, or plug in a mic, then try again."
+            : err instanceof Error
+              ? `Couldn't start the microphone: ${err.message}. Hold to talk to retry.`
+              : "Couldn't access the microphone. Hold to talk to retry.";
       setError(msg);
-      setStatus("error");
+      setStatus("idle");
     }
   }
 
@@ -125,7 +130,7 @@ export function LciBridgeClient() {
   async function interpret(blob: Blob) {
     if (blob.size === 0) {
       setError("Didn't catch that — hold the button while you speak.");
-      setStatus("error");
+      setStatus("idle");
       return;
     }
     setStatus("interpreting");
@@ -144,7 +149,7 @@ export function LciBridgeClient() {
       };
       if (!res.ok || !body.translatedText) {
         setError(body.error ?? `Interpreter error (HTTP ${res.status})`);
-        setStatus("error");
+        setStatus("idle");
         return;
       }
 
@@ -167,7 +172,7 @@ export function LciBridgeClient() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Interpreter request failed");
-      setStatus("error");
+      setStatus("idle");
     }
   }
 
@@ -225,7 +230,7 @@ export function LciBridgeClient() {
             );
           })}
         </div>
-        <p className="mt-3 text-center text-sm text-mute">
+        <p className="mt-3 text-center text-base text-mute">
           They&apos;ll hear it in{" "}
           <span className="font-medium text-ink">
             {target.flag} {target.native}
@@ -262,15 +267,10 @@ export function LciBridgeClient() {
         >
           <span className="text-4xl">{recording ? "●" : "🎙️"}</span>
         </button>
-        <p
-          className={
-            "text-center text-sm " +
-            (status === "error" ? "text-coral" : "text-mute")
-          }
-        >
+        <p className="text-center text-base text-mute">
           {statusText[status]}
         </p>
-        <p className="text-center text-xs text-mute">
+        <p className="text-center text-base text-mute">
           Hold the circle while you speak, release when you&apos;re done.
         </p>
         {error && (

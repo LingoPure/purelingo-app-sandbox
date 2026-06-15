@@ -1,0 +1,16 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { SayFixWidget } from "@caistech/sayfix-embed";
+
+/**
+ * Renders the SayFix "Report a problem" pill everywhere EXCEPT the LCI Bridge
+ * interpreter page. On that page the floating pill sat on top of the
+ * hold-to-talk control on mobile (the core action opened the bug reporter
+ * instead) — and you don't want investors filing bug reports mid-demo anyway.
+ */
+export function ConditionalSayFix({ repo }: { repo: string }) {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/lci-bridge")) return null;
+  return <SayFixWidget repo={repo} />;
+}
