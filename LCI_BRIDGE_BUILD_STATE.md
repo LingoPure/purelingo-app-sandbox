@@ -27,15 +27,27 @@ Zoom/Teams) is the documented later phase. Route B (own call app) rejected.
 - Reverse zh→en not locally testable (no Chinese SAPI voice) but it's the same
   direction-agnostic route with params swapped.
 
-## NEXT STEPS (to demo tonight)
+## STATUS: SHIPPED + GATE GREEN (2026-06-15)
 
-1. **Deploy** the branch to Vercel (preview or merge to main for prod
-   `lingo-pure-ai.vercel.app/lci-bridge`). Ensure prod has `OPENAI_API_KEY`,
-   `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY` (all already used by LingoPure).
-2. **URL-SHARE GATE (blocking):** run `/naive-tester` against the deployed
-   `/lci-bridge`, fix any ❌, then record the PASS via gate-check before the URL
-   goes to anyone. Do NOT share the link until this passes.
-3. Test on a real phone: mic permission prompt, autoplay, both directions.
+- **LIVE:** https://lingo-pure-ai.vercel.app/lci-bridge (prod, commit 5f9fb88,
+  deployment dpl_8WWroSp2X4LXkkV1rLFashCSzsRq).
+- **Prod end-to-end PROVEN:** English audio → `我们对您的报价很满意，希望能尽快签署
+  合同。` + Mandarin audio. All three keys present in prod.
+- **naive-tester PASS recorded** (slug `lingo-pure-ai`), url-share gate = ALLOWED.
+- **Fixed blockers from first pass:** SayFix pill overlapping the talk button
+  (hidden on this page via ConditionalSayFix), mic-error UX (actionable +
+  resets), captions ≥16px. Mobile re-test = GO, all standards ✅.
+
+## STILL WORTH DOING (not blocking tonight)
+
+1. **Smoke-test one full turn on the ACTUAL presentation device** (a phone with a
+   real mic) — testers confirmed everything except the live mic round-trip
+   (their browser had no mic); the server pipeline is proven, but confirm the
+   browser mic-grant + playback on the real device before going live in the room.
+2. Use **headphones or low speaker volume** so the spoken translation doesn't
+   echo back into the next capture.
+3. Minor: 11px kicker label ("LINGOPURE · LCI BRIDGE") is sub-12px; demo banner
+   eats ~17% of mobile height (global chrome, not page-specific).
 
 ## KNOWN / FLAGGED
 
