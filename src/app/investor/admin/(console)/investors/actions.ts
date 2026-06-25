@@ -3,8 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { getOperator } from "@/lib/investor/operator-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendInvestorInviteEmail } from "@/lib/email/invite";
 
-export type ActionResult = { ok?: boolean; error?: string; inviteLink?: string };
+export type ActionResult = {
+  ok?: boolean;
+  error?: string;
+  inviteLink?: string;
+  emailed?: boolean;
+};
 
 async function findUserId(svc: ReturnType<typeof createAdminClient>, email: string) {
   for (let page = 1; page <= 10; page++) {
@@ -73,9 +79,24 @@ export async function inviteInvestor(formData: FormData): Promise<ActionResult> 
       email,
       options: { redirectTo: `${origin}/auth/callback?next=/investor/ask` },
     });
+    const actionLink = link.data?.properties?.action_link;
+
+    // Auto-send via Resend (canonical flow). Best-effort — on failure we still
+    // return the link so the operator can send it manually.
+    let emailed = false;
+    if (actionLink) {
+      const sent = await sendInvestorInviteEmail({
+        to: email,
+        inviteeName: fullName || firm || email,
+        firm,
+        actionLink,
+        deepDive,
+      });
+      emailed = sent.ok;
+    }
 
     revalidatePath("/investor/admin/investors");
-    return { ok: true, inviteLink: link.data?.properties?.action_link };
+    return { ok: true, emailed, inviteLink: emailed ? undefined : actionLink };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Invite failed." };
   }

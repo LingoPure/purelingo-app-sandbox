@@ -74,15 +74,64 @@ export async function sendInviteEmail(
   }
 }
 
+/**
+ * Investor-dataroom invite — same canonical Resend transport + template as the
+ * staff invite, with investor-appropriate copy. Best-effort: ok=false when
+ * RESEND_API_KEY is unset so the caller can fall back to the copy-pasteable link.
+ */
+export async function sendInvestorInviteEmail(input: {
+  to: string;
+  inviteeName: string;
+  firm: string | null;
+  actionLink: string;
+  deepDive: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
+  const subject = "You're invited to the LingoPure investor dataroom";
+  const access = input.deepDive
+    ? " You'll have the main dataroom, and can unlock the confidential deep-dive board materials by accepting the NDA in-app."
+    : " You'll have access to the main investor dataroom.";
+  const lead = `You've been invited to review LingoPure in our investor dataroom — ask any question and get cited answers, generate reports, and browse the source documents.${access}`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM_ADDRESS,
+        to: input.to,
+        subject,
+        html: htmlTemplate({
+          inviteeName: input.inviteeName,
+          subject,
+          lead,
+          actionLink: input.actionLink,
+          kind: "invite",
+          ctaLabel: "Open the dataroom",
+        }),
+        text: `Hi ${input.inviteeName},\n\n${lead}\n\nOpen this link to begin (single use, ~1hr expiry):\n${input.actionLink}\n\n— LingoPure`,
+      }),
+    });
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      return { ok: false, error: `Resend ${r.status}: ${text}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 function htmlTemplate(input: {
   inviteeName: string;
   subject: string;
   lead: string;
   actionLink: string;
   kind: "invite" | "magiclink";
+  ctaLabel?: string;
 }): string {
   const ctaLabel =
-    input.kind === "invite" ? "Start discovery session" : "Sign in";
+    input.ctaLabel ?? (input.kind === "invite" ? "Start discovery session" : "Sign in");
   return `<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#f3f6fb;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#0d1117;">

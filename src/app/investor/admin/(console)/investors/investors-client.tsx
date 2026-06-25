@@ -39,7 +39,11 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
       const r = await inviteInvestor(fd);
       if (r.error) setErr(r.error);
       else {
-        setMsg("Investor invited.");
+        setMsg(
+          r.emailed
+            ? "Investor invited — sign-in link emailed to them."
+            : "Investor invited. Email wasn't sent — copy the link below and send it."
+        );
         if (r.inviteLink) setInviteLink(r.inviteLink);
         form.reset();
         router.refresh();
