@@ -20,6 +20,13 @@ export async function GET(request: Request) {
   const type = url.searchParams.get("type");
   const explicitNext = url.searchParams.get("next");
 
+  // Send auth failures back to the login that matches where they were headed.
+  const loginPath = explicitNext?.startsWith("/investor/admin")
+    ? "/investor/admin/login"
+    : explicitNext?.startsWith("/investor")
+      ? "/investor/login"
+      : "/login";
+
   console.log("[auth/callback] hit", {
     hasCode: Boolean(code),
     hasTokenHash: Boolean(tokenHash),
@@ -45,7 +52,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(await postAuthTarget(), request.url));
     }
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url)
+      new URL(`${loginPath}?error=${encodeURIComponent(error.message)}`, request.url)
     );
   }
 
@@ -63,11 +70,11 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(await postAuthTarget(), request.url));
     }
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url)
+      new URL(`${loginPath}?error=${encodeURIComponent(error.message)}`, request.url)
     );
   }
 
   return NextResponse.redirect(
-    new URL("/login?error=Missing+verification+code", request.url)
+    new URL(`${loginPath}?error=Missing+verification+code`, request.url)
   );
 }

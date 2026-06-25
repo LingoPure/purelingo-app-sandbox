@@ -118,7 +118,13 @@ if (password) {
     options: { redirectTo: `${site}/auth/callback?next=/investor/ask` },
   });
   if (link.error) throw new Error(`generateLink failed: ${link.error.message}`);
-  const actionLink = link.data?.properties?.action_link;
+  // Use OUR callback with token_hash (server-side verifyOtp) — NOT Supabase's
+  // /auth/v1/verify action_link, which returns the session in a URL hash the
+  // server callback can't read ("Missing verification code").
+  const hashedToken = link.data?.properties?.hashed_token;
+  const actionLink = hashedToken
+    ? `${site}/auth/callback?token_hash=${hashedToken}&type=magiclink&next=${encodeURIComponent('/investor/ask')}`
+    : link.data?.properties?.action_link;
   console.log(`\n✔ Invite ready for ${email}. Send them this one-time sign-in link:\n`);
   console.log(actionLink);
   console.log(`\n(They land at ${site}/investor/ask. ${tier === 'main' ? 'They can unlock deep dive via the in-portal NDA.' : 'Deep-dive access pre-granted.'})`);

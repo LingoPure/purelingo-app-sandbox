@@ -79,7 +79,14 @@ export async function inviteInvestor(formData: FormData): Promise<ActionResult> 
       email,
       options: { redirectTo: `${origin}/auth/callback?next=/investor/ask` },
     });
-    const actionLink = link.data?.properties?.action_link;
+    // Canonical: send the link to OUR callback with token_hash (server-side
+    // verifyOtp), NOT Supabase's /auth/v1/verify action_link — that returns the
+    // session in a URL hash the server callback can't read ("Missing
+    // verification code"). hashed_token + token_hash is cross-device safe.
+    const hashedToken = link.data?.properties?.hashed_token;
+    const actionLink = hashedToken
+      ? `${origin}/auth/callback?token_hash=${hashedToken}&type=magiclink&next=${encodeURIComponent("/investor/ask")}`
+      : link.data?.properties?.action_link;
 
     // Auto-send via Resend (canonical flow). Best-effort — on failure we still
     // return the link so the operator can send it manually.
