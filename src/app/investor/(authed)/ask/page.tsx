@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { loadInvestor } from "@/lib/investor/auth";
-import { AskChat } from "./ask-chat";
+import {
+  INVESTOR_MORGAN_AGENT_ID,
+  loadVoiceRecall,
+  buildWelcomeBackMessage,
+} from "@/lib/investor/voice-morgan";
+import { AskMode } from "./ask-mode";
 
 export const metadata: Metadata = {
   title: "Ask · LingoPure Investor Dataroom",
@@ -18,6 +24,16 @@ export default async function InvestorAskPage() {
       ? "the full dataroom, including the deep-dive board materials"
       : "the main dataroom";
 
+  // Voice Morgan recall (welcome-back) — computed server-side from prior calls.
+  // Degrade-don't-fake: no agent / no history → fresh greeting.
+  let welcomeBack: string | null = null;
+  let returning = false;
+  if (user && investor && INVESTOR_MORGAN_AGENT_ID) {
+    const recall = await loadVoiceRecall(createAdminClient(), user.id);
+    welcomeBack = buildWelcomeBackMessage(recall);
+    returning = recall.hasHistory;
+  }
+
   return (
     <div className="space-y-6">
       <header className="space-y-2">
@@ -28,10 +44,16 @@ export default async function InvestorAskPage() {
           Ask any question about LingoPure and get a specific, cited answer drawn
           from {scope} — instead of reading through every file. Every answer
           quotes the source documents it used; if something isn&apos;t in the
-          dataroom, the analyst tells you rather than guessing.
+          dataroom, the analyst tells you rather than guessing. Prefer to talk it
+          through first? Morgan, the voice guide, helps you work out what to ask.
         </p>
       </header>
-      <AskChat />
+      <AskMode
+        voiceAgentId={INVESTOR_MORGAN_AGENT_ID}
+        userId={user?.id ?? ""}
+        welcomeBack={welcomeBack}
+        returning={returning}
+      />
     </div>
   );
 }

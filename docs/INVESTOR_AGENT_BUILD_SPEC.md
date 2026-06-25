@@ -596,3 +596,50 @@ investor functions land.
 - **Lane fit:** this is an *internal/strategic* investor tool, not a lane-1 distributor product —
   BYOK + multi-tenant scale infra are out of scope; build the experience, not the platform.
 ```
+
+---
+
+## 11. Voice Morgan — the spoken clarifier (built 2026-06-26)
+
+The investor makes a **conscious choice** at the top of "Ask the dataroom" (`/investor/ask`):
+
+- **"Text only — I know what I need"** → the existing cited written analyst (`AskChat`), retained
+  unchanged.
+- **"Talk to Morgan — help me figure out what I need"** → the canonical portfolio voice surface.
+
+**Morgan is a CLARIFIER, not a voice-RAG-answerer.** She helps an investor turn a broad interest
+into the specific questions the dataroom can answer, then hands them to the cited written analyst
+(one tap, same screen). This is deliberate and matches the canonical discovery-Morgan pattern (Aria
+has no RAG tools either) — and it is the *secure* choice: ElevenLabs server-tools can't enforce the
+main/deep-dive NDA tier (the tool body is LLM-filled and spoofable), so **only the authenticated
+browser path (`/api/investor/ask`, server-tier-checked) ever emits tier-gated content.** A voice
+call carries no confidential-data egress.
+
+**Implementation (all `@caistech` substrate — no per-product re-fork):**
+- **Surface:** `@caistech/elevenlabs-convai/react` `VoiceWidget` with `placement="fullpage"`,
+  `avatarUrl="/female_avatar.jpeg"`, `coachName="Morgan"`, `transcript`, `textFallback`
+  (`src/app/investor/(authed)/ask/investor-voice-morgan.tsx`). The conscious choice lives in
+  `ask-mode.tsx`; the server page (`ask/page.tsx`) computes recall.
+- **Agent:** provisioned by `scripts/provision-investor-morgan.mjs` via `provisionVoiceAgent`
+  (idempotent; uses the workspace `ELEVENLABS_API_KEY` — **no operator key/agent-id hand-fetch**).
+  Reuses the discovery agent's voice; allowlisted; shares the workspace post-call webhook bound to
+  `/api/convai/webhook`. Sets `NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID`.
+- **Memory loop** (VOICE_MEMORY_STANDARD): **recall** — `loadVoiceRecall()` reads prior calls via
+  the `get_conversation_context` RPC and the page injects a welcome-back greeting as a per-session
+  `firstMessage` override (degrade-don't-fake: fresh greeting on no history). **Persist** — the
+  post-call webhook branches on the Morgan agent id, persists via `handlePostCallWebhook` and
+  distils to `convai_memory` via `morganMemoryExtractor` (Anthropic). A `convai_agents` row is
+  seeded so persistence doesn't hit "Agent not found".
+- **Identity (server-trusted):** `VoiceWidget onConnect` → `POST /api/investor/voice/bind` (authed)
+  writes `investor_voice_sessions(elevenlabs_conversation_id → investor_id)` (migration 0022); the
+  post-call webhook resolves the investor from THIS binding, not the client-supplied `user_id`
+  dynamic var — a tampered client can't write into another investor's memory.
+
+**Go-live:** run the provision script, add `NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID` to `.env.local` +
+Vercel (plain, prod+preview), redeploy. Until the env var is present the "Talk to Morgan" tile shows
+a graceful "use the text Ask" fallback.
+
+**Known caveat:** `@elevenlabs/react` 1.3.0 has the iOS-Safari-18 `ConversationProvider` connect
+bug (the same reason discovery uses raw `@elevenlabs/client` WebSocket). Acceptable for a
+desktop-primary investor audience + `textFallback`; revisit if mobile investors hit it (the fix is a
+hub-level `VoiceWidget` change, not per-product).

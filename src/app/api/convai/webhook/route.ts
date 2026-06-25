@@ -3,11 +3,16 @@ import {
   verifyWebhookSignature,
   parsePostCallPayload,
   handlePostCallWebhook,
+  distillConversationToMemory,
   type TableNames,
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
 import { awardXp } from "@/lib/gamification/award";
+import {
+  INVESTOR_MORGAN_AGENT_ID,
+  morganMemoryExtractor,
+} from "@/lib/investor/voice-morgan";
 
 // Map the package's generic table-name interface onto our public.convai_* schema.
 const TABLES: TableNames = {
@@ -25,6 +30,87 @@ function adminSupabase() {
     throw new Error("Supabase env not configured (URL + SERVICE_ROLE_KEY)");
   }
   return createClient(url, key, { auth: { persistSession: false } });
+}
+
+type PostCallPayload = NonNullable<ReturnType<typeof parsePostCallPayload>>;
+
+/**
+ * Investor Morgan post-call: persist the call into convai_* keyed by the
+ * SERVER-TRUSTED investor (from investor_voice_sessions, written at connect by
+ * the authed bind route), then distil it to convai_memory for next-time recall.
+ * The client-supplied user_id dynamic variable is only a fallback; the binding
+ * wins so a tampered client can't write into another investor's memory.
+ */
+async function handleInvestorMorganPostCall(payload: PostCallPayload) {
+  const supabase = adminSupabase();
+  const conversationId = payload.data.conversation_id;
+
+  const { data: binding } = await supabase
+    .from("investor_voice_sessions")
+    .select("investor_id")
+    .eq("elevenlabs_conversation_id", conversationId)
+    .maybeSingle();
+  const fallbackUserId =
+    payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+  const investorId = binding?.investor_id ?? fallbackUserId;
+
+  if (!investorId) {
+    console.warn(
+      "[convai/webhook:morgan] no investor binding or user_id — ignoring",
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "no_investor" });
+  }
+
+  const startMs = payload.data.metadata.start_time_unix_secs * 1000;
+  const endMs =
+    (payload.data.metadata.end_time_unix_secs ??
+      payload.data.metadata.start_time_unix_secs +
+        payload.data.metadata.call_duration_secs) * 1000;
+  const messages = payload.data.transcript.map((t) => ({
+    role: (t.role === "agent" ? "assistant" : "user") as "user" | "assistant",
+    content: t.message,
+    timestamp: new Date(startMs + t.time_in_call_secs * 1000).toISOString(),
+  }));
+
+  const result = await handlePostCallWebhook(
+    supabase,
+    {
+      elevenlabsAgentId: payload.data.agent_id,
+      conversationId,
+      userId: investorId,
+      topic:
+        payload.data.analysis?.transcript_summary?.slice(0, 80) ??
+        "Investor dataroom call",
+      status: payload.data.status === "done" ? "completed" : "abandoned",
+      startedAt: new Date(startMs).toISOString(),
+      endedAt: new Date(endMs).toISOString(),
+      durationSecs: payload.data.metadata.call_duration_secs,
+      terminationReason: payload.data.metadata.termination_reason,
+      summary: payload.data.analysis?.transcript_summary,
+      messages,
+    },
+    TABLES,
+    // Distil ONCE, after the core conversation/message writes commit. Failures
+    // here are logged inside the package and never roll back the transcript.
+    async (conversation, sb) => {
+      await distillConversationToMemory(sb, {
+        elevenlabsConversationId: conversation.elevenlabsConversationId,
+        conversationId: conversation.id,
+        extract: morganMemoryExtractor(),
+        tables: TABLES,
+      });
+    }
+  );
+
+  if (!result.success) {
+    console.warn("[convai/webhook:morgan] persist skipped:", {
+      error: result.error,
+      conversationId,
+      investorId,
+    });
+  }
+  return NextResponse.json({ ok: true });
 }
 
 export async function POST(request: NextRequest) {
@@ -73,6 +159,16 @@ export async function POST(request: NextRequest) {
       rawBody.slice(0, 400)
     );
     return NextResponse.json({ ok: true, ignored: "non_post_call" });
+  }
+
+  // Investor Morgan shares this workspace webhook (one bound URL). Route her
+  // calls to the investor memory path and return — the discovery scoring below
+  // does not apply to her.
+  if (
+    INVESTOR_MORGAN_AGENT_ID &&
+    payload.data.agent_id === INVESTOR_MORGAN_AGENT_ID
+  ) {
+    return handleInvestorMorganPostCall(payload);
   }
 
   const userId =
