@@ -620,6 +620,15 @@ call carries no confidential-data egress.
   `avatarUrl="/female_avatar.jpeg"`, `coachName="Morgan"`, `transcript`, `textFallback`
   (`src/app/investor/(authed)/ask/investor-voice-morgan.tsx`). The conscious choice lives in
   `ask-mode.tsx`; the server page (`ask/page.tsx`) computes recall.
+- **Auto-handoff (voice → cited answer):** the same component captures the investor's spoken
+  questions (`onMessage` user turns) as one-tap candidates + an editable composer, and runs the
+  chosen question through the authed `/api/investor/ask` (tier/NDA-gated, audited), rendering the
+  cited answer inline. This closes path (b) — shape with Morgan, answer from the written analyst —
+  with NO ElevenLabs tooling (pure browser, identity from the session). It carries a visible
+  **confidentiality rationale**: the answer comes back as cited text (not spoken) because the
+  dataroom is access-controlled across main + NDA-gated deep dive, so every question runs the same
+  audited, tier-checked path — voice never bypasses the guardrail. (Voice-triggered document
+  lookup / report generation remain deferred; Documents + Reports are already first-class nav pages.)
 - **Agent:** provisioned by `scripts/provision-investor-morgan.mjs` via `provisionVoiceAgent`
   (idempotent; uses the workspace `ELEVENLABS_API_KEY` — **no operator key/agent-id hand-fetch**).
   Reuses the discovery agent's voice; allowlisted; shares the workspace post-call webhook bound to
