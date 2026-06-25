@@ -62,6 +62,27 @@ Set that cookie on the browser context, then navigate to `/investor/ask`.
 
 ---
 
+## Operator console (admin) — `/investor/admin` (§8.5 / §9.5)
+
+The investor dataroom has an operator console gated by the **`ADMIN_EMAILS`** allowlist
+(rejection is **post-auth**, not at the form). Canonical allowlist (default, override via
+`ADMIN_EMAILS` env): the two human operators + the **admin-AGENT**
+`dennis+qaadmin@factory2key.com.au` (`QA_TEST_ADMIN_EMAIL`). The user-agent
+`dennis@factory2key.com.au` is **deliberately NOT** an operator (must stay blocked — VT_B2).
+
+Seed the admin-agent (reads `QA_TEST_ADMIN_PASSWORD` from `cais-shared-services/.secrets`):
+```bash
+node scripts/seed-qa-admin.mjs
+```
+
+Admin-agent walks **VT_A1–A4 only** (portal access, settings profile/password/notifications);
+the console has no agent-destructive controls. Operator-destructive actions (revoke investor,
+revoke deep-dive) are confirm-gated and operator-run.
+
+- **VT_A1 — admin portal access:** sign in at **`/investor/admin/login`** with `QA_TEST_ADMIN_*` → reaches `/investor/admin` (→ `/investor/admin/investors`).
+- **VT_B2 — user blocked from admin:** the user-agent (`QA_TEST_USER_*`, an investor) signing in at `/investor/admin/login` is **rejected post-auth** (not on the allowlist) and bounced back with an error.
+- **Invariant:** admin-agent ∈ `ADMIN_EMAILS`; `dennis@factory2key.com.au` ∉ `ADMIN_EMAILS`. The admin-agent has **no `investors` row** (it's an operator, not an investor).
+
 ## Programmatic verification (no browser)
 
 - `node scripts/retrieval-test.mjs` — index state + cited retrieval + tier-gate (zero restricted leak on main-only).
