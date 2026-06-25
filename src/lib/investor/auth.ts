@@ -22,6 +22,8 @@ export type InvestorRow = {
   firm: string | null;
   email: string;
   maxTier: Tier;
+  /** Admin-set entitlement: may this investor unlock deep dive (via the NDA) at all? */
+  deepDiveInvited: boolean;
   status: "active" | "revoked";
   ndaAcceptedAt: string | null;
 };
@@ -40,7 +42,7 @@ export async function loadInvestor(userId: string): Promise<InvestorRow | null> 
   const svc = createAdminClient();
   const { data, error } = await svc
     .from("investors")
-    .select("id, full_name, firm, email, max_tier, status, nda_accepted_at")
+    .select("id, full_name, firm, email, max_tier, deep_dive_invited, status, nda_accepted_at")
     .eq("id", userId)
     .maybeSingle();
   if (error) {
@@ -54,6 +56,7 @@ export async function loadInvestor(userId: string): Promise<InvestorRow | null> 
     firm: string | null;
     email: string;
     max_tier: Tier;
+    deep_dive_invited: boolean;
     status: "active" | "revoked";
     nda_accepted_at: string | null;
   };
@@ -63,6 +66,7 @@ export async function loadInvestor(userId: string): Promise<InvestorRow | null> 
     firm: row.firm,
     email: row.email,
     maxTier: row.max_tier,
+    deepDiveInvited: row.deep_dive_invited,
     status: row.status,
     ndaAcceptedAt: row.nda_accepted_at,
   };

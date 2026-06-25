@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { inviteInvestor, setInvestorStatus, setInvestorTier } from "./actions";
+import { inviteInvestor, setInvestorStatus, setDeepDiveEligibility } from "./actions";
 
 export type InvestorRow = {
   id: string;
@@ -10,6 +10,7 @@ export type InvestorRow = {
   full_name: string | null;
   firm: string | null;
   max_tier: "main" | "restricted";
+  deep_dive_invited: boolean;
   status: "active" | "revoked";
   nda_accepted_at: string | null;
   created_at: string;
@@ -65,9 +66,9 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
           <input name="email" type="email" required placeholder="investor@firm.com" className={input} aria-label="Email" />
           <input name="firm" type="text" placeholder="Firm (optional)" className={input} aria-label="Firm" />
           <input name="fullName" type="text" placeholder="Name (optional)" className={input} aria-label="Name" />
-          <select name="tier" defaultValue="main" className={input} aria-label="Tier">
-            <option value="main">Main dataroom (no NDA)</option>
-            <option value="restricted">Deep dive (pre-grant)</option>
+          <select name="access" defaultValue="main" className={input} aria-label="Access">
+            <option value="main">Dataroom only (no NDA)</option>
+            <option value="deepdive">Dataroom + deep dive (NDA-gated)</option>
           </select>
           <div className="sm:col-span-2 flex items-center gap-3">
             <button type="submit" disabled={pending} className={btn}>
@@ -98,7 +99,7 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
               <thead className="bg-mist text-left">
                 <tr>
                   <th className="px-2 py-2 font-medium text-navy">Investor</th>
-                  <th className="px-2 py-2 font-medium text-navy">Tier</th>
+                  <th className="px-2 py-2 font-medium text-navy">Deep dive</th>
                   <th className="px-2 py-2 font-medium text-navy">NDA</th>
                   <th className="px-2 py-2 font-medium text-navy">Status</th>
                   <th className="px-2 py-2 font-medium text-navy">Actions</th>
@@ -112,9 +113,13 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
                       <div className="text-xs text-navy/50">{inv.firm ?? inv.full_name ?? "—"}</div>
                     </td>
                     <td className="px-2 py-2">
-                      <span className={inv.max_tier === "restricted" ? "rounded bg-gold/15 px-2 py-0.5 text-xs text-navy" : "rounded bg-mist px-2 py-0.5 text-xs text-navy/70"}>
-                        {inv.max_tier === "restricted" ? "deep dive" : "main"}
-                      </span>
+                      {!inv.deep_dive_invited ? (
+                        <span className="rounded bg-mist px-2 py-0.5 text-xs text-navy/50">not eligible</span>
+                      ) : inv.max_tier === "restricted" ? (
+                        <span className="rounded bg-gold/15 px-2 py-0.5 text-xs text-navy">unlocked</span>
+                      ) : (
+                        <span className="rounded bg-mist px-2 py-0.5 text-xs text-navy/70">eligible · awaiting NDA</span>
+                      )}
                     </td>
                     <td className="px-2 py-2 text-xs text-navy/70">
                       {inv.nda_accepted_at ? new Date(inv.nda_accepted_at).toISOString().slice(0, 10) : "—"}
@@ -124,23 +129,26 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
                     </td>
                     <td className="px-2 py-2">
                       <div className="flex flex-wrap gap-2">
-                        {inv.max_tier === "main" ? (
+                        {!inv.deep_dive_invited ? (
                           <button
                             type="button"
                             disabled={pending}
-                            onClick={() => rowAction(() => setInvestorTier(inv.id, "restricted"))}
+                            onClick={() => rowAction(() => setDeepDiveEligibility(inv.id, true))}
                             className="rounded border border-navy/20 px-2 py-1 text-xs text-navy hover:bg-mist disabled:opacity-40"
                           >
-                            Grant deep dive
+                            Allow deep dive
                           </button>
                         ) : (
                           <button
                             type="button"
                             disabled={pending}
-                            onClick={() => rowAction(() => setInvestorTier(inv.id, "main"))}
+                            onClick={() => {
+                              if (confirm(`Remove ${inv.email}'s deep-dive eligibility? Any current deep-dive access is pulled back to main.`))
+                                rowAction(() => setDeepDiveEligibility(inv.id, false));
+                            }}
                             className="rounded border border-navy/20 px-2 py-1 text-xs text-navy hover:bg-mist disabled:opacity-40"
                           >
-                            Revoke deep dive
+                            Remove deep dive
                           </button>
                         )}
                         {inv.status === "active" ? (

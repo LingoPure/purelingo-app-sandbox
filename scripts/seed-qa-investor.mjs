@@ -64,11 +64,15 @@ if (create.error) {
   console.log(`+ auth user created (${userId}) with the canonical shared QA password`);
 }
 
+// New model: admin sets eligibility; the online NDA gates actual access. So
+// --tier restricted = deep-dive-INVITED (eligible), but max_tier stays 'main'
+// until the investor accepts the NDA in-app.
+const deepDive = tier === "restricted";
 const { error } = await sb.from("investors").upsert(
-  { id: userId, email, full_name: "QA Investor", firm: "QA Capital", max_tier: tier, status: "active", invited_by: "qa-seed" },
+  { id: userId, email, full_name: "QA Investor", firm: "QA Capital", max_tier: "main", deep_dive_invited: deepDive, status: "active", invited_by: "qa-seed" },
   { onConflict: "id" }
 );
 if (error) throw new Error(`investors upsert failed: ${error.message}`);
 
-console.log(`+ investors row upserted (tier=${tier}, status=active)`);
+console.log(`+ investors row upserted (deep_dive_invited=${deepDive}, max_tier=main, status=active)`);
 console.log(`\n✔ ${email} is now a LingoPure investor. Mode-A: sign in at /investor/login with the shared QA_TEST_USER_PASSWORD.`);

@@ -10,7 +10,7 @@ export default async function AdminInvestorsPage() {
   const svc = createAdminClient();
   const { data } = await svc
     .from("investors")
-    .select("id, email, full_name, firm, max_tier, status, nda_accepted_at, created_at")
+    .select("id, email, full_name, firm, max_tier, deep_dive_invited, status, nda_accepted_at, created_at")
     .order("created_at", { ascending: false });
   const investors = (data ?? []) as InvestorRow[];
 

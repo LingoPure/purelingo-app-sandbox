@@ -34,8 +34,8 @@ export default async function InvestorAuthedLayout({
     { href: "/investor/ask", label: "Ask", exact: true },
     { href: "/investor/reports", label: "Reports" },
     { href: "/investor/documents", label: "Documents" },
-    // Main-tier investors get the NDA unlock; restricted investors already have it.
-    ...(investor.maxTier === "main"
+    // Only deep-dive-INVITED investors who haven't signed yet see the NDA unlock.
+    ...(investor.deepDiveInvited && investor.maxTier === "main"
       ? [{ href: "/investor/nda", label: "Unlock deep dive" }]
       : []),
     { href: "/investor/settings", label: "Settings" },

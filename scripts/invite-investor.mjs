@@ -88,20 +88,24 @@ let userId;
 
 // 2. Upsert the investors row.
 {
+  // New model: --tier restricted = deep-dive-INVITED (eligible); actual access is
+  // still gated by the investor accepting the online NDA, so max_tier starts 'main'.
+  const deepDive = tier === 'restricted';
   const { error } = await sb.from('investors').upsert(
     {
       id: userId,
       email,
       full_name: fullName,
       firm,
-      max_tier: tier,
+      max_tier: 'main',
+      deep_dive_invited: deepDive,
       status: 'active',
       invited_by: 'operator',
     },
     { onConflict: 'id' }
   );
   if (error) throw new Error(`investors upsert failed: ${error.message}`);
-  console.log(`+ investors row upserted (tier=${tier}, status=active)`);
+  console.log(`+ investors row upserted (deep_dive_invited=${deepDive}, max_tier=main, status=active)`);
 }
 
 // 3. Sign-in path.

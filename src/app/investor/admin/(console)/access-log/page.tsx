@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Access log · Operator Console" };
 
-const ACTIONS = ["ask", "answer", "report_generate", "download", "doc_view", "nda_accept", "invite", "status_change", "tier_change"];
+const ACTIONS = ["ask", "answer", "report_generate", "download", "doc_view", "nda_accept", "invite", "status_change", "deep_dive_change"];
 
 type AuditRow = {
   id: string;
@@ -22,7 +22,8 @@ function summarise(action: string, detail: Record<string, unknown> | null): stri
   if (action === "report_generate") return String(d.reportType ?? "");
   if (action === "download") return String(d.reportId ?? d.storage_path ?? "");
   if (action === "nda_accept") return `NDA ${d.nda_version ?? ""}`;
-  if (action === "invite" || action === "tier_change") return `tier=${d.tier ?? ""} by ${d.by ?? ""}`;
+  if (action === "invite") return `deep-dive eligible=${String(detail.deep_dive_invited)} by ${d.by ?? ""}`;
+  if (action === "deep_dive_change") return `eligible=${String(detail.eligible)} by ${d.by ?? ""}`;
   if (action === "status_change") return `${d.status ?? ""} by ${d.by ?? ""}`;
   return "";
 }

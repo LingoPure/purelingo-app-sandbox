@@ -35,6 +35,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Deep dive is an admin-decided entitlement; the NDA only unlocks it for the
+  // invited. An un-invited investor cannot sign their way into deep dive.
+  if (!investor.deepDiveInvited) {
+    return NextResponse.json(
+      { error: "Deep-dive access hasn't been enabled for your account." },
+      { status: 403 }
+    );
+  }
+
   if (investor.maxTier === "restricted" && investor.ndaAcceptedAt) {
     return NextResponse.json({ ok: true, alreadyAccepted: true });
   }
