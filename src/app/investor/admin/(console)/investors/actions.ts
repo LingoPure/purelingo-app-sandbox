@@ -5,12 +5,36 @@ import { getOperator } from "@/lib/investor/operator-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendInvestorInviteEmail } from "@/lib/email/invite";
 
+export type InvestorRecord = {
+  id: string;
+  email: string;
+  full_name: string | null;
+  firm: string | null;
+  max_tier: "main" | "restricted";
+  deep_dive_invited: boolean;
+  status: "active" | "revoked";
+  nda_accepted_at: string | null;
+  created_at: string;
+};
+
 export type ActionResult = {
   ok?: boolean;
   error?: string;
   inviteLink?: string;
   emailed?: boolean;
+  rows?: InvestorRecord[];
 };
+
+/** Fresh investor list so a mutating action can hand the UI updated state directly. */
+async function currentInvestors(
+  svc: ReturnType<typeof createAdminClient>
+): Promise<InvestorRecord[]> {
+  const { data } = await svc
+    .from("investors")
+    .select("id, email, full_name, firm, max_tier, deep_dive_invited, status, nda_accepted_at, created_at")
+    .order("created_at", { ascending: false });
+  return (data ?? []) as InvestorRecord[];
+}
 
 async function findUserId(svc: ReturnType<typeof createAdminClient>, email: string) {
   for (let page = 1; page <= 10; page++) {
@@ -103,7 +127,12 @@ export async function inviteInvestor(formData: FormData): Promise<ActionResult> 
     }
 
     revalidatePath("/investor/admin/investors");
-    return { ok: true, emailed, inviteLink: emailed ? undefined : actionLink };
+    return {
+      ok: true,
+      emailed,
+      inviteLink: emailed ? undefined : actionLink,
+      rows: await currentInvestors(svc),
+    };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Invite failed." };
   }
@@ -124,7 +153,7 @@ export async function setInvestorStatus(
     .insert({ investor_id: investorId, action: "status_change", detail: { by: op.email, status } })
     .then(() => {}, () => {});
   revalidatePath("/investor/admin/investors");
-  return { ok: true };
+  return { ok: true, rows: await currentInvestors(svc) };
 }
 
 /**
@@ -150,5 +179,5 @@ export async function setDeepDiveEligibility(
     .insert({ investor_id: investorId, action: "deep_dive_change", detail: { by: op.email, eligible } })
     .then(() => {}, () => {});
   revalidatePath("/investor/admin/investors");
-  return { ok: true };
+  return { ok: true, rows: await currentInvestors(svc) };
 }

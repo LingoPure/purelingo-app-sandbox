@@ -2,19 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { inviteInvestor, setInvestorStatus, setDeepDiveEligibility } from "./actions";
+import {
+  inviteInvestor,
+  setInvestorStatus,
+  setDeepDiveEligibility,
+  type InvestorRecord,
+  type ActionResult,
+} from "./actions";
 
-export type InvestorRow = {
-  id: string;
-  email: string;
-  full_name: string | null;
-  firm: string | null;
-  max_tier: "main" | "restricted";
-  deep_dive_invited: boolean;
-  status: "active" | "revoked";
-  nda_accepted_at: string | null;
-  created_at: string;
-};
+export type InvestorRow = InvestorRecord;
 
 const card = "rounded-2xl border border-cream bg-paper p-4 sm:p-6";
 const input =
@@ -27,6 +23,15 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  // Local copy so console actions repaint the list immediately (each action
+  // returns the fresh list). Re-sync to new server props via the render-time
+  // pattern (no effect) so a router.refresh / navigation still updates it.
+  const [rows, setRows] = useState<InvestorRow[]>(investors);
+  const [seenProp, setSeenProp] = useState(investors);
+  if (seenProp !== investors) {
+    setSeenProp(investors);
+    setRows(investors);
+  }
 
   function invite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,19 +50,23 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
             : "Investor invited. Email wasn't sent — copy the link below and send it."
         );
         if (r.inviteLink) setInviteLink(r.inviteLink);
+        if (r.rows) setRows(r.rows);
         form.reset();
         router.refresh();
       }
     });
   }
 
-  function rowAction(fn: () => Promise<{ error?: string }>) {
+  function rowAction(fn: () => Promise<ActionResult>) {
     setMsg(null);
     setErr(null);
     start(async () => {
       const r = await fn();
       if (r.error) setErr(r.error);
-      else router.refresh();
+      else {
+        if (r.rows) setRows(r.rows);
+        router.refresh();
+      }
     });
   }
 
@@ -94,8 +103,8 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
 
       {/* List */}
       <section className={card}>
-        <h2 className="mb-3 font-serif text-lg text-navy">All investors ({investors.length})</h2>
-        {investors.length === 0 ? (
+        <h2 className="mb-3 font-serif text-lg text-navy">All investors ({rows.length})</h2>
+        {rows.length === 0 ? (
           <p className="text-sm text-navy/60">No investors yet.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -110,7 +119,7 @@ export function InvestorsManager({ investors }: { investors: InvestorRow[] }) {
                 </tr>
               </thead>
               <tbody>
-                {investors.map((inv) => (
+                {rows.map((inv) => (
                   <tr key={inv.id} className="border-t border-cream align-top">
                     <td className="px-2 py-2">
                       <div className="font-medium text-navy">{inv.email}</div>
