@@ -33,7 +33,7 @@ OUTPUT FORMAT — return ONLY a JSON object, no markdown fence, no prose outside
 {"reply":"<your next line to the investor, plain text>","spec":null}
 Keep "spec" null while clarifying. Once the investor has confirmed (or clearly stated) what they want, set "spec" to:
 {"reportType":"<one of the listed types>","title":<string or null>,"topic":<string or null>,"sections":["..."],"format":"pdf"}
-Default "sections" to the type's defaults unless the investor asked for specific ones. Keep "reply" short and conversational even when emitting a spec (e.g. "Generating that now.").`;
+Default "sections" to the type's defaults unless the investor asked for specific ones. You only FILL THE FORM — you do NOT generate or run the report yourself. When you emit a spec, make "reply" a short hand-off, NOT a claim that you are generating, e.g. "I've set that up in the form — review the sections and hit Generate." Never say "generating now" or imply the report is being produced.`;
 
 export async function POST(req: NextRequest) {
   const auth = await requireInvestor();

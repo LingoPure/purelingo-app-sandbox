@@ -48,7 +48,7 @@ export default async function InvestorLoginPage({
               type="email"
               required
               autoComplete="email"
-              className="rounded-md border border-cream bg-paper px-3 py-2 text-sm focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
+              className="min-h-[44px] rounded-md border border-cream bg-paper px-3 py-2 text-base focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
             />
           </label>
           <label className="flex flex-col gap-1.5 text-sm">
@@ -57,13 +57,13 @@ export default async function InvestorLoginPage({
           </label>
           <Link
             href="/forgot-password"
-            className="-mt-1 self-end text-xs font-medium text-navy hover:underline"
+            className="-mt-1 self-end py-1.5 text-sm font-medium text-navy hover:underline"
           >
             Forgot password?
           </Link>
           <button
             type="submit"
-            className="mt-2 min-h-[44px] rounded-md bg-navy px-4 text-sm font-medium text-paper hover:bg-navy-deep"
+            className="mt-2 min-h-[44px] rounded-md bg-navy px-4 text-base font-medium text-paper hover:bg-navy-deep"
           >
             Sign in
           </button>
@@ -83,11 +83,11 @@ export default async function InvestorLoginPage({
               required
               autoComplete="email"
               placeholder="you@firm.com"
-              className="rounded-md border border-cream bg-paper px-3 py-2 text-sm focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
+              className="min-h-[44px] rounded-md border border-cream bg-paper px-3 py-2 text-base focus:border-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
             />
             <button
               type="submit"
-              className="min-h-[44px] rounded-md border border-navy/30 bg-paper px-4 text-sm font-medium text-navy hover:bg-mist"
+              className="min-h-[44px] rounded-md border border-navy/30 bg-paper px-4 text-base font-medium text-navy hover:bg-mist"
             >
               Email me a sign-in link →
             </button>

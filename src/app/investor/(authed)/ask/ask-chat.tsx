@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MarkdownView } from "@/components/markdown-view";
 
 type Citation = { documentId: string; displayName: string; page: number | null };
 type Message = { role: "user" | "analyst"; text: string; citations?: Citation[] };
@@ -82,7 +83,11 @@ export function AskChat() {
                   : "max-w-[85%] space-y-3 rounded-2xl border border-cream bg-paper px-4 py-3 text-base text-navy"
               }
             >
-              <p className="whitespace-pre-wrap">{m.text}</p>
+              {m.role === "analyst" ? (
+                <MarkdownView>{m.text}</MarkdownView>
+              ) : (
+                <p className="whitespace-pre-wrap">{m.text}</p>
+              )}
               {m.role === "analyst" && m.citations && m.citations.length > 0 && (
                 <div className="border-t border-cream pt-2">
                   <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-navy/50">

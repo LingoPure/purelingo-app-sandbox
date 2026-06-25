@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { MarkdownView } from "@/components/markdown-view";
 
 type Capability = { key: string; label: string; defaultSections: string[] };
 type Citation = { documentId: string; displayName: string; page: number | null };
@@ -15,6 +17,7 @@ type RunResult = {
 };
 
 export function ReportsBuilder({ capabilities }: { capabilities: Capability[] }) {
+  const router = useRouter();
   const [reportType, setReportType] = useState(capabilities[0].key);
   const [title, setTitle] = useState("");
   const [topic, setTopic] = useState("");
@@ -71,6 +74,14 @@ export function ReportsBuilder({ capabilities }: { capabilities: Capability[] })
         setTopic(data.spec.topic ?? "");
         setSectionsText((data.spec.sections ?? []).join("\n"));
         setFormat(data.spec.format ?? "pdf");
+        // Deterministic hand-off cue — Morgan fills the form; the investor runs it.
+        setChat((c) => [
+          ...c,
+          {
+            role: "morgan",
+            text: '✓ I\'ve filled the form on the right — review the sections and click "Generate report".',
+          },
+        ]);
       }
     } catch (err) {
       setChat((c) => [...c, { role: "morgan", text: err instanceof Error ? err.message : "Something went wrong." }]);
@@ -93,6 +104,8 @@ export function ReportsBuilder({ capabilities }: { capabilities: Capability[] })
       if (!res.ok) throw new Error(data?.error ?? `Request failed (${res.status})`);
       setResult(data);
       if (data.format === "pdf" && data.downloadUrl) window.open(data.downloadUrl, "_blank");
+      router.refresh(); // refresh the server-rendered "Your reports" list
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -243,8 +256,8 @@ export function ReportsBuilder({ capabilities }: { capabilities: Capability[] })
               </button>
             </div>
           </div>
-          <div className="max-h-[55vh] overflow-y-auto whitespace-pre-wrap rounded-xl bg-mist p-4 text-sm leading-relaxed text-navy/90">
-            {result.markdown}
+          <div className="max-h-[55vh] overflow-y-auto rounded-xl bg-mist p-4">
+            <MarkdownView>{result.markdown}</MarkdownView>
           </div>
           {result.citations.length > 0 && (
             <div>

@@ -20,7 +20,7 @@ export function InvestorSignOut() {
       type="button"
       onClick={handleClick}
       disabled={pending}
-      className="rounded-md border border-paper/20 px-3 py-1.5 text-xs font-medium text-paper hover:bg-paper/10 disabled:opacity-50"
+      className="inline-flex min-h-[44px] items-center rounded-md border border-paper/20 px-3 text-sm font-medium text-paper hover:bg-paper/10 disabled:opacity-50"
     >
       {pending ? "…" : "Sign out"}
     </button>

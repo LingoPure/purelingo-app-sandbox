@@ -88,7 +88,7 @@ export default async function DocumentsPage() {
                     href={`/api/investor/documents/${d.id}/download`}
                     target="_blank"
                     rel="noreferrer"
-                    className="shrink-0 rounded-md border border-navy/20 px-3 py-2 text-sm text-navy hover:bg-mist"
+                    className="inline-flex min-h-[44px] shrink-0 items-center rounded-md border border-navy/20 px-4 text-sm text-navy hover:bg-mist"
                   >
                     Open
                   </a>

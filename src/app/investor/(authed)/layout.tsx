@@ -22,7 +22,8 @@ export default async function InvestorAuthedLayout({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/login?redirectTo=/investor/ask");
+    // Investor portal segregation — bounce to the investor login, not the student one.
+    redirect("/investor/login");
   }
   const investor = await loadInvestor(user.id);
   if (!investor || investor.status !== "active") {

@@ -93,7 +93,7 @@ export function MobileNav({ items, tone = "light", signOut }: Props) {
         aria-expanded={open}
         aria-controls="mobile-nav-drawer"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex h-10 w-10 items-center justify-center rounded-md border ${buttonClass}`}
+        className={`inline-flex h-11 w-11 items-center justify-center rounded-md border ${buttonClass}`}
       >
         <svg
           width="18"
@@ -146,7 +146,7 @@ export function MobileNav({ items, tone = "light", signOut }: Props) {
                     key={item.href}
                     href={item.href}
                     className={
-                      "rounded-md px-3 py-3 font-mono text-[12px] uppercase tracking-[0.22em] " +
+                      "flex min-h-[44px] items-center rounded-md px-3 font-mono text-[13px] uppercase tracking-[0.22em] " +
                       (active ? linkActive : linkInactive)
                     }
                   >
