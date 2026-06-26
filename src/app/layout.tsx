@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans, DM_Serif_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { getActiveLanguage } from "@/lib/i18n";
 import { DemoBanner } from "@/components/demo-banner";
+import { ConditionalDemoBanner } from "@/components/conditional-demo-banner";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -42,7 +43,9 @@ export default async function RootLayout({
       className={`${jakarta.variable} ${dmSerif.variable} ${dmMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
-        <DemoBanner />
+        <ConditionalDemoBanner>
+          <DemoBanner />
+        </ConditionalDemoBanner>
         {children}<ConditionalSayFix repo="lingopureai" />
       </body>
     </html>
