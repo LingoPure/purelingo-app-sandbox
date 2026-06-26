@@ -627,8 +627,18 @@ call carries no confidential-data egress.
   with NO ElevenLabs tooling (pure browser, identity from the session). It carries a visible
   **confidentiality rationale**: the answer comes back as cited text (not spoken) because the
   dataroom is access-controlled across main + NDA-gated deep dive, so every question runs the same
-  audited, tier-checked path — voice never bypasses the guardrail. (Voice-triggered document
-  lookup / report generation remain deferred; Documents + Reports are already first-class nav pages.)
+  audited, tier-checked path — voice never bypasses the guardrail.
+- **Voice-surface actions (2026-06-26, all live + naive-tester PASS):** still browser-orchestrated
+  through the existing authed/tier-gated endpoints (Morgan only clarifies — no voice→docs):
+  **clickable citations** (Source chips deep-link to the cited PDF page via the inline download
+  route); **per-answer cards** with a Copy (answer + sources) action; a tier-filtered **document
+  finder** (new `GET /api/investor/documents` → open via the watermarked download route); and a
+  **report generator** (the Morgan transcript → `/reports/voice` spec → `/reports/run` watermarked
+  PDF, degrading to guidance + the Reports page if no report is defined).
+- **"Explore the platform" (2026-06-26):** a subtle investor-portal nav item → `/investor/explore`
+  bridging the dataroom to the working consumer prototype (opens `/` in a new tab), with an honest
+  PROTOTYPE-not-the-live-service caveat and a quiet credit to Dennis McMahon / Corporate AI Solutions
+  (corporate-ai-solutions.vercel.app).
 - **Agent:** provisioned by `scripts/provision-investor-morgan.mjs` via `provisionVoiceAgent`
   (idempotent; uses the workspace `ELEVENLABS_API_KEY` — **no operator key/agent-id hand-fetch**).
   Reuses the discovery agent's voice; allowlisted; shares the workspace post-call webhook bound to
