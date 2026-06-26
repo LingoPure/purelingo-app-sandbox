@@ -38,6 +38,7 @@ export default async function InvestorAuthedLayout({
     ...(investor.deepDiveInvited && investor.maxTier === "main"
       ? [{ href: "/investor/nda", label: "Unlock deep dive" }]
       : []),
+    { href: "/investor/explore", label: "Explore the platform" },
     { href: "/investor/settings", label: "Settings" },
   ];
   const accessLabel =
