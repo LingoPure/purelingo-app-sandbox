@@ -11,7 +11,7 @@ import remarkGfm from "remark-gfm";
  */
 export function MarkdownView({ children }: { children: string }) {
   return (
-    <div className="space-y-2 text-base leading-relaxed text-navy">
+    <div className="min-w-0 max-w-full space-y-2 text-base leading-relaxed text-navy">
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -29,8 +29,8 @@ export function MarkdownView({ children }: { children: string }) {
           ),
           hr: ({ node, ...p }) => <hr className="my-3 border-cream" {...p} />,
           table: ({ node, ...p }) => (
-            <div className="overflow-x-auto">
-              <table className="my-2 w-full border-collapse text-sm" {...p} />
+            <div className="block w-full max-w-full overflow-x-auto">
+              <table className="my-2 w-max min-w-full border-collapse text-sm" {...p} />
             </div>
           ),
           thead: ({ node, ...p }) => <thead className="bg-mist" {...p} />,
