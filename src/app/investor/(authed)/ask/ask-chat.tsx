@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MarkdownView } from "@/components/markdown-view";
+import { Citations, type Citation } from "@/components/investor/citations";
 
-type Citation = { documentId: string; displayName: string; page: number | null };
 type Message = { role: "user" | "analyst"; text: string; citations?: Citation[] };
 
 const SAMPLES = [
@@ -88,24 +88,7 @@ export function AskChat() {
               ) : (
                 <p className="whitespace-pre-wrap">{m.text}</p>
               )}
-              {m.role === "analyst" && m.citations && m.citations.length > 0 && (
-                <div className="border-t border-cream pt-2">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-navy/50">
-                    Sources
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {m.citations.map((c) => (
-                      <span
-                        key={c.documentId}
-                        className="rounded-md bg-mist px-2 py-1 text-xs text-navy/80"
-                      >
-                        {c.displayName}
-                        {c.page ? ` · p.${c.page}` : ""}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {m.role === "analyst" && <Citations citations={m.citations ?? []} />}
             </div>
           </div>
         ))}

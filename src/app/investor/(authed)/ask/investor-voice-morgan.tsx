@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { VoiceWidget } from "@caistech/elevenlabs-convai/react";
 import { MarkdownView } from "@/components/markdown-view";
+import { Citations, type Citation } from "@/components/investor/citations";
 
 /**
  * Voice Morgan — the investor dataroom voice clarifier, wired to the written
@@ -19,7 +20,6 @@ import { MarkdownView } from "@/components/markdown-view";
  * answer comes back as cited text, inside those guardrails.
  */
 
-type Citation = { documentId: string; displayName: string; page: number | null };
 type Answer = { question: string; text: string; citations: Citation[] };
 
 export function InvestorVoiceMorgan({
@@ -183,24 +183,7 @@ export function InvestorVoiceMorgan({
           <div key={i} className="min-w-0 space-y-3 rounded-xl border border-cream bg-mist/40 p-4">
             <p className="text-sm font-medium text-navy/60">{a.question}</p>
             <MarkdownView>{a.text}</MarkdownView>
-            {a.citations.length > 0 && (
-              <div className="border-t border-cream pt-2">
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-navy/50">
-                  Sources
-                </p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {a.citations.map((c) => (
-                    <span
-                      key={c.documentId}
-                      className="rounded-md bg-paper px-2 py-1 text-xs text-navy/80"
-                    >
-                      {c.displayName}
-                      {c.page ? ` · p.${c.page}` : ""}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            <Citations citations={a.citations} />
           </div>
         ))}
       </div>
