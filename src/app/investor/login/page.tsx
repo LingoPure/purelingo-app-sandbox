@@ -57,7 +57,7 @@ export default async function InvestorLoginPage({
           </label>
           <Link
             href="/forgot-password"
-            className="-mt-1 self-end py-1.5 text-sm font-medium text-navy hover:underline"
+            className="-mt-1 inline-flex min-h-[44px] items-center self-end text-sm font-medium text-navy hover:underline"
           >
             Forgot password?
           </Link>

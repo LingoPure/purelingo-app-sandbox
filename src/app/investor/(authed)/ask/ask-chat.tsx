@@ -79,8 +79,8 @@ export function AskChat() {
             <div
               className={
                 m.role === "user"
-                  ? "max-w-[85%] rounded-2xl bg-navy px-4 py-3 text-base text-paper"
-                  : "max-w-[85%] space-y-3 rounded-2xl border border-cream bg-paper px-4 py-3 text-base text-navy"
+                  ? "min-w-0 max-w-[85%] rounded-2xl bg-navy px-4 py-3 text-base text-paper"
+                  : "min-w-0 max-w-[85%] space-y-3 rounded-2xl border border-cream bg-paper px-4 py-3 text-base text-navy"
               }
             >
               {m.role === "analyst" ? (

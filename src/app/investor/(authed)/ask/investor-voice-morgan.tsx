@@ -83,9 +83,10 @@ export function InvestorVoiceMorgan({
   }
 
   return (
-    <div className="space-y-4">
-      {/* The voice clarifier */}
-      <div className="rounded-2xl border border-cream bg-paper p-4 sm:p-6">
+    <div className="min-w-0 space-y-4">
+      {/* The voice clarifier. overflow-x-clip contains the embedded convai panel,
+          which can render a few px past a 375px viewport (naive-tester §1). */}
+      <div className="overflow-x-clip rounded-2xl border border-cream bg-paper p-4 sm:p-6">
         <VoiceWidget
           agentId={agentId}
           userId={userId}
@@ -179,7 +180,7 @@ export function InvestorVoiceMorgan({
         {error && <p className="text-sm text-coral">{error}</p>}
 
         {answers.map((a, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-cream bg-mist/40 p-4">
+          <div key={i} className="min-w-0 space-y-3 rounded-xl border border-cream bg-mist/40 p-4">
             <p className="text-sm font-medium text-navy/60">{a.question}</p>
             <MarkdownView>{a.text}</MarkdownView>
             {a.citations.length > 0 && (
