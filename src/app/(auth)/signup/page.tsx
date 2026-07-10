@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signup } from "./actions";
 import { getDict } from "@/lib/i18n";
 import { PasswordInput } from "@/components/auth/password-input";
+import { SubmitButton } from "@/components/auth/submit-button";
 
 export default async function SignupPage({
   searchParams,
@@ -35,12 +36,12 @@ export default async function SignupPage({
           <span className="font-medium text-ink">{t("signup.fieldPassword")}</span>
           <PasswordInput name="password" required minLength={8} autoComplete="new-password" />
         </label>
-        <button
-          type="submit"
-          className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
+        <SubmitButton
+          pendingLabel="Creating account…"
+          className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:opacity-70"
         >
           {t("signup.submit")}
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="mt-6 text-center text-sm text-mute">

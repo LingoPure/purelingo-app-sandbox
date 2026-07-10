@@ -113,6 +113,29 @@
 .mkt .navlinks a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
 @media (max-width: 860px) { .mkt .navlinks a:not(.btn) { display: none; } }
 
+/* mobile nav drawer */
+.mkt-hamburger {
+  display: none; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--paper); color: var(--ink); cursor: pointer;
+}
+@media (max-width: 860px) { .mkt-hamburger { display: inline-flex; } }
+.mkt-drawer {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(11, 31, 36, 0.4); display: flex; justify-content: flex-end;
+}
+.mkt-drawer-panel {
+  background: var(--paper); width: min(80vw, 300px); height: 100%;
+  padding: 24px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: -8px 0 24px rgba(11, 31, 36, 0.15); font-family: var(--body);
+}
+.mkt-drawer-panel a {
+  padding: 12px 8px; font-size: 16px; color: var(--ink); text-decoration: none;
+  border-radius: 6px; min-height: 44px; display: flex; align-items: center;
+}
+.mkt-drawer-panel a:hover { background: var(--teal-soft); }
+.mkt-drawer-panel a.btn { margin-top: 8px; justify-content: center; color: #fff; }
+
 .mkt .btn {
   display: inline-block; background: var(--go); color: #fff !important;
   padding: 12px 20px; border-radius: 4px; text-decoration: none !important;

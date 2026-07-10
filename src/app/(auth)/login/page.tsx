@@ -3,6 +3,7 @@ import Link from "next/link";
 import { login, requestMagicLink } from "./actions";
 import { getDict } from "@/lib/i18n";
 import { PasswordInput } from "@/components/auth/password-input";
+import { SubmitButton } from "@/components/auth/submit-button";
 
 export default async function LoginPage({
   searchParams,
@@ -45,12 +46,12 @@ export default async function LoginPage({
         >
           Forgot password?
         </Link>
-        <button
-          type="submit"
-          className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"
+        <SubmitButton
+          pendingLabel="Signing in…"
+          className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep disabled:opacity-70"
         >
           {t("login.submit")}
-        </button>
+        </SubmitButton>
       </form>
 
       {/* Returning students invited via magic link don't have a password.
@@ -67,12 +68,12 @@ export default async function LoginPage({
         <form action={requestMagicLink} className="flex flex-col gap-3">
           <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
           <Field label="Email" name="email" type="email" required />
-          <button
-            type="submit"
-            className="rounded-md border border-navy/30 bg-paper px-4 py-2.5 text-sm font-medium text-navy hover:bg-mist"
+          <SubmitButton
+            pendingLabel="Sending link…"
+            className="rounded-md border border-navy/30 bg-paper px-4 py-2.5 text-sm font-medium text-navy hover:bg-mist disabled:opacity-70"
           >
             Email me a sign-in link →
-          </button>
+          </SubmitButton>
         </form>
       </div>
 
