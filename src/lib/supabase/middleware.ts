@@ -62,14 +62,28 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
   const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
 
   if (!user && isProtected) {
+    // Fail OPEN on a transient auth error when a session cookie is present — a
+    // cold-start network blip to Supabase (Tokyo) returns an error + null user,
+    // and bouncing here would silently log a valid session out. Let the request
+    // through; the page's own getUser gate re-checks and bounces if it's really
+    // gone. Only redirect on a genuine no-session.
+    const hasAuthCookie = request.cookies
+      .getAll()
+      .some((c) => c.name.includes("-auth-token"));
+    if (error && hasAuthCookie) {
+      return supabaseResponse;
+    }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", path);
+    // Surface the reason so a dropped/expired session isn't a silent bounce.
+    url.searchParams.set("message", "Please sign in to continue.");
     return NextResponse.redirect(url);
   }
 

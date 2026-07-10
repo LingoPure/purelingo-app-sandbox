@@ -16,7 +16,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     const supabase = await createClient();
     const result = await supabase.auth.getUser();
     user = result.data.user;
-    if (!user) redirect("/login");
+    if (!user) {
+      redirect(`/login?message=${encodeURIComponent("Please sign in to continue.")}`);
+    }
     const { loadEmployerAdmin } = await import("@/lib/employer/auth");
     isEmployerAdmin = Boolean(await loadEmployerAdmin(supabase, result.data.user!.id));
   }

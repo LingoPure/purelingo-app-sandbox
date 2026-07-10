@@ -73,6 +73,13 @@ export async function login(formData: FormData) {
       `/login?error=${encodeURIComponent(error?.message ?? "Sign-in failed")}&redirectTo=${encodeURIComponent(redirectToRaw)}`
     );
   }
+  // Silent-login guard: auth succeeded but no session was returned (the cookie
+  // won't persist) — surface it instead of redirecting into a mystery bounce.
+  if (!data.session) {
+    redirect(
+      `/login?error=${encodeURIComponent("Signed in, but the session didn't persist. Please try again.")}&redirectTo=${encodeURIComponent(redirectToRaw)}`
+    );
+  }
 
   // Everyone lands on the learner dashboard (an explicit redirectTo still
   // wins, e.g. from a magic link). Employer admins reach their console via the
