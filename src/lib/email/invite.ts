@@ -122,6 +122,56 @@ export async function sendInvestorInviteEmail(input: {
   }
 }
 
+/**
+ * Content-editor invite — same canonical Resend transport + template, with
+ * marketing-admin copy. Best-effort: ok=false when RESEND_API_KEY is unset so
+ * the caller can fall back to the copy-pasteable link.
+ */
+export async function sendContentEditorInviteEmail(input: {
+  to: string;
+  inviteeName: string;
+  role: "admin" | "marketing" | "readonly";
+  actionLink: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
+  const subject = "You've been invited to edit LingoPure content";
+  const roleLabel =
+    input.role === "admin"
+      ? "as an admin (edit content and manage editors)"
+      : input.role === "marketing"
+        ? "as a marketing editor (edit content)"
+        : "with read-only access (preview only)";
+  const lead = `You've been invited to the LingoPure content admin ${roleLabel}. Sign in to edit the marketing site's copy directly — no developer needed.`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: FROM_ADDRESS,
+        to: input.to,
+        subject,
+        html: htmlTemplate({
+          inviteeName: input.inviteeName,
+          subject,
+          lead,
+          actionLink: input.actionLink,
+          kind: "invite",
+          ctaLabel: "Open the content admin",
+        }),
+        text: `Hi ${input.inviteeName},\n\n${lead}\n\nOpen this link to begin (single use, ~1hr expiry):\n${input.actionLink}\n\n— LingoPure`,
+      }),
+    });
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      return { ok: false, error: `Resend ${r.status}: ${text}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 function htmlTemplate(input: {
   inviteeName: string;
   subject: string;
