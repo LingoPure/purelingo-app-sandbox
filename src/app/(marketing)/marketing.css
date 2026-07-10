@@ -111,13 +111,14 @@
 .mkt .navlinks { display: flex; gap: 22px; margin-left: auto; font-size: 15px; align-items: center; }
 .mkt .navlinks a { color: var(--ink); text-decoration: none; opacity: 0.8; }
 .mkt .navlinks a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
-@media (max-width: 860px) { .mkt .navlinks a:not(.btn) { display: none; } }
+/* On mobile the whole inline nav collapses into the hamburger drawer. */
+@media (max-width: 860px) { .mkt .navlinks { display: none; } }
 
 /* mobile nav drawer */
 .mkt-hamburger {
   display: none; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 6px;
-  background: var(--paper); color: var(--ink); cursor: pointer;
+  width: 44px; height: 44px; margin-left: auto; border: 1px solid var(--line);
+  border-radius: 6px; background: var(--paper); color: var(--ink); cursor: pointer;
 }
 @media (max-width: 860px) { .mkt-hamburger { display: inline-flex; } }
 .mkt-drawer {

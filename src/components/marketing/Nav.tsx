@@ -21,8 +21,10 @@ export function Nav() {
           <Link href={cta.href} className="btn">
             {cta.label}
           </Link>
-          <MktMobileMenu links={links.map((l) => ({ ...l }))} cta={{ ...cta }} />
         </div>
+        {/* Hamburger + drawer live OUTSIDE .navlinks so the drawer's links are
+            not caught by the mobile "hide .navlinks" rule. */}
+        <MktMobileMenu links={links.map((l) => ({ ...l }))} cta={{ ...cta }} />
       </div>
     </nav>
   );

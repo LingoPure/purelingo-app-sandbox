@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { loadEmployerAdmin } from "@/lib/employer/auth";
 
 /**
  * Send the signed-in user (or any returning student) a fresh magic link
@@ -75,17 +74,12 @@ export async function login(formData: FormData) {
     );
   }
 
-  // After successful auth, route based on role:
-  //   - explicit redirectTo wins (e.g. coming back from a magic-link)
-  //   - employer admins → /employer
-  //   - everyone else → /dashboard
-  let target = redirectToRaw && redirectToRaw.startsWith("/")
-    ? redirectToRaw
-    : null;
-  if (!target) {
-    const admin = await loadEmployerAdmin(supabase, data.user.id);
-    target = admin ? "/employer" : "/dashboard";
-  }
+  // Everyone lands on the learner dashboard (an explicit redirectTo still
+  // wins, e.g. from a magic link). Employer admins reach their console via the
+  // "Employer console" nav item — so a dual-role / sandbox user experiences the
+  // full learner flow first instead of being bounced to /employer.
+  const target =
+    redirectToRaw && redirectToRaw.startsWith("/") ? redirectToRaw : "/dashboard";
 
   revalidatePath("/", "layout");
   redirect(target);
