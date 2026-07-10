@@ -2,14 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ClassInSandboxNotice } from "@/components/classin/classin-sandbox-notice";
 
-export function ScheduleClassButton() {
+export function ScheduleClassButton({ connected = false }: { connected?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
 
-  async function handleClick() {
+  async function doSchedule() {
     setError(null);
+    setScheduling(true);
     try {
       const res = await fetch("/api/classin/sessions", {
         method: "POST",
@@ -21,10 +25,23 @@ export function ScheduleClassButton() {
         setError(body.error ?? `HTTP ${res.status}`);
         return;
       }
+      setNoticeOpen(false);
       startTransition(() => router.refresh());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Schedule failed");
+    } finally {
+      setScheduling(false);
     }
+  }
+
+  function handleClick() {
+    // In the sandbox, ClassIn isn't connected — flag it on usage before
+    // creating the placeholder session. When connected, schedule directly.
+    if (!connected) {
+      setNoticeOpen(true);
+      return;
+    }
+    void doSchedule();
   }
 
   return (
@@ -38,6 +55,12 @@ export function ScheduleClassButton() {
         {pending ? "Scheduling…" : "Schedule a demo class"}
       </button>
       {error && <span className="text-xs text-coral">{error}</span>}
+      <ClassInSandboxNotice
+        open={noticeOpen}
+        onClose={() => setNoticeOpen(false)}
+        onContinue={() => void doSchedule()}
+        busy={scheduling}
+      />
     </div>
   );
 }

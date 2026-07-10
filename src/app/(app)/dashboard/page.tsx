@@ -13,6 +13,7 @@ import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import { readClassinCredentials } from "@/lib/classin/token";
 import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
 import { BilingualText } from "@/components/i18n/bilingual-text";
@@ -414,7 +415,10 @@ export default async function DashboardPage() {
       <PracticeCard totalXp={totalXp} completedLessons={completedLessons} />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <NextClassCard nextClass={nextClass} />
+        <NextClassCard
+          nextClass={nextClass}
+          classinConnected={readClassinCredentials() !== null}
+        />
         <ActivityLogCard recentClasses={recentClasses} />
       </section>
 
@@ -608,7 +612,13 @@ function ProfileCard({
   );
 }
 
-function NextClassCard({ nextClass }: { nextClass: NextClass | null }) {
+function NextClassCard({
+  nextClass,
+  classinConnected,
+}: {
+  nextClass: NextClass | null;
+  classinConnected: boolean;
+}) {
   if (!nextClass) {
     return (
       <div className="flex flex-col gap-3 rounded-lg border border-cream bg-paper p-6">
@@ -617,7 +627,7 @@ function NextClassCard({ nextClass }: { nextClass: NextClass | null }) {
           No class scheduled — your coordinator will assign a teacher and slot. For demo
           purposes you can schedule one yourself below.
         </p>
-        <ScheduleClassButton />
+        <ScheduleClassButton connected={classinConnected} />
       </div>
     );
   }

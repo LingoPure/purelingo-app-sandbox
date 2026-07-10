@@ -85,14 +85,15 @@ function PendingShell({
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-      <p className="mb-3 font-mono text-xs uppercase tracking-[0.3em] text-gold">
-        Session {sessionId.slice(0, 8)}
-      </p>
-      <h1 className="mb-4 font-serif text-4xl text-paper">
-        ClassIn integration pending
+      <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-paper/20 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.16em] text-paper/80">
+        <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+        Sandbox
+      </span>
+      <h1 className="mb-4 max-w-xl font-serif text-4xl text-paper">
+        ClassIn isn&apos;t connected in the sandbox
       </h1>
-      <p className="mb-2 max-w-xl text-mute">
-        {teacherName ? `Class with ${teacherName}` : "Class"}
+      <p className="mb-2 max-w-xl text-base text-mute">
+        {teacherName ? `Class with ${teacherName}` : "Your class"}
         {scheduledAt
           ? ` · ${new Date(scheduledAt).toLocaleString("en-AU", {
               dateStyle: "medium",
@@ -100,24 +101,14 @@ function PendingShell({
             })}`
           : ""}
       </p>
-      <p className="mb-1 max-w-xl text-mute">
-        Live classroom credentials must be obtained from EEO Technology before this embed
-        can connect to a real ClassIn session.
-      </p>
-      <p className="mb-8 max-w-xl text-mute">
-        Set{" "}
-        <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">
-          CLASSIN_APP_ID
-        </code>{" "}
-        and{" "}
-        <code className="rounded bg-paper/10 px-1.5 py-0.5 font-mono text-xs text-paper">
-          CLASSIN_APP_SECRET
-        </code>{" "}
-        — this page renders the SDK iframe automatically.
+      <p className="mb-8 max-w-xl text-base leading-relaxed text-mute">
+        Live classes run on ClassIn, which isn&apos;t connected in this sandbox
+        demo yet — it&apos;s wired up in the production build. Everything else in
+        your learning flow works as normal.
       </p>
       <Link
         href="/dashboard"
-        className="rounded-md border border-paper/20 px-4 py-2 text-sm font-medium text-paper hover:bg-paper/10"
+        className="inline-flex min-h-[44px] items-center rounded-md border border-paper/20 px-4 py-2.5 text-sm font-medium text-paper hover:bg-paper/10"
       >
         ← Back to dashboard
       </Link>
