@@ -8,6 +8,6 @@ import { getHomeContent } from "@/content/resolve";
  * draft content.
  */
 export default async function MarketingHome() {
-  const home = await getHomeContent();
-  return <MarketingHomeView home={home} />;
+  const { home, testimonials, logos } = await getHomeContent();
+  return <MarketingHomeView home={home} testimonials={testimonials} logos={logos} />;
 }

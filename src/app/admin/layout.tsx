@@ -21,6 +21,9 @@ export default async function AdminLayout({
 
   const links = [
     { href: "/admin/content", label: "Content" },
+    { href: "/admin/testimonials", label: "Testimonials" },
+    { href: "/admin/logos", label: "Logos" },
+    { href: "/admin/audit", label: "History" },
     ...(isAdmin ? [{ href: "/admin/editors", label: "Editors" }] : []),
   ];
 

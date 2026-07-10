@@ -16,14 +16,14 @@ export default async function MarketingPreview() {
   const editor = await getContentEditor();
   if (!editor) redirect("/login?next=/preview");
 
-  const home = await getHomeContent({ draft: true });
+  const { home, testimonials, logos } = await getHomeContent({ draft: true });
   return (
     <>
       <div className="demobar">
         Draft preview — not published ·{" "}
         <Link href="/admin/content">← back to the editor</Link>
       </div>
-      <MarketingHomeView home={home} />
+      <MarketingHomeView home={home} testimonials={testimonials} logos={logos} />
     </>
   );
 }

@@ -208,6 +208,12 @@
 /* testimonials */
 .mkt .tgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 900px) { .mkt .tgrid { grid-template-columns: 1fr; } }
+.mkt .tcard { border: 1px solid var(--line); border-radius: 8px; padding: 24px; background: #fff; }
+.mkt .tcard blockquote { font-family: var(--quote); font-style: italic; font-size: 18px; line-height: 1.4; color: var(--ink); }
+.mkt .tcard figcaption { margin-top: 16px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
+.mkt .tcard figcaption strong { color: var(--ink); font-weight: 600; }
+.mkt .tphoto { width: 44px; height: 44px; border-radius: 9999px; object-fit: cover; flex-shrink: 0; }
+.mkt .logos img { height: 30px; width: auto; max-width: 150px; object-fit: contain; }
 
 /* faq */
 .mkt .faq { max-width: 820px; }

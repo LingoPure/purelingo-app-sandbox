@@ -1,16 +1,28 @@
 import Link from "next/link";
 import type { HomeContent } from "@/content/home";
+import type { PublicTestimonial, PublicLogo } from "@/content/resolve";
 import { Anno, Stage, EmptySlot } from "@/components/marketing/AnnotationLayer";
 import { SectionGate, SpecOnly } from "@/components/marketing/CanvasGates";
 
 /**
  * The ten-stage sales-flow homepage. Renders a home-shaped content object —
  * the static source file (public/production), or the row-overlaid object
- * (edits / preview). Presentation only; content comes from the prop.
+ * (edits / preview) — plus the row-backed testimonials and logo lists.
+ * Presentation only; content comes from the props.
  */
-export function MarketingHomeView({ home }: { home: HomeContent }) {
+export function MarketingHomeView({
+  home,
+  testimonials: liveTestimonials = [],
+  logos = [],
+}: {
+  home: HomeContent;
+  testimonials?: PublicTestimonial[];
+  logos?: PublicLogo[];
+}) {
   const { hero, trust, problem, fork, how, proof, outcomes, testimonials, objections, final } =
     home;
+  const hasLogos = logos.length > 0;
+  const hasTestimonials = liveTestimonials.length > 0;
   return (
     <>
       {/* 01 — HERO */}
@@ -38,24 +50,26 @@ export function MarketingHomeView({ home }: { home: HomeContent }) {
 
       {/* 02 — TRUST (empty today: no consented logos, no sourced stat →
           absent from clean-view DOM via SectionGate) */}
-      <SectionGate fill="empty">
+      <SectionGate fill={hasLogos || trust.statValue ? "partial" : "empty"}>
         <section className="trust">
           <Stage>{trust.stage}</Stage>
           <div className="wrap trustin">
-            {(() => {
-              const consented = trust.logos.filter((l) => l.consent);
-              return consented.length > 0 ? (
-                <div className="logos">
-                  {consented.map((l) => (
-                    <span key={l.name}>{l.name}</span>
-                  ))}
-                </div>
-              ) : (
-                <EmptySlot title={trust.logosSlot.title}>
-                  {trust.logosSlot.note}
-                </EmptySlot>
-              );
-            })()}
+            {hasLogos ? (
+              <div className="logos">
+                {logos.map((l) =>
+                  l.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={l.id} src={l.logoUrl} alt={l.name} />
+                  ) : (
+                    <span key={l.id}>{l.name}</span>
+                  )
+                )}
+              </div>
+            ) : (
+              <EmptySlot title={trust.logosSlot.title}>
+                {trust.logosSlot.note}
+              </EmptySlot>
+            )}
             {trust.statValue ? (
               <div className="stat">
                 <b>{trust.statValue}</b>
@@ -196,8 +210,8 @@ export function MarketingHomeView({ home }: { home: HomeContent }) {
         </div>
       </section>
 
-      {/* 08 — TESTIMONIALS (empty: three pending slots → absent from clean) */}
-      <SectionGate fill="empty">
+      {/* 08 — TESTIMONIALS (real ones from the DB; empty pending slots when none) */}
+      <SectionGate fill={hasTestimonials ? "complete" : "empty"}>
         <section style={{ borderTop: "1px solid var(--line)" }}>
           <Stage>{testimonials.stage}</Stage>
           <div className="wrap">
@@ -205,11 +219,28 @@ export function MarketingHomeView({ home }: { home: HomeContent }) {
             <p className="eyebrow">{testimonials.eyebrow}</p>
             <h2 style={{ marginBottom: 40 }}>{testimonials.h2}</h2>
             <div className="tgrid">
-              {testimonials.slots.map((s) => (
-                <EmptySlot key={s.title} title={s.title}>
-                  {s.note}
-                </EmptySlot>
-              ))}
+              {hasTestimonials
+                ? liveTestimonials.map((t) => (
+                    <figure className="tcard" key={t.id}>
+                      <blockquote>&ldquo;{t.quote}&rdquo;</blockquote>
+                      <figcaption>
+                        {t.photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img className="tphoto" src={t.photoUrl} alt={t.name} />
+                        ) : null}
+                        <span>
+                          <strong>{t.name}</strong>
+                          {t.role ? `, ${t.role}` : ""}
+                          {t.company ? ` · ${t.company}` : ""}
+                        </span>
+                      </figcaption>
+                    </figure>
+                  ))
+                : testimonials.slots.map((s) => (
+                    <EmptySlot key={s.title} title={s.title}>
+                      {s.note}
+                    </EmptySlot>
+                  ))}
             </div>
           </div>
         </section>
