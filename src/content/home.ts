@@ -22,9 +22,9 @@ export const home = {
       { label: "For companies", href: "/for-companies" },
       { label: "For individuals", href: "/for-individuals" },
       { label: "Method", href: "/method" },
-      { label: "Results", href: "#proof" },
+      { label: "The report", href: "/#proof" },
     ],
-    cta: { label: "Book a free demo", href: "/book-a-demo" },
+    cta: { label: "Try the demo", href: "/demo" },
   },
 
   hero: {
@@ -38,7 +38,7 @@ export const home = {
     h1: "English that holds up when it actually counts.",
     lede: "Placement in one class. Progress you can see. Certification you can show. For teams that need to work in English, and for professionals who need to be heard in it.",
     ctas: [
-      { label: "Book a free demo class", href: "/book-a-demo" },
+      { label: "Try a free demo class", href: "/demo" },
       { label: "I'm looking for my team", href: "/for-companies", ghost: true },
     ] as Cta[],
     micro: "Free · 45 minutes · you receive an LP-18 placement report either way",
@@ -110,13 +110,13 @@ export const home = {
         tag: "For companies",
         h3: "Your team can read the contract. Can they hold the call?",
         p: "Assess a whole team in a week. Get a capability baseline, not an attendance sheet — and a monthly report you can take to your board.",
-        cta: { label: "Book a team assessment", href: "/for-companies" },
+        cta: { label: "Try a team assessment", href: "/demo" },
       },
       {
         tag: "For individuals",
         h3: "You've done the courses. You still don't sound like yourself.",
         p: "Start with one free class and a placement report that tells you exactly where you are, and exactly what's holding you back.",
-        cta: { label: "Book a free demo class", href: "/book-a-demo" },
+        cta: { label: "Try a free demo class", href: "/demo" },
       },
     ],
     annoConfirm: {
@@ -161,10 +161,10 @@ export const home = {
       label: "Ready — our most under-used asset",
       note: "Anonymise a real LP-18 report and show it large. Show, don't claim. Most competitors in this market cannot produce anything like it, and it converts because it is free, specific, and obviously expensive to produce.",
     } as Anno,
-    eyebrow: "Results",
+    eyebrow: "What you receive",
     h2: 'We don\'t tell you you\'re "intermediate". We show you which eighteenth.',
     lede: "CEFR gives you six levels. That's too coarse to act on. LP-18 splits each level into three micro-bands and maps your communication signals against them — so the next class targets something specific instead of something general.",
-    cta: { label: "See yours after one class", href: "/book-a-demo" },
+    cta: { label: "See yours after one class", href: "/demo" },
     slot: {
       title: "LP-18 report artifact",
       note: "Insert anonymised student report (currently produced in Canva, 2 pages). Owner: Thao · No research dependency · Start immediately",
@@ -296,9 +296,9 @@ export const home = {
     } as Anno,
     h2: "Find out where you actually stand. It takes 45 minutes.",
     p: "One free class with a real teacher. One LP-18 placement report. No obligation to continue, and the report is yours either way.",
-    cta: { label: "Book a free demo class", href: "/book-a-demo" },
+    cta: { label: "Try a free demo class", href: "/demo" },
     microPrefix: "Companies with five or more staff — ",
-    microLink: { label: "book a team assessment instead", href: "/for-companies" },
+    microLink: { label: "try a team assessment instead", href: "/demo" },
   },
 
   footer: {
@@ -311,7 +311,6 @@ export const home = {
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
       { label: "Contact", href: "/contact" },
-      { label: "Zalo", href: "#" },
       { label: "Company", href: "/company" },
     ],
     langs: "English · Tiếng Việt",

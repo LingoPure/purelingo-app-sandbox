@@ -9,11 +9,13 @@ export const metadata = { title: "Company · LingoPure" };
 export default function CompanyPage() {
   return (
     <ScaffoldPage
-      title="Company"
-      intro="LingoPure Pte. Ltd. (Singapore), a subsidiary of LingoPure Limited (New Zealand). CEFR certification is delivered in partnership with TrackTest."
+      eyebrow="Company"
+      headline="LingoPure"
+      subhead="LingoPure Pte. Ltd. (Singapore), a subsidiary of LingoPure Limited (New Zealand). CEFR certification is delivered in partnership with TrackTest."
+      cta={{ label: "Contact us", href: "/contact" }}
       annotation={{
-        label: "Company page pending",
-        note: "Entity detail, team, and any investor-facing framing live here — deliberately not above the footer on the marketing pages.",
+        label: "Company page — scaffold",
+        note: "Entity detail, team, and any investor-facing framing live here — deliberately below the marketing fold, never above it.",
       }}
     />
   );

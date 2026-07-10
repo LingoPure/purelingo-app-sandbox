@@ -218,11 +218,11 @@ const en: Dict = {
   "mkt.fork.title": "Where do you start?",
   "mkt.fork.company.title": "For companies",
   "mkt.fork.company.body":
-    "Assess a whole team, run cohorts, and prove the gap closing with audit-grade reporting.",
+    "Assess a whole team in a week. Get a capability baseline, not an attendance sheet.",
   "mkt.fork.company.cta": "Explore for companies",
   "mkt.fork.individual.title": "For individuals",
   "mkt.fork.individual.body":
-    "Find your level, get a plan, and certify your business English at your own pace.",
+    "Start with one free class and a placement report that tells you exactly where you are.",
   "mkt.fork.individual.cta": "Explore for individuals",
   // 05 HowItWorks
   "mkt.how.title": "How it works",
@@ -235,7 +235,7 @@ const en: Dict = {
     "Virtual classrooms run inside LingoPure on ClassIn — no separate logins, full session analytics flow back.",
   "mkt.how.step3.title": "Measured gap, closing",
   "mkt.how.step3.body":
-    "A six-dimension gap score updates after every lesson and live class, with CEFR certification via TrackTest.",
+    "Live classes and micro-lessons targeted at your gaps, re-measured as you go, with CEFR certification via TrackTest.",
   // 06 ProofOfMethod (copy ready; image pending)
   "mkt.proof.title": "Proof of method: the LP-18 report",
   "mkt.proof.body":

@@ -5,11 +5,13 @@ export const metadata = { title: "For companies · LingoPure" };
 export default function ForCompaniesPage() {
   return (
     <ScaffoldPage
-      title="For companies"
-      intro="The B2B argument lives here: assess a whole team, run cohorts, and prove the English gap closing with audit-grade reporting."
+      eyebrow="For companies"
+      headline="Close your team's English gap, and prove it."
+      subhead="Assess a whole team in a week. Get a capability baseline, not an attendance sheet."
+      cta={{ label: "Try a team assessment", href: "/demo" }}
       annotation={{
-        label: "B2B PAGE PENDING",
-        note: "The real company argument — depth beyond the homepage summary — is built here after the fork copy is validated. Empty until then.",
+        label: "Landing page — scaffold",
+        note: "The full B2B argument mirrors the homepage sales flow. This uses the existing product-demo headline and the homepage fork-card copy until the customer research lands — nothing here is invented.",
       }}
     />
   );

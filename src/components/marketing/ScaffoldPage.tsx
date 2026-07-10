@@ -4,43 +4,39 @@ import type { Annotation } from "@/content/types";
 
 /**
  * Scaffold page body for the route stubs (/for-companies, /for-individuals,
- * /method, /book-a-demo). The marketing chrome (nav, footer, canvas toggle)
- * comes from the (marketing) layout — this renders only the page's own
- * section: an explanatory header + an honest empty slot for the page body.
+ * /method, /company). Renders REAL, approved copy (drawn from the homepage /
+ * product demo — never invented) so a visitor sees a coherent page. The
+ * "scaffold" note lives ONLY in the annotation, so it shows in spec view and
+ * NEVER leaks into clean view. Nothing in the visible copy describes product
+ * functionality that doesn't exist.
  */
 export function ScaffoldPage({
-  title,
-  intro,
+  eyebrow,
+  headline,
+  subhead,
+  cta,
   annotation,
 }: {
-  title: string;
-  intro: string;
+  eyebrow: string;
+  headline: string;
+  subhead: string;
+  cta: { label: string; href: string };
   annotation: Annotation;
 }) {
   return (
     <section>
       <div className="wrap">
-        <p className="eyebrow">Landing page · scaffold</p>
-        <h1 style={{ marginBottom: 18 }}>{title}</h1>
+        <p className="eyebrow">{eyebrow}</p>
+        <h1 style={{ marginBottom: 18 }}>{headline}</h1>
         <p className="lede" style={{ marginBottom: 26 }}>
-          {intro}
+          {subhead}
         </p>
-        {/* A single CTA so a linked scaffold is never a dead end. */}
         <div style={{ marginBottom: 26 }}>
-          <Link href="/book-a-demo" className="btn btn--lg">
-            Book a free demo class
+          <Link href={cta.href} className="btn btn--lg">
+            {cta.label}
           </Link>
         </div>
-        <Anno annotation={annotation} status="pending" />
-        <div style={{ marginTop: 8 }}>
-          <Anno
-            annotation={{
-              label: "Page body pending",
-              note: "This landing page is scaffolded. The full argument is built here after the homepage fork copy is validated.",
-            }}
-            status="pending"
-          />
-        </div>
+        <Anno annotation={annotation} status="confirm" />
       </div>
     </section>
   );

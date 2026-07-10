@@ -5,11 +5,13 @@ export const metadata = { title: "For individuals · LingoPure" };
 export default function ForIndividualsPage() {
   return (
     <ScaffoldPage
-      title="For individuals"
-      intro="The B2C argument lives here: find your level, get a plan, and certify your business English at your own pace."
+      eyebrow="For individuals"
+      headline="You've done the courses. You still don't sound like yourself."
+      subhead="Start with one free class and a placement report that tells you exactly where you are, and exactly what's holding you back."
+      cta={{ label: "Try a free demo class", href: "/demo" }}
       annotation={{
-        label: "B2C PAGE PENDING",
-        note: "Individual-learner content depends on B2C research that has not landed. No invented benefits or pricing.",
+        label: "Landing page — scaffold",
+        note: "The full B2C argument mirrors the homepage sales flow. This uses the homepage fork-card copy until the individual-learner research lands — no invented benefits or pricing.",
       }}
     />
   );

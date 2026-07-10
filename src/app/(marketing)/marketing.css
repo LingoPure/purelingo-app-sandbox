@@ -60,6 +60,10 @@
 .mkt.clean .anno { display: none; }
 .mkt.clean .stage { display: none; }
 .mkt.clean .slot--empty { display: none; }
+/* Spec-only content (empty sections + a partial section's empty sub-column) is
+   hidden in clean view by CSS — one style recalc, no React reconciliation on
+   toggle (the INP fix). In production (canvas off) it isn't rendered at all. */
+.mkt.clean .mkt-speconly { display: none; }
 /* Partial sections collapse to one column in clean view when their second
    column is Spec-only (no reserved empty column beside the filled content). */
 .mkt.clean .proofgrid { grid-template-columns: 1fr; }

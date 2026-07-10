@@ -51,8 +51,8 @@ export default function AboutPage() {
             <p className="text-mute">
               Vietnamese and Southeast Asian professionals working in business
               English, the employers training them, and the schools and RTOs
-              running cohorts. Single learners, classrooms, and enterprise
-              rollouts are all supported.
+              running group programmes. Single learners, classrooms, and
+              enterprise rollouts are all supported.
             </p>
           </div>
           <div>

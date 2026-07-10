@@ -5,11 +5,13 @@ export const metadata = { title: "Method · LingoPure" };
 export default function MethodPage() {
   return (
     <ScaffoldPage
-      title="The method"
-      intro="How placement works: the LP-18 profile, CEFR mapping, and the six-dimension gap score that updates after every lesson."
+      eyebrow="Method"
+      headline={'We don’t tell you you’re "intermediate". We show you which eighteenth.'}
+      subhead="CEFR gives you six levels — too coarse to act on. LP-18 splits each level into three micro-bands and maps your communication signals against them."
+      cta={{ label: "See yours after one class", href: "/demo" }}
       annotation={{
-        label: "METHOD PAGE PENDING",
-        note: "The full LP-18 / CEFR explainer is built here. Needs sign-off on how much methodology detail is public vs. board-only.",
+        label: "Landing page — scaffold",
+        note: "Method detail mirrors the homepage proof section — LP-18, CEFR, micro-bands, and nothing beyond it. If it feels thin, it is thin until the full explainer is written; the copy does not fill the gap with claims.",
       }}
     />
   );

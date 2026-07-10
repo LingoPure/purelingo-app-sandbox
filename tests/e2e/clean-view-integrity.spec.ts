@@ -21,6 +21,10 @@ const SPEC_VOCAB = [
   "evidence pending",
   "answer pending",
   "pending",
+  // Scaffold editorial notes must live in annotations, not visible copy (Patch 02 §3).
+  "scaffold",
+  "the b2b argument lives here",
+  "the b2c argument lives here",
 ];
 
 async function gotoClean(page: import("@playwright/test").Page) {

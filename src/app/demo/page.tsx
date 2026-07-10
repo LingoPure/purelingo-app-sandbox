@@ -68,7 +68,7 @@ export default async function LandingPage() {
           <FeatureCard
             tag="03"
             title="Measurable Gap, Closing"
-            body="Six-dimension gap score updates after every micro-lesson and live class. CEFR certification via TrackTest."
+            body="A skill profile scored from your own voice — speaking, listening, vocabulary and more — re-measured as you learn. CEFR certification via TrackTest."
           />
         </div>
       </main>

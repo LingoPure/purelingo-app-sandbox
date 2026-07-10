@@ -28,7 +28,7 @@ const PLANS = [
     name: "Classroom",
     price: "$15",
     period: "/seat / month",
-    description: "For schools, RTOs, and language programmes with cohorts of learners.",
+    description: "For schools, RTOs, and language programmes with groups of learners.",
     features: [
       "Up to 50 learners per classroom",
       "Unlimited target languages",
