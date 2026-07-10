@@ -101,7 +101,7 @@ export default async function LessonsPage() {
                 <div className="flex items-center gap-3">
                   {l.score_after != null && (
                     <span className="font-mono text-xs text-mute">
-                      {l.score_after}/100
+                      {l.score_after}/1000
                     </span>
                   )}
                   {l.xp_awarded != null && l.xp_awarded > 0 && (

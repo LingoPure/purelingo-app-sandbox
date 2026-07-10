@@ -315,7 +315,7 @@ function ScoreTile({
       </p>
       <p className="mt-1 font-serif text-2xl text-navy">
         {score}
-        <span className="ml-1 font-mono text-xs text-mute">/100</span>
+        <span className="ml-1 font-mono text-xs text-mute">/1000</span>
       </p>
       <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gold">
         {band}

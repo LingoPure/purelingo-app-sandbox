@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { signup } from "./actions";
 import { getDict } from "@/lib/i18n";
+import { PasswordInput } from "@/components/auth/password-input";
 
 export default async function SignupPage({
   searchParams,
@@ -30,13 +31,10 @@ export default async function SignupPage({
       <form action={signup} className="flex flex-col gap-4">
         <Field label={t("signup.fieldFullName")} name="fullName" type="text" required />
         <Field label={t("signup.fieldEmail")} name="email" type="email" required />
-        <Field
-          label={t("signup.fieldPassword")}
-          name="password"
-          type="password"
-          required
-          minLength={8}
-        />
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-ink">{t("signup.fieldPassword")}</span>
+          <PasswordInput name="password" required minLength={8} autoComplete="new-password" />
+        </label>
         <button
           type="submit"
           className="mt-2 rounded-md bg-navy px-4 py-2.5 text-sm font-medium text-paper hover:bg-navy-deep"

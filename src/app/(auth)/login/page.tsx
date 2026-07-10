@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { login, requestMagicLink } from "./actions";
 import { getDict } from "@/lib/i18n";
+import { PasswordInput } from "@/components/auth/password-input";
 
 export default async function LoginPage({
   searchParams,
@@ -34,13 +35,10 @@ export default async function LoginPage({
       <form action={login} className="flex flex-col gap-4">
         <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
         <Field label={t("login.fieldEmail")} name="email" type="email" required />
-        <Field
-          label={t("login.fieldPassword")}
-          name="password"
-          type="password"
-          required
-          minLength={6}
-        />
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-ink">{t("login.fieldPassword")}</span>
+          <PasswordInput name="password" required minLength={6} autoComplete="current-password" />
+        </label>
         <Link
           href="/forgot-password"
           className="-mt-1 self-end text-xs font-medium text-navy hover:underline"
