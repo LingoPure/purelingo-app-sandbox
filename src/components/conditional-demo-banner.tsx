@@ -24,5 +24,9 @@ export function ConditionalDemoBanner({
 }) {
   const pathname = usePathname();
   if (pathname?.startsWith("/investor")) return null;
+  // Marketing route group carries its own "sales flow canvas" demobar, so the
+  // app-level demo band would double up. Suppress it there.
+  const marketing = ["/for-companies", "/for-individuals", "/method", "/book-a-demo"];
+  if (pathname === "/" || marketing.some((p) => pathname?.startsWith(p))) return null;
   return <>{children}</>;
 }

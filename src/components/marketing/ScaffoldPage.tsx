@@ -1,18 +1,13 @@
-import { getDict } from "@/lib/i18n";
-import { SpecProvider } from "./SpecProvider";
-import { CanvasBar, ViewToggle } from "./CanvasChrome";
-import { Nav } from "./Nav";
-import { Footer } from "./Footer";
-import { EmptySlot, StatusPill } from "./AnnotationLayer";
+import { Anno } from "./AnnotationLayer";
 import type { Annotation } from "@/content/types";
 
 /**
- * Scaffold page shell for the route stubs (/for-companies,
- * /for-individuals, /method, /book-a-demo). Real chrome + an explanatory
- * header, with the page body rendered as an honest empty slot until its
- * content is built. No invented copy.
+ * Scaffold page body for the route stubs (/for-companies, /for-individuals,
+ * /method, /book-a-demo). The marketing chrome (nav, footer, canvas toggle)
+ * comes from the (marketing) layout — this renders only the page's own
+ * section: an explanatory header + an honest empty slot for the page body.
  */
-export async function ScaffoldPage({
+export function ScaffoldPage({
   title,
   intro,
   annotation,
@@ -21,25 +16,25 @@ export async function ScaffoldPage({
   intro: string;
   annotation: Annotation;
 }) {
-  const { lang, t } = await getDict();
   return (
-    <SpecProvider>
-      <CanvasBar />
-      <ViewToggle />
-      <Nav t={t} lang={lang} />
-      <main className="flex-1">
-        <section className="mx-auto w-full max-w-6xl px-6 py-16 sm:py-20">
-          <div className="mb-4 flex items-center gap-3">
-            <h1 className="font-serif text-4xl text-navy sm:text-5xl">{title}</h1>
-            <StatusPill status="pending" />
-          </div>
-          <p className="max-w-2xl text-lg text-mute">{intro}</p>
-          <div className="mt-10">
-            <EmptySlot annotation={annotation} minHeight="16rem" />
-          </div>
-        </section>
-      </main>
-      <Footer t={t} />
-    </SpecProvider>
+    <section>
+      <div className="wrap">
+        <p className="eyebrow">Landing page · scaffold</p>
+        <h1 style={{ marginBottom: 18 }}>{title}</h1>
+        <p className="lede" style={{ marginBottom: 26 }}>
+          {intro}
+        </p>
+        <Anno annotation={annotation} status="pending" />
+        <div style={{ marginTop: 8 }}>
+          <Anno
+            annotation={{
+              label: "Page body pending",
+              note: "This landing page is scaffolded. The full argument is built here after the homepage fork copy is validated.",
+            }}
+            status="pending"
+          />
+        </div>
+      </div>
+    </section>
   );
 }

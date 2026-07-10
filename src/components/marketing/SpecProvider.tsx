@@ -1,16 +1,10 @@
 "use client";
 
 /**
- * SpecProvider — the canvas-mode context.
- *
- * Canvas mode is gated by NEXT_PUBLIC_CANVAS_MODE at build time. When it
- * is not "true", canvas is OFF everywhere and cannot be turned on: no
- * toggle, no bar, no annotations, no empty slots — the page renders
- * exactly what a visitor would see.
- *
- * When canvas mode is available, the view (Spec vs Clean) is a runtime
- * choice persisted to localStorage. Spec view shows annotations and
- * empty slots; Clean view shows only visitor-facing content.
+ * Canvas-mode context. When CANVAS_ENABLED is false the view is locked to
+ * "clean" and no toggle renders. When enabled, Spec vs Clean is a runtime
+ * choice persisted to localStorage; the class is toggled on the .mkt root
+ * and scoped CSS hides annotations/stage markers/empty slots in clean view.
  */
 
 import {
@@ -20,32 +14,24 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { CANVAS_ENABLED } from "./canvas-mode";
+
+export { CANVAS_ENABLED };
 
 export type CanvasView = "spec" | "clean";
-
-/** Build-time gate. Only "true" enables canvas mode at all. */
-export const CANVAS_ENABLED =
-  process.env.NEXT_PUBLIC_CANVAS_MODE === "true";
-
 const STORAGE_KEY = "lp_canvas_view";
 
 interface SpecContextValue {
-  /** True only when canvas mode is enabled AND the user is in Spec view. */
-  spec: boolean;
   view: CanvasView;
   setView: (v: CanvasView) => void;
 }
 
 const SpecContext = createContext<SpecContextValue>({
-  spec: false,
   view: "clean",
   setView: () => {},
 });
 
 export function SpecProvider({ children }: { children: ReactNode }) {
-  // Default to Spec view when canvas is enabled (the brief's default),
-  // Clean otherwise. Read the persisted choice after mount to avoid
-  // hydration mismatch.
   const [view, setViewState] = useState<CanvasView>(
     CANVAS_ENABLED ? "spec" : "clean"
   );
@@ -61,10 +47,8 @@ export function SpecProvider({ children }: { children: ReactNode }) {
     if (CANVAS_ENABLED) window.localStorage.setItem(STORAGE_KEY, v);
   };
 
-  const spec = CANVAS_ENABLED && view === "spec";
-
   return (
-    <SpecContext.Provider value={{ spec, view, setView }}>
+    <SpecContext.Provider value={{ view, setView }}>
       {children}
     </SpecContext.Provider>
   );
