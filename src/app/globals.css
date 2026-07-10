@@ -15,6 +15,11 @@
   --color-mist: #f3f6fb;
   --color-cream: #ede8dc;
   --color-mute: #8fa3b1;
+  --color-line: #dce3e3;
+
+  /* markup layer — canvas annotations only, never used by production UI */
+  --color-mark: #b91c1c;
+  --color-mark-bg: #fef3f2;
 
   --color-background: #ffffff;
   --color-foreground: #0d1117;

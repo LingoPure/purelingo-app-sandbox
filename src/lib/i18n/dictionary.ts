@@ -194,6 +194,81 @@ const en: Dict = {
   "emp.loginField": "Access password",
   "emp.loginSubmit": "Sign in",
   "emp.loginSubmitting": "Signing in…",
+
+  // ── Marketing site (mkt.*) ──────────────────────────────────────────────
+  // Nav
+  "mkt.nav.method": "Method",
+  "mkt.nav.forCompanies": "For companies",
+  "mkt.nav.forIndividuals": "For individuals",
+  "mkt.nav.demo": "See the demo",
+  "mkt.nav.bookDemo": "Book a demo",
+  // 01 Hero (CTAs only; headline/subhead pending research)
+  "mkt.hero.ctaPrimary": "Book a free demo class",
+  "mkt.hero.ctaSecondary": "I'm looking for my team",
+  // 02 TrustBand (placeholder — validate)
+  "mkt.trust.caption": "Trusted by teams across Vietnam and Southeast Asia",
+  "mkt.trust.statValue": "1,200+",
+  "mkt.trust.statLabel": "learners assessed",
+  // 03 Problem (one illustrative verbatim; rest pending)
+  "mkt.problem.title": "The moment English costs you",
+  "mkt.problem.q1":
+    "In meetings with head office, our best engineer just goes quiet. It's not the work — it's the English.",
+  "mkt.problem.q1.attr": "Operations lead, manufacturing (illustrative)",
+  // 04 AudienceFork
+  "mkt.fork.title": "Where do you start?",
+  "mkt.fork.company.title": "For companies",
+  "mkt.fork.company.body":
+    "Assess a whole team, run cohorts, and prove the gap closing with audit-grade reporting.",
+  "mkt.fork.company.cta": "Explore for companies",
+  "mkt.fork.individual.title": "For individuals",
+  "mkt.fork.individual.body":
+    "Find your level, get a plan, and certify your business English at your own pace.",
+  "mkt.fork.individual.cta": "Explore for individuals",
+  // 05 HowItWorks
+  "mkt.how.title": "How it works",
+  "mkt.how.lead": "Three steps from unknown to measured.",
+  "mkt.how.step1.title": "Voice discovery",
+  "mkt.how.step1.body":
+    "A 20–35 minute conversational AI assessment surfaces each person's real fluency, role and target level — before a single class.",
+  "mkt.how.step2.title": "Live classes, embedded",
+  "mkt.how.step2.body":
+    "Virtual classrooms run inside LingoPure on ClassIn — no separate logins, full session analytics flow back.",
+  "mkt.how.step3.title": "Measured gap, closing",
+  "mkt.how.step3.body":
+    "A six-dimension gap score updates after every lesson and live class, with CEFR certification via TrackTest.",
+  // 06 ProofOfMethod (copy ready; image pending)
+  "mkt.proof.title": "Proof of method: the LP-18 report",
+  "mkt.proof.body":
+    "Every learner gets an LP-18 profile — eighteen sub-skills scored from their own voice, mapped to CEFR, with the evidence quoted back. It's the artifact a manager can act on.",
+  // 07 Outcomes (company confirm; individual pending)
+  "mkt.outcomes.title": "What changes",
+  "mkt.outcomes.company.title": "For companies",
+  "mkt.outcomes.company.item1":
+    "A baseline for every employee in weeks, not a vague 'intermediate'.",
+  "mkt.outcomes.company.item2":
+    "Cohort dashboards that show the gap closing, tied to roles.",
+  "mkt.outcomes.company.item3":
+    "CEFR certification you can put in a capability matrix.",
+  // 08 Testimonials (all pending — title only)
+  "mkt.testimonials.title": "What learners say",
+  // 09 Objections (questions drafted; answers pending)
+  "mkt.objections.title": "Questions you're probably asking",
+  "mkt.objections.q1": "How is this different from an English tutor or an app?",
+  "mkt.objections.q2": "Do our staff need to install anything?",
+  "mkt.objections.q3": "How do you measure progress objectively?",
+  "mkt.objections.q4": "What about data privacy for our employees?",
+  // 10 FinalCTA
+  "mkt.finalCta.title": "See your team's English gap — measured, in one class.",
+  "mkt.finalCta.body":
+    "Book a free demo class. We'll assess a few of your people and show you the LP-18 report.",
+  "mkt.finalCta.button": "Book a free demo class",
+  // Footer
+  "mkt.footer.tagline": "AI-first business English for Southeast Asia.",
+  "mkt.footer.method": "Method",
+  "mkt.footer.privacy": "Privacy",
+  "mkt.footer.terms": "Terms",
+  "mkt.footer.company": "Company",
+  "mkt.footer.rights": "© 2026 LingoPure · Strategic platform demo",
 };
 
 const vi: Dict = {
@@ -340,6 +415,69 @@ const vi: Dict = {
   "emp.loginField": "Mật khẩu truy cập",
   "emp.loginSubmit": "Đăng nhập",
   "emp.loginSubmitting": "Đang đăng nhập…",
+
+  // ── Marketing site (mkt.*) ──────────────────────────────────────────────
+  "mkt.nav.method": "Phương pháp",
+  "mkt.nav.forCompanies": "Cho doanh nghiệp",
+  "mkt.nav.forIndividuals": "Cho cá nhân",
+  "mkt.nav.demo": "Xem bản demo",
+  "mkt.nav.bookDemo": "Đặt lịch demo",
+  "mkt.hero.ctaPrimary": "Đặt lịch học thử miễn phí",
+  "mkt.hero.ctaSecondary": "Tôi đang tìm giải pháp cho đội ngũ",
+  "mkt.trust.caption": "Được các đội ngũ tại Việt Nam và Đông Nam Á tin dùng",
+  "mkt.trust.statValue": "1.200+",
+  "mkt.trust.statLabel": "học viên đã được đánh giá",
+  "mkt.problem.title": "Khoảnh khắc tiếng Anh khiến bạn trả giá",
+  "mkt.problem.q1":
+    "Trong các cuộc họp với trụ sở chính, kỹ sư giỏi nhất của chúng tôi chỉ im lặng. Không phải vì chuyên môn — mà vì tiếng Anh.",
+  "mkt.problem.q1.attr": "Trưởng phòng vận hành, sản xuất (minh họa)",
+  "mkt.fork.title": "Bạn bắt đầu từ đâu?",
+  "mkt.fork.company.title": "Cho doanh nghiệp",
+  "mkt.fork.company.body":
+    "Đánh giá cả đội ngũ, tổ chức theo nhóm, và chứng minh khoảng cách đang thu hẹp bằng báo cáo đạt chuẩn kiểm toán.",
+  "mkt.fork.company.cta": "Khám phá cho doanh nghiệp",
+  "mkt.fork.individual.title": "Cho cá nhân",
+  "mkt.fork.individual.body":
+    "Xác định trình độ, nhận lộ trình, và chứng nhận tiếng Anh thương mại theo nhịp độ của riêng bạn.",
+  "mkt.fork.individual.cta": "Khám phá cho cá nhân",
+  "mkt.how.title": "Cách thức hoạt động",
+  "mkt.how.lead": "Ba bước từ chưa rõ đến đo lường được.",
+  "mkt.how.step1.title": "Khám phá bằng giọng nói",
+  "mkt.how.step1.body":
+    "Bài đánh giá hội thoại bằng AI trong 20–35 phút làm rõ trình độ, vai trò và mục tiêu thực của từng người — trước cả buổi học đầu tiên.",
+  "mkt.how.step2.title": "Lớp học trực tiếp, tích hợp sẵn",
+  "mkt.how.step2.body":
+    "Lớp học ảo chạy ngay trong LingoPure trên ClassIn — không cần đăng nhập riêng, toàn bộ dữ liệu buổi học được ghi nhận.",
+  "mkt.how.step3.title": "Khoảng cách được đo, và thu hẹp",
+  "mkt.how.step3.body":
+    "Điểm khoảng cách sáu chiều cập nhật sau mỗi bài học và lớp trực tiếp, kèm chứng nhận CEFR qua TrackTest.",
+  "mkt.proof.title": "Bằng chứng phương pháp: báo cáo LP-18",
+  "mkt.proof.body":
+    "Mỗi học viên nhận một hồ sơ LP-18 — mười tám kỹ năng con được chấm điểm từ chính giọng nói của họ, ánh xạ sang CEFR, kèm dẫn chứng trích lại. Đây là tài liệu mà người quản lý có thể hành động dựa trên đó.",
+  "mkt.outcomes.title": "Điều gì thay đổi",
+  "mkt.outcomes.company.title": "Cho doanh nghiệp",
+  "mkt.outcomes.company.item1":
+    "Có mốc chuẩn cho mọi nhân viên trong vài tuần, không còn 'trung cấp' chung chung.",
+  "mkt.outcomes.company.item2":
+    "Bảng theo dõi theo nhóm cho thấy khoảng cách thu hẹp, gắn với từng vai trò.",
+  "mkt.outcomes.company.item3":
+    "Chứng nhận CEFR có thể đưa vào ma trận năng lực.",
+  "mkt.testimonials.title": "Học viên nói gì",
+  "mkt.objections.title": "Những câu hỏi bạn có thể đang thắc mắc",
+  "mkt.objections.q1": "Điều này khác gì so với gia sư tiếng Anh hay một ứng dụng?",
+  "mkt.objections.q2": "Nhân viên của chúng tôi có cần cài đặt gì không?",
+  "mkt.objections.q3": "Các bạn đo lường tiến bộ một cách khách quan như thế nào?",
+  "mkt.objections.q4": "Còn quyền riêng tư dữ liệu của nhân viên thì sao?",
+  "mkt.finalCta.title": "Nhìn thấy khoảng cách tiếng Anh của đội ngũ — được đo, trong một buổi học.",
+  "mkt.finalCta.body":
+    "Đặt lịch học thử miễn phí. Chúng tôi sẽ đánh giá một vài người của bạn và cho bạn xem báo cáo LP-18.",
+  "mkt.finalCta.button": "Đặt lịch học thử miễn phí",
+  "mkt.footer.tagline": "Tiếng Anh thương mại ưu tiên AI cho Đông Nam Á.",
+  "mkt.footer.method": "Phương pháp",
+  "mkt.footer.privacy": "Quyền riêng tư",
+  "mkt.footer.terms": "Điều khoản",
+  "mkt.footer.company": "Công ty",
+  "mkt.footer.rights": "© 2026 LingoPure · Bản demo nền tảng chiến lược",
 };
 
 // The remaining 4 languages translate the highest-impact public surface

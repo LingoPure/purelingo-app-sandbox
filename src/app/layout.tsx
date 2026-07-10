@@ -8,7 +8,11 @@ import { ConditionalDemoBanner } from "@/components/conditional-demo-banner";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
-  subsets: ["latin"],
+  // Body copy carries most Vietnamese text — load the vietnamese subset so
+  // diacritics render correctly. DM Serif Display / DM Mono have no
+  // vietnamese subset upstream, so VI headings/labels fall back to the
+  // serif/mono system fallback (flagged as a type decision).
+  subsets: ["latin", "vietnamese"],
   weight: ["300", "400", "500", "600", "700"],
 });
 
