@@ -11,22 +11,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // If Supabase env vars are missing the createClient() call throws — fall back
   // to a demo-mode header so the placeholder pages still render in dev.
   let user: { email?: string | null } | null = null;
+  let isEmployerAdmin = false;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const supabase = await createClient();
     const result = await supabase.auth.getUser();
     user = result.data.user;
     if (!user) redirect("/login");
+    const { loadEmployerAdmin } = await import("@/lib/employer/auth");
+    isEmployerAdmin = Boolean(await loadEmployerAdmin(supabase, result.data.user!.id));
   }
 
   const { lang, t } = await getDict();
   const returnTo = await getReturnTo();
 
-  // Standard authenticated nav — Dashboard, Lessons, Settings. Used by both the
-  // desktop SideNav (left rail) and the mobile drawer (MobileNav).
+  // Standard authenticated nav. "Voice discovery" surfaces the Aria onboarding
+  // (the core voice coach) from the chrome; "Employer console" appears only for
+  // users who are also an employer admin, so a dual-role user reaches both.
   const navItems: MobileNavItem[] = [
     { href: "/dashboard", label: t("nav.dashboard") },
+    { href: "/onboarding", label: "Voice discovery" },
     { href: "/lessons", label: t("nav.lessons") },
     { href: "/settings", label: "Settings" },
+    ...(isEmployerAdmin
+      ? [{ href: "/employer", label: "Employer console" }]
+      : []),
   ];
 
   const signOutForm = (
