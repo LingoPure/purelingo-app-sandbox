@@ -16,5 +16,9 @@ export function ConditionalSayFix({ repo }: { repo: string }) {
   const pathname = usePathname();
   if (pathname?.startsWith("/lci-bridge")) return null;
   if (pathname?.startsWith("/investor")) return null;
+  // Marketing pages are review/CEO-facing surfaces, not dev-bug-report ones —
+  // the dev feedback pill doesn't belong there.
+  const marketing = ["/for-companies", "/for-individuals", "/method", "/book-a-demo", "/company"];
+  if (pathname === "/" || marketing.some((p) => pathname?.startsWith(p))) return null;
   return <SayFixWidget repo={repo} />;
 }

@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   title: "LingoPure AI · Strategic Platform Demo",
   description:
     "Strategic platform demo for LingoPure: voice-led AI discovery, gap-scored micro-learning, employer cohort dashboards, and CEFR certification — wrapped around ClassIn. Not the production LingoPure service.",
-  robots: { index: false, follow: false },
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export default async function RootLayout({

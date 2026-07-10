@@ -46,9 +46,24 @@ export const home = {
 
   trust: {
     stage: "02 · Permission",
-    logos: ["Tradeland", "DatumHQ", "Client 03", "Client 04"],
-    statValue: "1,200+",
+    // Consent-gated: only logos with consent:true ever render. None hold
+    // written consent today, so the logo strip renders nothing. (Client 03/04
+    // deleted — lorem in a suit.)
+    logos: [
+      { name: "Tradeland", consent: false },
+      { name: "DatumHQ", consent: false },
+    ] as { name: string; consent: boolean }[],
+    // No invented number. A real, sourced figure goes here with a real value.
+    statValue: null as string | null,
     statLabel: "placement reports issued",
+    logosSlot: {
+      title: "Logo strip pending",
+      note: "Written usage consent required per client before any logo displays.",
+    } as Slot,
+    statSlot: {
+      title: "Stat pending",
+      note: "A real, defensible, sourced figure only — no placeholder number.",
+    } as Slot,
     anno: {
       status: "confirm",
       label: "Confirm before launch",
@@ -63,11 +78,13 @@ export const home = {
     anno: {
       status: "pending",
       label: "Evidence pending — do not write this from the pitch deck",
-      note: 'Three to four statements, in customer language, from research Q1 ("what were you trying to fix") and Q2 ("what had you already tried that didn\'t work"). If we write these ourselves they will be about communication friction and telemetry. Customers say things like the one below. The customer version sells.',
+      note: 'Quote 01 below is ILLUSTRATIVE and must be replaced with a real verbatim before launch. Quotes 02 and 03 await interviews (research Q1 "what were you trying to fix", Q2 "what had you already tried that didn\'t work"). If we write these ourselves they read as communication-friction/telemetry copy — the customer version sells.',
     } as Anno,
     quote: {
       text: "I can read English fine. I freeze the moment I have to speak in the meeting.",
-      cite: "Illustrative only — replace with real verbatim",
+      // Editorial caveat lives in the annotation, never in data. Null renders
+      // nothing (no empty <cite>, no dash) — nothing here leaks into clean view.
+      attribution: null as string | null,
     },
     slots: [
       {
@@ -144,7 +161,7 @@ export const home = {
       label: "Ready — our most under-used asset",
       note: "Anonymise a real LP-18 report and show it large. Show, don't claim. Most competitors in this market cannot produce anything like it, and it converts because it is free, specific, and obviously expensive to produce.",
     } as Anno,
-    eyebrow: "What you receive",
+    eyebrow: "Results",
     h2: 'We don\'t tell you you\'re "intermediate". We show you which eighteenth.',
     lede: "CEFR gives you six levels. That's too coarse to act on. LP-18 splits each level into three micro-bands and maps your communication signals against them — so the next class targets something specific instead of something general.",
     cta: { label: "See yours after one class", href: "/book-a-demo" },

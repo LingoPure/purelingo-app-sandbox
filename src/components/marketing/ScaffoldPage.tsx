@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Anno } from "./AnnotationLayer";
 import type { Annotation } from "@/content/types";
 
@@ -24,6 +25,12 @@ export function ScaffoldPage({
         <p className="lede" style={{ marginBottom: 26 }}>
           {intro}
         </p>
+        {/* A single CTA so a linked scaffold is never a dead end. */}
+        <div style={{ marginBottom: 26 }}>
+          <Link href="/book-a-demo" className="btn btn--lg">
+            Book a free demo class
+          </Link>
+        </div>
         <Anno annotation={annotation} status="pending" />
         <div style={{ marginTop: 8 }}>
           <Anno

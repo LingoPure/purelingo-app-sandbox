@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { home } from "@/content/home";
 import { Anno, Stage, EmptySlot } from "@/components/marketing/AnnotationLayer";
+import { SectionGate, SpecOnly } from "@/components/marketing/CanvasGates";
 
 /**
  * Marketing homepage — the ten-stage sales flow, ported from
@@ -36,24 +37,42 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      {/* 02 — TRUST */}
-      <section className="trust">
-        <Stage>{trust.stage}</Stage>
-        <div className="wrap trustin">
-          <div className="logos">
-            {trust.logos.map((l) => (
-              <span key={l}>{l}</span>
-            ))}
+      {/* 02 — TRUST (empty today: no consented logos, no sourced stat →
+          absent from clean-view DOM via SectionGate) */}
+      <SectionGate fill="empty">
+        <section className="trust">
+          <Stage>{trust.stage}</Stage>
+          <div className="wrap trustin">
+            {(() => {
+              const consented = trust.logos.filter((l) => l.consent);
+              return consented.length > 0 ? (
+                <div className="logos">
+                  {consented.map((l) => (
+                    <span key={l.name}>{l.name}</span>
+                  ))}
+                </div>
+              ) : (
+                <EmptySlot title={trust.logosSlot.title}>
+                  {trust.logosSlot.note}
+                </EmptySlot>
+              );
+            })()}
+            {trust.statValue ? (
+              <div className="stat">
+                <b>{trust.statValue}</b>
+                {trust.statLabel}
+              </div>
+            ) : (
+              <EmptySlot title={trust.statSlot.title}>
+                {trust.statSlot.note}
+              </EmptySlot>
+            )}
           </div>
-          <div className="stat">
-            <b>{trust.statValue}</b>
-            {trust.statLabel}
-          </div>
+        </section>
+        <div className="wrap" style={{ paddingTop: 18 }}>
+          <Anno annotation={trust.anno} status={trust.anno.status} />
         </div>
-      </section>
-      <div className="wrap" style={{ paddingTop: 18 }}>
-        <Anno annotation={trust.anno} status={trust.anno.status} />
-      </div>
+      </SectionGate>
 
       {/* 03 — PROBLEM */}
       <section id="problem" className="tight" style={{ paddingTop: 56 }}>
@@ -65,7 +84,9 @@ export default function MarketingHome() {
           <div className="problems">
             <blockquote className="problem">
               &ldquo;{problem.quote.text}&rdquo;
-              <cite>{problem.quote.cite}</cite>
+              {problem.quote.attribution ? (
+                <cite>{problem.quote.attribution}</cite>
+              ) : null}
             </blockquote>
             {problem.slots.map((s) => (
               <EmptySlot key={s.title} title={s.title}>
@@ -134,11 +155,13 @@ export default function MarketingHome() {
                 {proof.cta.label}
               </Link>
             </div>
-            <div className="reportframe">
-              <EmptySlot title={proof.slot.title} plain>
-                {proof.slot.note}
-              </EmptySlot>
-            </div>
+            <SpecOnly>
+              <div className="reportframe">
+                <EmptySlot title={proof.slot.title} plain>
+                  {proof.slot.note}
+                </EmptySlot>
+              </div>
+            </SpecOnly>
           </div>
         </div>
       </section>
@@ -162,52 +185,60 @@ export default function MarketingHome() {
                 ))}
               </ul>
             </div>
-            <div className="outcol">
-              <h3>{outcomes.individual.h3}</h3>
-              <EmptySlot title={outcomes.individual.slot.title}>
-                {outcomes.individual.slot.note}
-              </EmptySlot>
+            <SpecOnly>
+              <div className="outcol">
+                <h3>{outcomes.individual.h3}</h3>
+                <EmptySlot title={outcomes.individual.slot.title}>
+                  {outcomes.individual.slot.note}
+                </EmptySlot>
+              </div>
+            </SpecOnly>
+          </div>
+        </div>
+      </section>
+
+      {/* 08 — TESTIMONIALS (empty: three pending slots → absent from clean) */}
+      <SectionGate fill="empty">
+        <section style={{ borderTop: "1px solid var(--line)" }}>
+          <Stage>{testimonials.stage}</Stage>
+          <div className="wrap">
+            <Anno annotation={testimonials.anno} status={testimonials.anno.status} />
+            <p className="eyebrow">{testimonials.eyebrow}</p>
+            <h2 style={{ marginBottom: 40 }}>{testimonials.h2}</h2>
+            <div className="tgrid">
+              {testimonials.slots.map((s) => (
+                <EmptySlot key={s.title} title={s.title}>
+                  {s.note}
+                </EmptySlot>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </SectionGate>
 
-      {/* 08 — TESTIMONIALS */}
-      <section style={{ borderTop: "1px solid var(--line)" }}>
-        <Stage>{testimonials.stage}</Stage>
-        <div className="wrap">
-          <Anno annotation={testimonials.anno} status={testimonials.anno.status} />
-          <p className="eyebrow">{testimonials.eyebrow}</p>
-          <h2 style={{ marginBottom: 40 }}>{testimonials.h2}</h2>
-          <div className="tgrid">
-            {testimonials.slots.map((s) => (
-              <EmptySlot key={s.title} title={s.title}>
-                {s.note}
-              </EmptySlot>
-            ))}
+      {/* 09 — OBJECTIONS (empty: six questions, zero answers → absent from
+          clean. Six rows opening into nothing is a broken interaction, not an
+          unfinished section. Do NOT ship placeholder answers.) */}
+      <SectionGate fill="empty">
+        <section style={{ background: "var(--teal-soft)" }}>
+          <Stage>{objections.stage}</Stage>
+          <div className="wrap">
+            <Anno annotation={objections.anno} status={objections.anno.status} />
+            <p className="eyebrow">{objections.eyebrow}</p>
+            <h2 style={{ marginBottom: 38 }}>{objections.h2}</h2>
+            <div className="faq">
+              {objections.faqs.map((f) => (
+                <details key={f.q} open={"open" in f ? Boolean(f.open) : undefined}>
+                  <summary>{f.q}</summary>
+                  <div className="body">
+                    <EmptySlot title={f.answer.title}>{f.answer.note}</EmptySlot>
+                  </div>
+                </details>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* 09 — OBJECTIONS */}
-      <section style={{ background: "var(--teal-soft)" }}>
-        <Stage>{objections.stage}</Stage>
-        <div className="wrap">
-          <Anno annotation={objections.anno} status={objections.anno.status} />
-          <p className="eyebrow">{objections.eyebrow}</p>
-          <h2 style={{ marginBottom: 38 }}>{objections.h2}</h2>
-          <div className="faq">
-            {objections.faqs.map((f) => (
-              <details key={f.q} open={"open" in f ? Boolean(f.open) : undefined}>
-                <summary>{f.q}</summary>
-                <div className="body">
-                  <EmptySlot title={f.answer.title}>{f.answer.note}</EmptySlot>
-                </div>
-              </details>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      </SectionGate>
 
       {/* 10 — FINAL */}
       <section id="final" className="final">

@@ -60,6 +60,10 @@
 .mkt.clean .anno { display: none; }
 .mkt.clean .stage { display: none; }
 .mkt.clean .slot--empty { display: none; }
+/* Partial sections collapse to one column in clean view when their second
+   column is Spec-only (no reserved empty column beside the filled content). */
+.mkt.clean .proofgrid { grid-template-columns: 1fr; }
+.mkt.clean .outcomes { grid-template-columns: 1fr; }
 
 /* stage marker — spine of the argument */
 .mkt .stage {
