@@ -1,33 +1,25 @@
 /**
- * Tier-filtered RAG retrieval over the investor dataroom.
- *
- * The chunks table + the match_dataroom_chunks RPC are RLS-protected and
- * EXECUTE-granted to service_role only, so retrieval always runs through the
- * service-role client AFTER the route has resolved the caller's allowed tiers.
- * The tier filter lives inside the SECURITY DEFINER RPC — passing the wrong
- * tiers here can only ever narrow, never widen, what a caller is entitled to,
+ * Tier-filtered RAG retrieval over the investor dataroom — the INJECTED retriever
+ * that @caistech/dataroom-core's engine calls. The chunks table + the
+ * match_dataroom_chunks RPC are RLS-protected and EXECUTE-granted to service_role
+ * only, so retrieval runs through the service-role client AFTER the route has
+ * resolved the caller's allowed tiers. The tier filter lives inside the SECURITY
+ * DEFINER RPC — passing the wrong tiers here can only narrow, never widen access,
  * and the route derives the tiers from the server-side investor row.
  *
- * Reused by the Q&A agent (Phase 2) and the report generator (Phase 4).
+ * The embedding + RPC wiring is LingoPure's; the RetrievedChunk shape + the
+ * downstream answer/report orchestration are the package's.
  */
 
 import OpenAI from "openai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Tier } from "@/lib/investor/auth";
+import type { RetrievedChunk, Retriever } from "@caistech/dataroom-core";
+
+export type { RetrievedChunk };
 
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL ?? "text-embedding-3-large";
 const EMBEDDING_DIMS = 1536; // must match the vector(1536) column in migration 0020
-
-export type RetrievedChunk = {
-  chunkId: string;
-  documentId: string;
-  displayName: string;
-  page: number | null;
-  content: string;
-  isVisionCaption: boolean;
-  tier: Tier;
-  similarity: number;
-};
 
 type RpcRow = {
   chunk_id: string;
@@ -52,11 +44,11 @@ export async function embedQuery(text: string): Promise<number[]> {
   return r.data[0].embedding;
 }
 
-export async function retrieveChunks(
-  query: string,
-  allowedTiers: Tier[],
-  matchCount = 12
-): Promise<RetrievedChunk[]> {
+/**
+ * The @caistech/dataroom-core Retriever: embed the query, then call the
+ * tier-filtered SECURITY DEFINER RPC. This is the seam the engine is wired to.
+ */
+export const retrieve: Retriever = async (query, allowedTiers, matchCount) => {
   const embedding = await embedQuery(query);
   const svc = createAdminClient();
   const { data, error } = await svc.rpc("match_dataroom_chunks", {
@@ -76,4 +68,13 @@ export async function retrieveChunks(
     tier: r.confidentiality_tier,
     similarity: r.similarity,
   }));
+};
+
+/** Back-compat wrapper preserving the original name/signature (Tier[] + default 12). */
+export function retrieveChunks(
+  query: string,
+  allowedTiers: Tier[],
+  matchCount = 12
+): Promise<RetrievedChunk[]> {
+  return retrieve(query, allowedTiers, matchCount);
 }

@@ -1,12 +1,21 @@
-// The investor ReportSpec (Zod) + capability manifest — the single contract the
-// discovery agent (Morgan), the building-block form, and the executor all share.
-// Ported from F2K's reports/query-spec.ts pattern, but LingoPure reports are
-// NARRATIVE-over-RAG (sections synthesised from the dataroom), not SQL queries.
+// The investor ReportSpec + capability manifest — LingoPure's report CATALOGUE,
+// built on @caistech/dataroom-core's generic report contract. The schema shape,
+// title strategy, and manifest builder come from the package; the report types +
+// capabilities (the product content) live here and are injected into the engine.
 //
 // Tier is NOT part of the spec — the run route derives allowed tiers from the
 // investor's server-side max_tier (the NDA gate), so a client can never widen scope.
 
-import { z } from "zod";
+import {
+  makeReportSpecSchema,
+  makeDefaultTitleFor,
+  capabilityFor as capabilityForCore,
+  capabilityManifestForLLM as capabilityManifestForLLMCore,
+  type ReportCapability,
+  type ReportSpec as CoreReportSpec,
+} from "@caistech/dataroom-core";
+
+export type { ReportCapability };
 
 export const REPORT_TYPES = [
   "investment_memo",
@@ -20,22 +29,12 @@ export const REPORT_TYPES = [
 ] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
-export const ReportSpecSchema = z.object({
-  reportType: z.enum(REPORT_TYPES),
-  title: z.string().min(2).max(200).nullable().default(null),
-  /** Free-text focus for dd_summary / custom (e.g. "the DatumHQ contract"). */
-  topic: z.string().max(300).nullable().default(null),
-  sections: z.array(z.string().min(2).max(140)).min(1).max(12),
-  format: z.enum(["pdf", "markdown"]).default("pdf"),
-});
-export type ReportSpec = z.infer<typeof ReportSpecSchema>;
-
-export interface ReportCapability {
-  key: ReportType;
-  label: string;
-  defaultSections: string[];
-  draws: string;
-}
+export const ReportSpecSchema = makeReportSpecSchema(REPORT_TYPES);
+// Typed structurally from the package's contract (narrowing reportType to the
+// LingoPure catalogue), NOT via z.infer — the consumer's zod and the package's
+// zod can differ across the module boundary, which would collapse z.infer to
+// `unknown`.
+export type ReportSpec = Omit<CoreReportSpec, "reportType"> & { reportType: ReportType };
 
 export const REPORT_CAPABILITIES: ReportCapability[] = [
   {
@@ -89,24 +88,20 @@ export const REPORT_CAPABILITIES: ReportCapability[] = [
 ];
 
 export function capabilityFor(type: ReportType): ReportCapability {
-  return REPORT_CAPABILITIES.find((c) => c.key === type) ?? REPORT_CAPABILITIES[0];
+  return capabilityForCore(REPORT_CAPABILITIES, type);
 }
 
-export function defaultTitleFor(spec: ReportSpec): string {
-  if (spec.title) return spec.title;
-  const cap = capabilityFor(spec.reportType);
-  const base = `LingoPure — ${cap.label}`;
-  return spec.topic ? `${base}: ${spec.topic}` : base;
-}
+// Typed against the package's (wide) ReportSpec so it satisfies ReportConfig.titleFor;
+// callers passing the narrower LingoPure ReportSpec are still assignable.
+export const defaultTitleFor: (spec: CoreReportSpec) => string = makeDefaultTitleFor(
+  REPORT_CAPABILITIES,
+  "LingoPure —"
+);
 
 /** Compact manifest the discovery agent reads to compose within the real report types. */
 export function capabilityManifestForLLM(): string {
-  const lines = ["REPORT TYPES (compose within these; default sections shown, editable):"];
-  for (const c of REPORT_CAPABILITIES) {
-    lines.push(`- ${c.key}: ${c.label} — sections: ${c.defaultSections.join(" / ")} — draws on ${c.draws}.`);
-  }
-  lines.push(
-    "Every section is synthesised ONLY from the dataroom; a section with no coverage is marked \"Not covered in the available dataroom\" (never faked)."
+  return capabilityManifestForLLMCore(
+    REPORT_CAPABILITIES,
+    'Every section is synthesised ONLY from the dataroom; a section with no coverage is marked "Not covered in the available dataroom" (never faked).'
   );
-  return lines.join("\n");
 }
