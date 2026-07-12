@@ -1,4 +1,6 @@
 import "./marketing.css";
+import { AgentJsonLd } from "@caistech/webmcp-kit/react";
+import { agentConfig } from "@/agent-readiness.config";
 import { SpecProvider } from "@/components/marketing/SpecProvider";
 import { MktShell } from "@/components/marketing/CanvasChrome";
 import { Nav } from "@/components/marketing/Nav";
@@ -16,6 +18,7 @@ export default function MarketingLayout({
 }) {
   return (
     <SpecProvider>
+      <AgentJsonLd config={agentConfig} />
       <MktShell>
         <Nav />
         {children}
