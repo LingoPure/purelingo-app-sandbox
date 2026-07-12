@@ -17,11 +17,13 @@ export function AskMode({
   voiceAgentId,
   userId,
   welcomeBack,
+  sessionPrompt,
   returning,
 }: {
   voiceAgentId: string;
   userId: string;
   welcomeBack: string | null;
+  sessionPrompt: string | null;
   returning: boolean;
 }) {
   const [mode, setMode] = useState<Mode>("choose");
@@ -55,6 +57,7 @@ export function AskMode({
           agentId={voiceAgentId}
           userId={userId}
           welcomeBack={welcomeBack}
+          sessionPrompt={sessionPrompt}
         />
       </div>
     );

@@ -6,6 +6,7 @@ import {
   INVESTOR_MORGAN_AGENT_ID,
   loadVoiceRecall,
   buildWelcomeBackMessage,
+  buildMorganSessionPrompt,
 } from "@/lib/investor/voice-morgan";
 import { AskMode } from "./ask-mode";
 
@@ -24,13 +25,17 @@ export default async function InvestorAskPage() {
       ? "the full dataroom, including the deep-dive board materials"
       : "the main dataroom";
 
-  // Voice Morgan recall (welcome-back) — computed server-side from prior calls.
-  // Degrade-don't-fake: no agent / no history → fresh greeting.
+  // Voice Morgan recall — computed server-side from prior calls. The welcome-back
+  // is the opener; the session prompt carries what she remembers (thesis /
+  // concerns / follow-ups) so she picks up naturally mid-call, not just in the
+  // greeting. Degrade-don't-fake: no agent / no history → fresh, base greeting.
   let welcomeBack: string | null = null;
+  let sessionPrompt: string | null = null;
   let returning = false;
   if (user && investor && INVESTOR_MORGAN_AGENT_ID) {
     const recall = await loadVoiceRecall(createAdminClient(), user.id);
     welcomeBack = buildWelcomeBackMessage(recall);
+    sessionPrompt = buildMorganSessionPrompt(recall);
     returning = recall.hasHistory;
   }
 
@@ -52,6 +57,7 @@ export default async function InvestorAskPage() {
         voiceAgentId={INVESTOR_MORGAN_AGENT_ID}
         userId={user?.id ?? ""}
         welcomeBack={welcomeBack}
+        sessionPrompt={sessionPrompt}
         returning={returning}
       />
     </div>

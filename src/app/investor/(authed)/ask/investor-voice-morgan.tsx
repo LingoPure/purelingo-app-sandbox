@@ -35,10 +35,12 @@ export function InvestorVoiceMorgan({
   agentId,
   userId,
   welcomeBack,
+  sessionPrompt,
 }: {
   agentId: string;
   userId: string;
   welcomeBack: string | null;
+  sessionPrompt: string | null;
 }) {
   // Investor questions captured from the live call (their spoken turns) become
   // one-tap candidates; the full transcript feeds the report generator.
@@ -209,7 +211,18 @@ export function InvestorVoiceMorgan({
           coachName="Morgan"
           title="Talk it through with Morgan. Tell her, in your own words, what you're evaluating — she helps you turn a broad interest into a specific question. When you've shaped it, send it to the analyst below for a cited answer, open the source documents, or generate a report."
           overrides={
-            welcomeBack ? { agent: { firstMessage: welcomeBack } } : undefined
+            welcomeBack || sessionPrompt
+              ? {
+                  agent: {
+                    // Returning-investor recall: the composed prompt (base persona
+                    // + what Morgan remembers about this investor) and a welcome-
+                    // back opener. Both are omitted for a first-timer, leaving the
+                    // provisioned base prompt + default greeting untouched.
+                    ...(sessionPrompt ? { prompt: { prompt: sessionPrompt } } : {}),
+                    ...(welcomeBack ? { firstMessage: welcomeBack } : {}),
+                  },
+                }
+              : undefined
           }
           onMessage={captureTurn}
           onConnect={(conversationId) => {
