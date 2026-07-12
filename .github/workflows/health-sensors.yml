@@ -1,0 +1,83 @@
+# Operations & Maintenance — Health Sensors
+#
+# Scheduled runtime health check against the live site, catching issues CI can't
+# (dead routes, missing env vars, DB/RLS down) before operators or users notice.
+#
+# LingoPure HAS user-facing auth (/login, /signup, /forgot-password), so the
+# auth smoke runs here (verified 8/8 live). The session (authenticated-route)
+# smoke is intentionally omitted until the QA_TEST_USER_* Actions secrets and a
+# real session.config.json are wired — the shipped session.config.json is still
+# an uncustomised template stub, so running it would be meaningless.
+
+name: health-sensors
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      TEST_BASE_URL: ${{ vars.PORTFOLIO_GATE_PREVIEW_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Detect package manager so setup-node's cache key + the install step use
+      # the right tooling (mirrors gate.yml).
+      - name: Detect package manager
+        id: detect-pm
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            echo "pm=pnpm" >> $GITHUB_OUTPUT
+          else
+            echo "pm=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup pnpm
+        if: steps.detect-pm.outputs.pm == 'pnpm'
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      # Node with @caistech GitHub Packages registry auth — this is what was
+      # missing: without it, `npx --no-install portfolio-gate-smoke-*` finds no
+      # local bin and falls back to the public registry, which 404s.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: ${{ steps.detect-pm.outputs.pm }}
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@caistech'
+
+      - name: Install dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack enable
+            pnpm install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.CAISTECH_PACKAGES_TOKEN }}
+
+      - name: Auth smoke test
+        run: |
+          npx --no-install portfolio-gate-smoke-auth \
+            --config auth.config.json \
+            --base-url "$TEST_BASE_URL"
+
+      - name: Route smoke test
+        run: |
+          npx --no-install portfolio-gate-smoke-routes \
+            --config routes.config.json \
+            --base-url "$TEST_BASE_URL"
