@@ -1,0 +1,44 @@
+version: 2
+
+# Delivery path for the @caistech shared substrate.
+#
+# Why this exists: until 2026-07-26 there was none. A fix published to a @caistech package reached
+# consumers only when someone bumped them by hand, from one machine, using a script with a hardcoded
+# and stale repo list. The cost was measured: a fail-closed fix for a live auth hole sat documented
+# for weeks because "ship the package" and "reach the fleet" were different jobs and only the first
+# had a mechanism.
+#
+# SCOPE IS DELIBERATELY NARROW. `allow` restricts this to @caistech/* — the substrate we publish and
+# must be able to propagate. Opening PRs for the whole npm tree across ~20 products would bury the
+# signal under upgrades nobody asked for, and a noisy bot is a bot that gets turned off.
+#
+# The registry token is a DEPENDABOT secret, not an Actions secret — dependabot.yml cannot read
+# Actions secrets, and getting that wrong fails every PR with an unauthenticated 401 that reads like
+# a scope problem. It is set org-wide on caistech, and per-repo on the dennissolver repos.
+registries:
+  caistech:
+    type: npm-registry
+    url: https://npm.pkg.github.com
+    token: ${{secrets.CAISTECH_PACKAGES_TOKEN}}
+
+updates:
+  - package-ecosystem: "npm" # also covers pnpm lockfiles
+    directory: "/"
+    registries:
+      - caistech
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    allow:
+      - dependency-name: "@caistech/*"
+    # One PR for all substrate bumps, not one per package — a single weekly review, and the packages
+    # move together anyway because they are versioned together.
+    groups:
+      caistech-shared:
+        patterns:
+          - "@caistech/*"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
