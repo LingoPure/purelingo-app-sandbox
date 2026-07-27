@@ -123,6 +123,27 @@ jobs:
       #   CONVAI_TOOL_SECRET                  if the webhook routes are secret-guarded
       #   NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY   for sentinel cleanup
       # and a memory-loop.config.json naming the webhook path, memory table and tool-secret header.
+      # Does the middleware matcher silently swallow the routes MACHINES call?
+      #
+      # A session-refresh middleware redirects anything without a session, and a Next matcher
+      # normally runs on everything — so a vendor webhook or cron route is 307'd to /login unless
+      # it was explicitly excluded. A redirect is not an error: nothing throws, nothing logs, and
+      # the feature simply never runs. ExecutorAI lost the same feature to this twice in one day.
+      #
+      # Mark such a route `@machine-callable` in a comment; this fails if the matcher still
+      # captures it. Skips cleanly where there is no middleware or nothing is marked.
+      - name: Machine-callable routes survive the middleware matcher
+        run: |
+          # Resolve from node_modules directly, never a bare npx — `npx --no-install` has queried
+          # the PUBLIC registry for an unscoped name, 404'd, and turned an intended skip into a
+          # hard failure across the fleet.
+          BIN=node_modules/.bin/portfolio-gate-audit-machine-routes
+          if [ ! -x "$BIN" ]; then
+            echo "::warning title=Machine-callable routes NOT audited::@caistech/portfolio-gate in this repo predates the machine-routes audit (needs >=0.10.0). Webhook and cron routes are not being checked against the middleware matcher here. Bump the dependency to enable it."
+            exit 0
+          fi
+          "$BIN"
+
       - name: Voice memory-loop gate (skips where there is no voice agent)
         env:
           MEMORY_LOOP_UID: ${{ secrets.QA_TEST_USER_ID }}
