@@ -1,0 +1,5 @@
+{
+  "_doc": "Post-call leg ONLY: /api/convai/webhook calls handlePostCallWebhook + distillConversationToMemory into the canonical convai_* tables. There are no recall_memory / save_memory / start_conversation tool routes, so the canonical mid-call round-trip the runtime probe asserts does not exist here and probing it would report a false failure. The distil wiring is covered by the STATIC audit (portfolio-gate-audit-voice-memory). Revisit if the agent gains mid-call memory tools.",
+  "memoryLoop": false,
+  "webhookPath": "/api/convai/webhook"
+}
