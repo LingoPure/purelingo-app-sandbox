@@ -18,10 +18,10 @@ export const metadata = {
  * at login rather than at an empty HR page. This is a convenience, not the
  * security boundary: RLS is, and it holds even if this check were removed.
  *
- * Nav lists ONLY surfaces that exist today. Leave requests, the team calendar,
- * approvals and public holidays arrive with later issues and will be added as
- * they land. A nav item pointing at a 404 reads as broken software, and the
- * user cannot tell that apart from "not built yet".
+ * Nav lists ONLY surfaces that exist today — a nav item pointing at a 404 reads
+ * as broken software, and the user cannot tell that apart from "not built yet".
+ * The team calendar and public-holiday management arrive with #7 and get their
+ * entries then.
  */
 
 const ROLE_LABELS: Record<HrRole, string> = {
@@ -32,6 +32,8 @@ const ROLE_LABELS: Record<HrRole, string> = {
 
 const NAV_ITEMS: HrNavItem[] = [
   { href: "/hr", label: "Overview" },
+  { href: "/hr/requests", label: "My leave" },
+  { href: "/hr/approvals", label: "Approvals", roles: ["super_admin", "admin"] },
   { href: "/hr/team", label: "Team members", roles: ["super_admin"] },
 ];
 

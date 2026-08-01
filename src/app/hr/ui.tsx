@@ -142,6 +142,35 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
+export function RequestStatusPill({ status }: { status: string }) {
+  const tone: Record<string, string> = {
+    pending: "bg-gold/15 text-gold",
+    approved: "bg-ai-green/10 text-ai-green",
+    declined: "bg-coral/10 text-coral",
+    cancelled: "bg-mute/15 text-mute",
+  };
+  const label: Record<string, string> = {
+    pending: "Awaiting decision",
+    approved: "Approved",
+    declined: "Declined",
+    cancelled: "Cancelled",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+        tone[status] ?? "bg-mute/15 text-mute"
+      }`}
+    >
+      {label[status] ?? status}
+    </span>
+  );
+}
+
+/** A date range, collapsed to one date when both ends match. */
+export function DateRange({ from, to }: { from: string; to: string }) {
+  return <span>{from === to ? from : `${from} → ${to}`}</span>;
+}
+
 export function RolePill({ role }: { role: string }) {
   const label: Record<string, string> = {
     super_admin: "Super Admin",
