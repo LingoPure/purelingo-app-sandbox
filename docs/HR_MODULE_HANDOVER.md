@@ -122,13 +122,19 @@ depends on it.
 
 ## 5. Wiring into the host app
 
-Two host-app edits, both outside the module:
+Three host-app edits, all outside the module:
 
 1. **Route protection.** Add `/hr` to whatever the destination uses for
    session-gated prefixes. In this repo that is `PROTECTED_PREFIXES` in
    `src/lib/supabase/middleware.ts`. Without it, a missing Supabase env renders
    a page that then talks to a null client.
-2. **The cron.** Register `/api/hr/cron/holiday-notice` on a daily schedule. In
+2. **Post-login routing.** `src/app/(auth)/login/actions.ts` sends a signed-in
+   user who resolves to an HR employee to `/hr` instead of the host's default
+   destination. LingoPure staff are not learners; without it, every sign-in
+   after the invitation strands them somewhere meaningless. **On the destination
+   subdomain this branch should be deleted** — there, `/login` lands on `/hr`
+   unconditionally.
+3. **The cron.** Register `/api/hr/cron/holiday-notice` on a daily schedule. In
    this repo that is `vercel.json`. ⚠️ **The route must be excluded from any
    session-refresh middleware.** A middleware redirect on a cron route is not an
    error — nothing throws, nothing logs, the caller follows the 307 to a login

@@ -85,8 +85,31 @@ export async function login(formData: FormData) {
   // wins, e.g. from a magic link). Employer admins reach their console via the
   // "Employer console" nav item — so a dual-role / sandbox user experiences the
   // full learner flow first instead of being bounced to /employer.
-  const target =
+  //
+  // HR is the exception, and it is a different KIND of user rather than a
+  // different role. LingoPure's own staff are not learners: the learner
+  // dashboard is a dead end for them, and nothing in the product chrome links
+  // to /hr. Their invitation email carries `next=/hr`, so the first sign-in is
+  // fine — every one after it would strand them.
+  //
+  // HOST-APP MOUNT POINT. The HR module is destined for its own subdomain
+  // (docs/HR_MODULE_HANDOVER.md §5), where /login should land on /hr
+  // unconditionally and this branch disappears. Recorded there as the third
+  // host-app edit alongside the middleware prefix and the cron registration.
+  let target =
     redirectToRaw && redirectToRaw.startsWith("/") ? redirectToRaw : "/dashboard";
+
+  if (target === "/dashboard") {
+    // Deliberately swallows its own failure. A lookup problem here must send
+    // the user to the learner dashboard, not to an error page — being in the
+    // wrong place is recoverable, being unable to sign in is not.
+    try {
+      const { data: hrEmployeeId } = await supabase.rpc("hr_current_employee");
+      if (hrEmployeeId) target = "/hr";
+    } catch {
+      // fall through to /dashboard
+    }
+  }
 
   revalidatePath("/", "layout");
   redirect(target);

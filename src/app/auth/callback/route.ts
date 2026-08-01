@@ -42,6 +42,26 @@ export async function GET(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return "/dashboard";
+
+    // HR is checked FIRST, and it is a different kind of user rather than a
+    // competing role. LingoPure's own staff are not learners and not employer
+    // admins — the learner dashboard is a dead end for them and nothing in the
+    // product chrome links to /hr.
+    //
+    // This is also the only place the magic-link path can make the decision:
+    // the sign-in request knows an email but not an identity, and looking the
+    // address up there would leak whether it belongs to staff. Here the session
+    // exists, so the question is answerable without telling anyone anything.
+    //
+    // Swallows its own failure on purpose — a lookup problem must land the user
+    // somewhere, not on an error page.
+    try {
+      const { data: hrEmployeeId } = await supabase.rpc("hr_current_employee");
+      if (hrEmployeeId) return "/hr";
+    } catch {
+      // fall through to the existing destinations
+    }
+
     const admin = await loadEmployerAdmin(supabase, user.id);
     return admin ? "/employer" : "/dashboard";
   }
