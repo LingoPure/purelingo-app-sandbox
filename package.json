@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "check:content": "node scripts/check-content-claims.mjs",
+    "check:hr": "node scripts/check-hr-portability.mjs",
+    "test:hr": "tsx --test tests/hr/*.test.ts",
+    "test:hr:db": "bash scripts/hr-db-verify.sh",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
