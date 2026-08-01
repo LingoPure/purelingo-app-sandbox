@@ -4,14 +4,36 @@ import { getHrIdentity } from "@/lib/hr/auth";
 import { getTeamCalendar, monthBounds, shiftMonth, type CalendarDay } from "@/lib/hr/calendar";
 import { getOrgTimezone } from "@/lib/hr/policy";
 import { todayInTimeZone, isDateOnly, isoDayOfWeek } from "@/lib/hr/dates";
+import { getHrI18n, type HrLocale, type HrTranslate } from "@/lib/hr/i18n";
 import { PageHeader, Panel, EmptyState } from "../ui";
 
 export const metadata = { title: "Team calendar · LingoPure People" };
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+/**
+ * Month and weekday names.
+ *
+ * Not dictionary keys. Twenty-four entries that are pure data would bloat the
+ * dictionary without ever varying by context, and Vietnamese month names are
+ * regular ("Tháng 1" … "Tháng 12") so they are generated rather than listed.
+ */
+function monthNames(locale: HrLocale): string[] {
+  if (locale === "vi") {
+    return Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`);
+  }
+  return [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+}
+
+function weekdayNames(locale: HrLocale): string[] {
+  // ISO order: Monday first, matching hr_org_policy.working_days. Vietnamese
+  // counts weekdays from Sunday as "Chủ nhật", then "Thứ hai" (second day) for
+  // Monday — so the abbreviations are T2..T7 with CN for Sunday.
+  return locale === "vi"
+    ? ["T2", "T3", "T4", "T5", "T6", "T7", "CN"]
+    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+}
 
 /**
  * Who is away, and when.
@@ -32,7 +54,10 @@ export default async function CalendarPage({
   const identity = await getHrIdentity();
   if (!identity) redirect("/login?next=/hr/calendar");
 
-  const timezone = await getOrgTimezone(identity.orgId);
+  const [timezone, { t, locale }] = await Promise.all([
+    getOrgTimezone(identity.orgId),
+    getHrI18n(),
+  ]);
   const today = todayInTimeZone(timezone);
 
   const { month } = await searchParams;
@@ -41,7 +66,8 @@ export default async function CalendarPage({
 
   const days = await getTeamCalendar(from, to);
   const [year, monthIndex] = anchor.split("-").map(Number);
-  const monthLabel = `${MONTHS[monthIndex - 1]} ${year}`;
+  const months = monthNames(locale);
+  const monthLabel = `${months[monthIndex - 1]} ${year}`;
 
   const prev = shiftMonth(anchor, -1).slice(0, 7);
   const next = shiftMonth(anchor, 1).slice(0, 7);
@@ -49,28 +75,24 @@ export default async function CalendarPage({
 
   return (
     <>
-      <PageHeader title="Team calendar">
-        Who is unavailable, and when. Public holidays and company closures are
-        shown too. Leave reasons stay private to the person and their manager —
-        this page only shows that someone is away.
-      </PageHeader>
+      <PageHeader title={t("calendar.title")}>{t("calendar.intro")}</PageHeader>
 
       <nav
-        aria-label="Change month"
+        aria-label={t("calendar.changeMonth")}
         className="mb-6 flex items-center justify-between gap-3"
       >
         <Link
           href={`/hr/calendar?month=${prev}`}
           className="inline-flex min-h-[44px] items-center rounded-md border border-line bg-paper px-4 text-sm font-medium text-navy hover:bg-mist"
         >
-          ← {MONTHS[(monthIndex + 10) % 12]}
+          ← {months[(monthIndex + 10) % 12]}
         </Link>
         <h2 className="font-serif text-lg text-navy sm:text-xl">{monthLabel}</h2>
         <Link
           href={`/hr/calendar?month=${next}`}
           className="inline-flex min-h-[44px] items-center rounded-md border border-line bg-paper px-4 text-sm font-medium text-navy hover:bg-mist"
         >
-          {MONTHS[monthIndex % 12]} →
+          {months[monthIndex % 12]} →
         </Link>
       </nav>
 
@@ -79,9 +101,7 @@ export default async function CalendarPage({
           the text below readable size, and most days are empty anyway. */}
       <div className="md:hidden">
         {busyDays.length === 0 ? (
-          <EmptyState title="Nothing booked this month">
-            Approved leave and public holidays will appear here.
-          </EmptyState>
+          <EmptyState title={t("calendar.emptyTitle")}>{t("calendar.emptyBody")}</EmptyState>
         ) : (
           <ul className="flex flex-col gap-3">
             {busyDays.map((day) => (
@@ -90,7 +110,7 @@ export default async function CalendarPage({
                   <span className="font-medium text-navy">
                     {day.date}
                     {day.date === today ? (
-                      <span className="ml-2 text-xs text-gold">Today</span>
+                      <span className="ml-2 text-xs text-gold">{t("common.today")}</span>
                     ) : null}
                   </span>
                   {day.holidayName ? (
@@ -103,7 +123,7 @@ export default async function CalendarPage({
                   <ul className="mt-2 flex flex-col gap-1">
                     {day.away.map((entry) => (
                       <li key={`${entry.requestId}-${day.date}`} className="text-sm">
-                        <PersonBadge entry={entry} />
+                        <PersonBadge entry={entry} t={t} />
                       </li>
                     ))}
                   </ul>
@@ -116,19 +136,19 @@ export default async function CalendarPage({
 
       {/* Desktop: a real month grid. */}
       <div className="hidden md:block">
-        <MonthGrid days={days} today={today} />
+        <MonthGrid days={days} today={today} weekdays={weekdayNames(locale)} t={t} />
       </div>
 
       <Panel className="mt-6">
         <p className="text-sm text-mute">
           <span className="mr-4">
-            <Dot className="bg-ai-green" /> Approved leave
+            <Dot className="bg-ai-green" /> {t("calendar.legendApproved")}
           </span>
           <span className="mr-4">
-            <Dot className="bg-gold" /> Awaiting a decision
+            <Dot className="bg-gold" /> {t("calendar.legendPending")}
           </span>
           <span>
-            <Dot className="bg-navy-soft" /> Public holiday or closure
+            <Dot className="bg-navy-soft" /> {t("calendar.legendHoliday")}
           </span>
         </p>
       </Panel>
@@ -145,7 +165,13 @@ function Dot({ className }: { className: string }) {
   );
 }
 
-function PersonBadge({ entry }: { entry: CalendarDay["away"][number] }) {
+function PersonBadge({
+  entry,
+  t,
+}: {
+  entry: CalendarDay["away"][number];
+  t: HrTranslate;
+}) {
   const pending = entry.status === "pending";
   return (
     <span className="inline-flex items-center gap-1.5">
@@ -155,10 +181,10 @@ function PersonBadge({ entry }: { entry: CalendarDay["away"][number] }) {
         {entry.isHalfDay ? (
           <span className="text-mute">
             {" "}
-            ({entry.half === "am" ? "morning" : "afternoon"})
+            ({entry.half === "am" ? t("calendar.morning") : t("calendar.afternoon")})
           </span>
         ) : null}
-        {pending ? <span className="text-mute"> · pending</span> : null}
+        {pending ? <span className="text-mute"> · {t("calendar.pending")}</span> : null}
       </span>
     </span>
   );
@@ -171,14 +197,24 @@ function PersonBadge({ entry }: { entry: CalendarDay["away"][number] }) {
  * used throughout (Monday = 1), matching `hr_org_policy.working_days` — mixing
  * that with JavaScript's Sunday-is-0 is how a calendar ends up off by one.
  */
-function MonthGrid({ days, today }: { days: CalendarDay[]; today: string }) {
+function MonthGrid({
+  days,
+  today,
+  weekdays,
+  t,
+}: {
+  days: CalendarDay[];
+  today: string;
+  weekdays: string[];
+  t: HrTranslate;
+}) {
   if (days.length === 0) return null;
   const leadingBlanks = isoDayOfWeek(days[0].date) - 1;
 
   return (
     <div className="overflow-hidden rounded-lg border border-cream bg-paper">
       <div className="grid grid-cols-7 border-b border-cream bg-mist/60 text-center">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+        {weekdays.map((label) => (
           <div key={label} className="px-2 py-2 text-xs font-medium text-navy">
             {label}
           </div>
@@ -225,7 +261,9 @@ function MonthGrid({ days, today }: { days: CalendarDay[]; today: string }) {
                 </li>
               ))}
               {day.away.length > 3 ? (
-                <li className="text-[11px] text-mute">+{day.away.length - 3} more</li>
+                <li className="text-[11px] text-mute">
+                  {t("calendar.more", { count: day.away.length - 3 })}
+                </li>
               ) : null}
             </ul>
           </div>

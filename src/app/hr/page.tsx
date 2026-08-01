@@ -6,6 +6,7 @@ import { listLeaveTypes, getOrgTimezone, getOrgPolicy, listHolidays } from "@/li
 import { getBalances } from "@/lib/hr/balances";
 import { whoIsOff, listPendingApprovals, listRequests } from "@/lib/hr/requests";
 import { todayInTimeZone, leaveYearOf, addDays } from "@/lib/hr/dates";
+import { getHrI18n } from "@/lib/hr/i18n";
 import {
   PageHeader,
   Panel,
@@ -28,16 +29,21 @@ export const metadata = { title: "People · LingoPure" };
  * Rendered per role rather than showing empty panels to people they do not
  * apply to. A Staff member has no approval queue, and a panel reading "0
  * pending" is noise on the page they use most.
+ *
+ * Leave type names come from the database in both languages, so they are picked
+ * by locale here rather than translated — a Super Admin can add "Maternity
+ * leave" and it has no dictionary key.
  */
 export default async function HrHomePage() {
   const identity = await getHrIdentity();
   if (!identity) redirect("/login?next=/hr");
 
-  const [me, leaveTypes, timezone, policy] = await Promise.all([
+  const [me, leaveTypes, timezone, policy, { t, locale }] = await Promise.all([
     getOwnEmployee(),
     listLeaveTypes(identity.orgId),
     getOrgTimezone(identity.orgId),
     getOrgPolicy(identity.orgId),
+    getHrI18n(),
   ]);
 
   const today = todayInTimeZone(timezone);
@@ -55,38 +61,43 @@ export default async function HrHomePage() {
     ]);
 
   const employeeById = new Map(colleagues.map((e) => [e.id, e]));
-  const typeName = new Map(leaveTypes.map((t) => [t.id, t.nameEn]));
+  const typeName = new Map(
+    leaveTypes.map((type) => [type.id, locale === "vi" ? type.nameVi : type.nameEn])
+  );
   const deducting = balances.filter((b) => b.deductsBalance);
   const nextHoliday = upcomingHolidays[0] ?? null;
+  const holidayName = (h: (typeof upcomingHolidays)[number]) =>
+    locale === "vi" ? h.nameVi : h.nameEn;
 
   return (
     <>
       <PageHeader
-        title={me ? `Hello, ${me.firstName}` : "People"}
+        title={me ? t("home.greeting", { name: me.firstName }) : t("nav.people")}
         action={
           <Link href="/hr/requests/new" className={buttonPrimaryClass}>
-            Request leave
+            {t("home.requestLeave")}
           </Link>
         }
       >
-        Your leave balance, who is away, and what needs your attention. Days are
-        deducted only after a request is approved.
+        {t("home.intro")}
       </PageHeader>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         {deducting.map((balance) => (
           <Panel key={balance.leaveTypeId}>
             <p className="text-xs uppercase tracking-wide text-mute">
-              {balance.leaveTypeName}
+              {typeName.get(balance.leaveTypeId) ?? balance.leaveTypeName}
             </p>
             <p className="mt-1 font-serif text-3xl text-navy">
               {balance.remaining}
-              <span className="ml-1 text-base text-mute">
-                {balance.remaining === 1 ? "day" : "days"} left
-              </span>
+              <span className="ml-1 text-base text-mute">{t("home.daysLeft")}</span>
             </p>
             <p className="mt-1 text-sm text-mute">
-              {balance.taken} of {balance.allowance ?? "—"} used in {leaveYear}
+              {t("home.usedOf", {
+                taken: balance.taken,
+                allowance: balance.allowance ?? t("common.none"),
+                year: leaveYear,
+              })}
             </p>
           </Panel>
         ))}
@@ -94,29 +105,28 @@ export default async function HrHomePage() {
 
       {canApprove ? (
         <Panel className="mb-6">
-          <PanelHeader title="Waiting for you">
+          <PanelHeader title={t("home.waitingTitle")}>
             {pending.length === 0
-              ? "Nothing from your team needs a decision right now."
-              : `${pending.length} leave ${pending.length === 1 ? "request" : "requests"} from your team.`}
+              ? t("home.waitingNone")
+              : t("home.waitingSome", { count: pending.length })}
           </PanelHeader>
           {pending.length > 0 ? (
             <Link
               href="/hr/approvals"
               className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-navy px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-navy-deep"
             >
-              Review {pending.length === 1 ? "it" : "them"}
+              {t("home.waitingReview")}
             </Link>
           ) : null}
         </Panel>
       ) : null}
 
       <Panel className="mb-6">
-        <PanelHeader title="Off today">
-          Who is unavailable on {today}. Reasons stay private to the person and
-          their manager.
+        <PanelHeader title={t("home.offTodayTitle")}>
+          {t("home.offTodayIntro", { date: today })}
         </PanelHeader>
         {offToday.length === 0 ? (
-          <p className="text-sm text-mute">Everyone is in today.</p>
+          <p className="text-sm text-mute">{t("home.offTodayNone")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {offToday.map((request) => {
@@ -124,10 +134,10 @@ export default async function HrHomePage() {
               return (
                 <li key={request.id} className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="font-medium text-navy">
-                    {person ? displayName(person) : "A colleague"}
+                    {person ? displayName(person) : t("approvals.teamMember")}
                   </span>
                   <span className="text-mute">
-                    {typeName.get(request.leaveTypeId) ?? "Leave"} ·{" "}
+                    {typeName.get(request.leaveTypeId) ?? t("newRequest.leaveType")} ·{" "}
                     <DateRange from={request.startDate} to={request.endDate} />
                   </span>
                 </li>
@@ -138,22 +148,17 @@ export default async function HrHomePage() {
       </Panel>
 
       <Panel className="mb-6">
-        <PanelHeader title="Public holidays">
-          {nextHoliday
-            ? "Upcoming days off for everyone. These never come out of your balance."
-            : "No public holidays are on the calendar yet."}
+        <PanelHeader title={t("home.holidaysTitle")}>
+          {nextHoliday ? t("home.holidaysIntro") : t("home.holidaysNone")}
         </PanelHeader>
         {upcomingHolidays.length === 0 ? (
-          <p className="text-sm text-mute">
-            A Super Admin adds these. Until then, holidays are not excluded from
-            leave day counts.
-          </p>
+          <p className="text-sm text-mute">{t("home.holidaysHint")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {upcomingHolidays.slice(0, 5).map((holiday) => (
               <li key={holiday.id} className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="font-medium text-navy">{holiday.date}</span>
-                <span className="text-mute">{holiday.nameEn}</span>
+                <span className="text-mute">{holidayName(holiday)}</span>
               </li>
             ))}
           </ul>
@@ -161,12 +166,12 @@ export default async function HrHomePage() {
       </Panel>
 
       <Panel>
-        <PanelHeader title="Your recent requests" />
+        <PanelHeader title={t("home.recentTitle")} />
         {myRequests.length === 0 ? (
           <p className="text-sm text-mute">
-            You have not requested any leave yet.{" "}
+            {t("home.recentNone")}{" "}
             <Link href="/hr/requests/new" className="text-navy underline underline-offset-4">
-              Request some
+              {t("home.requestLeave")}
             </Link>
             .
           </p>
@@ -176,18 +181,18 @@ export default async function HrHomePage() {
               {myRequests.map((request) => (
                 <li key={request.id} className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-ink">
-                    {typeName.get(request.leaveTypeId) ?? "Leave"} ·{" "}
+                    {typeName.get(request.leaveTypeId) ?? t("newRequest.leaveType")} ·{" "}
                     <DateRange from={request.startDate} to={request.endDate} /> ·{" "}
                     {request.requestedDays}{" "}
-                    {request.requestedDays === 1 ? "day" : "days"}
+                    {request.requestedDays === 1 ? t("common.day") : t("common.days")}
                   </span>
-                  <RequestStatusPill status={request.status} />
+                  <RequestStatusPill status={request.status} t={t} />
                 </li>
               ))}
             </ul>
             <p className="mt-4">
               <Link href="/hr/requests" className="text-sm text-navy underline underline-offset-4">
-                See all my requests →
+                {t("home.seeAll")} →
               </Link>
             </p>
           </>
@@ -195,7 +200,8 @@ export default async function HrHomePage() {
       </Panel>
 
       <p className="mt-6 flex flex-wrap items-center gap-2 text-xs text-mute">
-        Signed in as {me ? displayName(me) : "—"} <RolePill role={identity.role} />
+        {t("home.signedInAs", { name: me ? displayName(me) : t("common.none") })}{" "}
+        <RolePill role={identity.role} t={t} />
       </p>
     </>
   );

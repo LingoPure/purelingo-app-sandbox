@@ -54,6 +54,7 @@ const en: Dict = {
   "nav.openMenu": "Open menu",
   "nav.closeMenu": "Close menu",
   "nav.people": "People",
+  "nav.sections": "HR sections",
 
   // ── Roles and statuses ───────────────────────────────────────────────────
   "role.super_admin": "Super Admin",
@@ -212,6 +213,56 @@ const en: Dict = {
   "settings.showPassword": "Show password",
   "settings.hidePassword": "Hide password",
 
+  // ── Team administration (Super Admin) ────────────────────────────────────
+  "team.title": "Team members",
+  "team.intro":
+    "Everyone at LingoPure with an account. Add a person here to give them access to request leave; assign them a manager to decide who approves it. Deactivating someone keeps their leave history but removes their access.",
+  "team.emptyTitle": "No team members yet",
+  "team.emptyBody":
+    "Add your first colleague above. They will get an email invitation and can sign in as soon as they accept it.",
+  "team.deactivatedTitle": "Deactivated",
+  "team.deactivatedIntro":
+    "These people can no longer sign in. Their leave history is kept, so past balances and approvals stay auditable.",
+  "team.colName": "Name",
+  "team.colRole": "Role",
+  "team.colReportsTo": "Reports to",
+  "team.colDepartment": "Department",
+  "team.colStatus": "Status",
+  "team.backToList": "Back to team members",
+  "team.detailsTitle": "Details",
+  "team.employmentStart": "Employment start",
+  "team.language": "Language",
+  "team.noManager": "No manager assigned",
+  "team.detailIntroAdmin":
+    "Their profile, role and reporting line. Changes here affect who approves their leave and what they can see.",
+  "team.detailIntroReadOnly":
+    "Their profile and reporting line. Only a Super Admin can change these details.",
+  "team.deactivatedPanelTitle": "Deactivated",
+  "team.deactivatedPanelBody":
+    "This person cannot sign in. Their leave history is retained. To restore access, save their profile above with an active role and resend an invitation.",
+
+  // ── Public holidays (Super Admin) ────────────────────────────────────────
+  "holidays.title": "Public holidays",
+  "holidays.intro":
+    "The days nobody works. Leave requests spanning these do not count them, and nothing here is deducted from anyone's balance. Staff are emailed {days} days before each one.",
+  "holidays.changeYear": "Change year",
+  "holidays.inYear": "Holidays in {year}",
+  "holidays.noneYet": "Nothing on the calendar for this year yet.",
+  "holidays.summary": "{days} days across {groups} holidays.",
+  "holidays.emptyTitle": "No holidays recorded for {year}",
+  "holidays.emptyBody":
+    "Add them above. Until they are here, leave requests spanning a public holiday will count it as a normal working day and charge the employee for it.",
+  "holidays.sameDateEachYear": "same date each year",
+  "holidays.notified": "Staff have been notified.",
+  "holidays.overridesTitle": "Compensatory and closure days in {year}",
+  "holidays.overridesNone":
+    "None recorded. The normal working pattern applies all year.",
+  "holidays.overridesSummary": "{count} days that differ from the normal pattern.",
+  "holidays.overridesHint":
+    "Add one above when a Saturday is worked to bridge a holiday, or when the office closes for a day that is not a public holiday.",
+  "holidays.everybodyWorks": "Everybody works",
+  "holidays.officeClosed": "Office closed",
+
   // ── Emails (subject + body) ──────────────────────────────────────────────
   "email.greeting": "Hi {name},",
   "email.noReplyNote":
@@ -267,6 +318,7 @@ const vi: Dict = {
   "nav.openMenu": "Mở menu",
   "nav.closeMenu": "Đóng menu",
   "nav.people": "Nhân sự",
+  "nav.sections": "Các mục nhân sự",
 
   "role.super_admin": "Quản trị viên cấp cao",
   "role.admin": "Quản lý",
@@ -414,6 +466,54 @@ const vi: Dict = {
   "settings.updating": "Đang cập nhật…",
   "settings.showPassword": "Hiện mật khẩu",
   "settings.hidePassword": "Ẩn mật khẩu",
+
+  "team.title": "Thành viên",
+  "team.intro":
+    "Tất cả nhân sự LingoPure có tài khoản. Thêm một người ở đây để họ có thể xin nghỉ phép; gán quản lý để quyết định ai duyệt đơn của họ. Vô hiệu hóa một người sẽ giữ lại lịch sử nghỉ phép nhưng thu hồi quyền truy cập.",
+  "team.emptyTitle": "Chưa có thành viên nào",
+  "team.emptyBody":
+    "Thêm đồng nghiệp đầu tiên ở trên. Họ sẽ nhận email mời và có thể đăng nhập ngay khi chấp nhận.",
+  "team.deactivatedTitle": "Đã vô hiệu hóa",
+  "team.deactivatedIntro":
+    "Những người này không còn đăng nhập được. Lịch sử nghỉ phép của họ được giữ lại để có thể tra cứu.",
+  "team.colName": "Họ tên",
+  "team.colRole": "Vai trò",
+  "team.colReportsTo": "Quản lý",
+  "team.colDepartment": "Phòng ban",
+  "team.colStatus": "Trạng thái",
+  "team.backToList": "Quay lại danh sách thành viên",
+  "team.detailsTitle": "Thông tin",
+  "team.employmentStart": "Ngày bắt đầu làm việc",
+  "team.language": "Ngôn ngữ",
+  "team.noManager": "Chưa gán quản lý",
+  "team.detailIntroAdmin":
+    "Hồ sơ, vai trò và quản lý trực tiếp. Thay đổi ở đây ảnh hưởng tới ai duyệt đơn nghỉ của họ và những gì họ thấy được.",
+  "team.detailIntroReadOnly":
+    "Hồ sơ và quản lý trực tiếp. Chỉ quản trị viên cấp cao mới sửa được các thông tin này.",
+  "team.deactivatedPanelTitle": "Đã vô hiệu hóa",
+  "team.deactivatedPanelBody":
+    "Người này không đăng nhập được. Lịch sử nghỉ phép vẫn được giữ. Để khôi phục quyền truy cập, lưu hồ sơ ở trên với vai trò đang hoạt động rồi gửi lại lời mời.",
+
+  "holidays.title": "Ngày lễ",
+  "holidays.intro":
+    "Những ngày cả công ty nghỉ. Đơn xin nghỉ trùng các ngày này sẽ không bị tính, và không trừ vào phép của ai. Nhân viên được gửi email trước {days} ngày.",
+  "holidays.changeYear": "Đổi năm",
+  "holidays.inYear": "Ngày lễ năm {year}",
+  "holidays.noneYet": "Năm nay chưa có ngày lễ nào trên lịch.",
+  "holidays.summary": "{days} ngày thuộc {groups} kỳ nghỉ lễ.",
+  "holidays.emptyTitle": "Chưa ghi nhận ngày lễ nào cho năm {year}",
+  "holidays.emptyBody":
+    "Hãy thêm ở trên. Khi chưa có, đơn xin nghỉ trùng ngày lễ sẽ bị tính như ngày làm việc bình thường và trừ vào phép của nhân viên.",
+  "holidays.sameDateEachYear": "cùng ngày mỗi năm",
+  "holidays.notified": "Đã thông báo cho nhân viên.",
+  "holidays.overridesTitle": "Ngày làm bù và ngày đóng cửa năm {year}",
+  "holidays.overridesNone":
+    "Chưa ghi nhận ngày nào. Lịch làm việc bình thường áp dụng cả năm.",
+  "holidays.overridesSummary": "{count} ngày khác với lịch làm việc bình thường.",
+  "holidays.overridesHint":
+    "Thêm khi có thứ Bảy làm bù để nối ngày lễ, hoặc khi văn phòng đóng cửa vào ngày không phải ngày lễ.",
+  "holidays.everybodyWorks": "Cả công ty đi làm",
+  "holidays.officeClosed": "Văn phòng đóng cửa",
 
   "email.greeting": "Chào {name},",
   "email.noReplyNote":

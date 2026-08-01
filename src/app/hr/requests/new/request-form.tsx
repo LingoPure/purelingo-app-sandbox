@@ -4,7 +4,31 @@ import { useActionState, useEffect, useState, useTransition } from "react";
 import { previewRequestAction, submitRequestAction, type PreviewState } from "../../request-actions";
 import type { ActionResult } from "../../actions";
 import { Field, Panel, inputClass, buttonPrimaryClass } from "../../ui";
-import type { HrLeaveType } from "@/lib/hr/types";
+export type RequestFormLabels = {
+  leaveType: string;
+  noBalanceSuffix: string;
+  firstDay: string;
+  lastDay: string;
+  halfDaySingle: string;
+  halfDayFirst: string;
+  halfDayLast: string;
+  halfDayHint: string;
+  fullDay: string;
+  morningOnly: string;
+  afternoonOnly: string;
+  reason: string;
+  reasonHint: string;
+  submit: string;
+  submitting: string;
+  balanceAfter: string;
+  /** Raw template with a {before} placeholder, interpolated at render. */
+  balanceFrom: string;
+  noDeduct: string;
+  day: string;
+  days: string;
+};
+
+type LeaveTypeOption = { id: string; name: string; deductsBalance: boolean };
 
 /**
  * Leave request form with a live day count.
@@ -24,10 +48,12 @@ export function RequestForm({
   employeeId,
   leaveTypes,
   today,
+  labels,
 }: {
   employeeId: string;
-  leaveTypes: HrLeaveType[];
+  leaveTypes: LeaveTypeOption[];
   today: string;
+  labels: RequestFormLabels;
 }) {
   const [leaveTypeId, setLeaveTypeId] = useState(leaveTypes[0]?.id ?? "");
   const [startDate, setStartDate] = useState(today);
@@ -82,7 +108,7 @@ export function RequestForm({
       <form action={formAction} className="flex flex-col gap-5">
         <input type="hidden" name="employeeId" value={employeeId} />
 
-        <Field id="leaveTypeId" label="Leave type" required>
+        <Field id="leaveTypeId" label={labels.leaveType} required>
           <select
             id="leaveTypeId"
             name="leaveTypeId"
@@ -93,15 +119,15 @@ export function RequestForm({
           >
             {leaveTypes.map((type) => (
               <option key={type.id} value={type.id}>
-                {type.nameEn}
-                {type.deductsBalance ? "" : " (does not use your balance)"}
+                {type.name}
+                {type.deductsBalance ? "" : ` (${labels.noBalanceSuffix})`}
               </option>
             ))}
           </select>
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="startDate" label="First day" required>
+          <Field id="startDate" label={labels.firstDay} required>
             <input
               id="startDate"
               name="startDate"
@@ -112,7 +138,7 @@ export function RequestForm({
               className={inputClass}
             />
           </Field>
-          <Field id="endDate" label="Last day" required>
+          <Field id="endDate" label={labels.lastDay} required>
             <input
               id="endDate"
               name="endDate"
@@ -129,8 +155,8 @@ export function RequestForm({
         <div className="grid gap-5 sm:grid-cols-2">
           <Field
             id="startHalf"
-            label={singleDay ? "Half day?" : "First day — half day?"}
-            hint={singleDay ? "Leave as a full day, or take a morning or afternoon." : undefined}
+            label={singleDay ? labels.halfDaySingle : labels.halfDayFirst}
+            hint={singleDay ? labels.halfDayHint : undefined}
           >
             <select
               id="startHalf"
@@ -139,9 +165,9 @@ export function RequestForm({
               onChange={(e) => setStartHalf(e.target.value)}
               className={inputClass}
             >
-              <option value="">Full day</option>
-              <option value="am">Morning only</option>
-              <option value="pm">Afternoon only</option>
+              <option value="">{labels.fullDay}</option>
+              <option value="am">{labels.morningOnly}</option>
+              <option value="pm">{labels.afternoonOnly}</option>
             </select>
           </Field>
 
@@ -149,7 +175,7 @@ export function RequestForm({
               control is hidden entirely on a single-day request rather than
               shown and ignored. */}
           {!singleDay ? (
-            <Field id="endHalf" label="Last day — half day?">
+            <Field id="endHalf" label={labels.halfDayLast}>
               <select
                 id="endHalf"
                 name="endHalf"
@@ -157,19 +183,19 @@ export function RequestForm({
                 onChange={(e) => setEndHalf(e.target.value)}
                 className={inputClass}
               >
-                <option value="">Full day</option>
-                <option value="am">Morning only</option>
-                <option value="pm">Afternoon only</option>
+                <option value="">{labels.fullDay}</option>
+                <option value="am">{labels.morningOnly}</option>
+                <option value="pm">{labels.afternoonOnly}</option>
               </select>
             </Field>
           ) : null}
         </div>
 
-        <Field id="reason" label="Reason" hint="Your manager sees this. Colleagues do not.">
+        <Field id="reason" label={labels.reason} hint={labels.reasonHint}>
           <textarea id="reason" name="reason" rows={3} className={`${inputClass} min-h-[88px] py-2`} />
         </Field>
 
-        <PreviewBox preview={preview} pending={previewPending} />
+        <PreviewBox preview={preview} pending={previewPending} labels={labels} />
 
         {state && !state.ok ? (
           <p role="alert" className="rounded-md bg-coral/10 px-4 py-3 text-sm text-coral">
@@ -188,7 +214,7 @@ export function RequestForm({
             disabled={submitting || blocked || previewPending}
             className={`${buttonPrimaryClass} disabled:opacity-60`}
           >
-            {submitting ? "Submitting…" : "Submit request"}
+            {submitting ? labels.submitting : labels.submit}
           </button>
         </div>
       </form>
@@ -196,7 +222,24 @@ export function RequestForm({
   );
 }
 
-function PreviewBox({ preview, pending }: { preview: PreviewState; pending: boolean }) {
+/**
+ * The live figure.
+ *
+ * `explanation`, `warnings` and `blockers` arrive already-worded from the
+ * server, so they are rendered as-is. They are produced by the leave engine
+ * rather than the UI, and localising them there — where the policy that
+ * generates them lives — keeps one source for each message instead of a
+ * dictionary key that has to be kept in step with a rule.
+ */
+function PreviewBox({
+  preview,
+  pending,
+  labels,
+}: {
+  preview: PreviewState;
+  pending: boolean;
+  labels: RequestFormLabels;
+}) {
   if (preview.status === "idle") return null;
 
   if (preview.status === "error") {
@@ -217,7 +260,7 @@ function PreviewBox({ preview, pending }: { preview: PreviewState; pending: bool
       } ${pending ? "opacity-60" : ""}`}
     >
       <p className="text-lg font-medium text-navy">
-        {p.days} {p.days === 1 ? "day" : "days"}
+        {p.days} {p.days === 1 ? labels.day : labels.days}
       </p>
 
       {p.explanation ? (
@@ -226,16 +269,16 @@ function PreviewBox({ preview, pending }: { preview: PreviewState; pending: bool
 
       {p.deductsBalance ? (
         <p className="mt-2 text-sm text-ink">
-          Balance after approval:{" "}
+          {labels.balanceAfter}{" "}
           <span className="font-medium">
-            {p.balanceAfter} {p.balanceAfter === 1 ? "day" : "days"}
+            {p.balanceAfter} {p.balanceAfter === 1 ? labels.day : labels.days}
           </span>{" "}
-          <span className="text-mute">(from {p.balanceBefore})</span>
+          <span className="text-mute">
+            {labels.balanceFrom.replace("{before}", String(p.balanceBefore))}
+          </span>
         </p>
       ) : (
-        <p className="mt-2 text-sm text-mute">
-          This type does not draw down your paid leave balance.
-        </p>
+        <p className="mt-2 text-sm text-mute">{labels.noDeduct}</p>
       )}
 
       {p.warnings.map((warning) => (

@@ -67,6 +67,7 @@ export default async function HrLayout({
         role={identity.role}
         displayName={name}
         roleLabel={roleLabel(identity.role, t)}
+        menuLabels={{ open: t("nav.openMenu"), close: t("nav.closeMenu"), sections: t("nav.sections") }}
       />
 
       <div className="flex min-h-screen flex-1 flex-col">

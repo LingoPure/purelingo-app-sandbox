@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getHrIdentity } from "@/lib/hr/auth";
 import { listEmployees, listPotentialManagers } from "@/lib/hr/employees";
 import { todayInTimeZone } from "@/lib/hr/dates";
+import { getHrI18n, type HrTranslate } from "@/lib/hr/i18n";
 import { PageHeader, StatusPill, RolePill, EmptyState } from "../ui";
 import { AddMemberForm } from "./add-member-form";
 
@@ -22,10 +23,11 @@ export default async function TeamPage() {
   if (!identity) redirect("/login?next=/hr/team");
   if (identity.role !== "super_admin") redirect("/hr");
 
-  const [employees, managers, headerList] = await Promise.all([
+  const [employees, managers, headerList, { t }] = await Promise.all([
     listEmployees({ includeDeactivated: true }),
     listPotentialManagers(),
     headers(),
+    getHrI18n(),
   ]);
 
   // Absolute origin for invitation links. Behind a proxy the forwarded headers
@@ -41,11 +43,7 @@ export default async function TeamPage() {
 
   return (
     <>
-      <PageHeader title="Team members">
-        Everyone at LingoPure with an account. Add a person here to give them
-        access to request leave; assign them a manager to decide who approves it.
-        Deactivating someone keeps their leave history but removes their access.
-      </PageHeader>
+      <PageHeader title={t("team.title")}>{t("team.intro")}</PageHeader>
 
       <AddMemberForm
         managers={managers}
@@ -54,22 +52,16 @@ export default async function TeamPage() {
       />
 
       {active.length === 0 ? (
-        <EmptyState title="No team members yet">
-          Add your first colleague above. They will get an email invitation and
-          can sign in as soon as they accept it.
-        </EmptyState>
+        <EmptyState title={t("team.emptyTitle")}>{t("team.emptyBody")}</EmptyState>
       ) : (
-        <TeamTable employees={active} byId={byId} />
+        <TeamTable employees={active} byId={byId} t={t} />
       )}
 
       {deactivated.length > 0 ? (
         <div className="mt-10">
-          <h2 className="mb-3 font-serif text-lg text-navy">Deactivated</h2>
-          <p className="mb-4 max-w-prose text-sm text-mute">
-            These people can no longer sign in. Their leave history is kept, so
-            past balances and approvals stay auditable.
-          </p>
-          <TeamTable employees={deactivated} byId={byId} />
+          <h2 className="mb-3 font-serif text-lg text-navy">{t("team.deactivatedTitle")}</h2>
+          <p className="mb-4 max-w-prose text-sm text-mute">{t("team.deactivatedIntro")}</p>
+          <TeamTable employees={deactivated} byId={byId} t={t} />
         </div>
       ) : null}
     </>
@@ -87,14 +79,16 @@ export default async function TeamPage() {
 function TeamTable({
   employees,
   byId,
+  t,
 }: {
   employees: Awaited<ReturnType<typeof listEmployees>>;
   byId: Map<string, Awaited<ReturnType<typeof listEmployees>>[number]>;
+  t: HrTranslate;
 }) {
   const managerName = (managerId: string | null) => {
     if (!managerId) return "—";
     const m = byId.get(managerId);
-    return m ? `${m.firstName} ${m.lastName}` : "—";
+    return m ? `${m.firstName} ${m.lastName}` : t("common.none");
   };
 
   return (
@@ -110,21 +104,21 @@ function TeamTable({
               >
                 {e.firstName} {e.lastName}
               </Link>
-              <StatusPill status={e.status} />
+              <StatusPill status={e.status} t={t} />
             </div>
             <p className="mt-1 break-all text-sm text-mute">{e.email}</p>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-mute">Role</dt>
-                <dd className="mt-1"><RolePill role={e.hrRole} /></dd>
+                <dt className="text-xs uppercase tracking-wide text-mute">{t("team.colRole")}</dt>
+                <dd className="mt-1"><RolePill role={e.hrRole} t={t} /></dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-mute">Reports to</dt>
+                <dt className="text-xs uppercase tracking-wide text-mute">{t("team.colReportsTo")}</dt>
                 <dd className="mt-1 text-ink">{managerName(e.managerId)}</dd>
               </div>
               {e.jobTitle ? (
                 <div className="col-span-2">
-                  <dt className="text-xs uppercase tracking-wide text-mute">Job title</dt>
+                  <dt className="text-xs uppercase tracking-wide text-mute">{t("settings.jobTitle")}</dt>
                   <dd className="mt-1 text-ink">{e.jobTitle}</dd>
                 </div>
               ) : null}
@@ -138,11 +132,11 @@ function TeamTable({
         <table className="w-full text-left text-sm">
           <thead className="border-b border-cream bg-mist/60">
             <tr>
-              <th scope="col" className="px-4 py-3 font-medium text-navy">Name</th>
-              <th scope="col" className="px-4 py-3 font-medium text-navy">Role</th>
-              <th scope="col" className="px-4 py-3 font-medium text-navy">Reports to</th>
-              <th scope="col" className="px-4 py-3 font-medium text-navy">Department</th>
-              <th scope="col" className="px-4 py-3 font-medium text-navy">Status</th>
+              <th scope="col" className="px-4 py-3 font-medium text-navy">{t("team.colName")}</th>
+              <th scope="col" className="px-4 py-3 font-medium text-navy">{t("team.colRole")}</th>
+              <th scope="col" className="px-4 py-3 font-medium text-navy">{t("team.colReportsTo")}</th>
+              <th scope="col" className="px-4 py-3 font-medium text-navy">{t("team.colDepartment")}</th>
+              <th scope="col" className="px-4 py-3 font-medium text-navy">{t("team.colStatus")}</th>
             </tr>
           </thead>
           <tbody>
@@ -157,10 +151,10 @@ function TeamTable({
                   </Link>
                   <div className="text-xs text-mute">{e.email}</div>
                 </td>
-                <td className="px-4 py-3"><RolePill role={e.hrRole} /></td>
+                <td className="px-4 py-3"><RolePill role={e.hrRole} t={t} /></td>
                 <td className="px-4 py-3 text-ink">{managerName(e.managerId)}</td>
-                <td className="px-4 py-3 text-ink">{e.department ?? "—"}</td>
-                <td className="px-4 py-3"><StatusPill status={e.status} /></td>
+                <td className="px-4 py-3 text-ink">{e.department ?? t("common.none")}</td>
+                <td className="px-4 py-3"><StatusPill status={e.status} t={t} /></td>
               </tr>
             ))}
           </tbody>
