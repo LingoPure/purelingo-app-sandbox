@@ -56,4 +56,4 @@ echo "==> creating isolated test organisations (removed on completion)"
 export HR_TEST_HARNESS=1
 export NODE_ENV=test
 
-npx tsx --test tests/hr/integration.test.ts
+npx tsx --test tests/hr/integration.itest.ts

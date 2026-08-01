@@ -33,8 +33,10 @@ const ROLE_LABELS: Record<HrRole, string> = {
 const NAV_ITEMS: HrNavItem[] = [
   { href: "/hr", label: "Overview" },
   { href: "/hr/requests", label: "My leave" },
+  { href: "/hr/calendar", label: "Team calendar" },
   { href: "/hr/approvals", label: "Approvals", roles: ["super_admin", "admin"] },
   { href: "/hr/team", label: "Team members", roles: ["super_admin"] },
+  { href: "/hr/holidays", label: "Public holidays", roles: ["super_admin"] },
 ];
 
 export default async function HrLayout({

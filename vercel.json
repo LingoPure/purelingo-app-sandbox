@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/nudges",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/hr/cron/holiday-notice",
+      "schedule": "0 1 * * *"
     }
   ]
 }
