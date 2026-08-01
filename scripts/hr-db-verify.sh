@@ -53,7 +53,8 @@ cd "$REPO_ROOT"
 for f in \
   "tests/hr/supabase-shim.sql" \
   "supabase/migrations/0027_hr_01_foundation.sql" \
-  "tests/hr/rls-verify.sql"
+  "tests/hr/rls-verify.sql" \
+  "tests/hr/employees-verify.sql"
 do
   docker cp "$f" "$CONTAINER:/tmp/$(basename "$f")" >/dev/null
 done
@@ -68,8 +69,14 @@ echo "==> re-applying to prove idempotency"
 psql_run -q -f /tmp/0027_hr_01_foundation.sql >/dev/null 2>&1
 echo "    idempotent re-run: ok"
 
-echo "==> verifying RLS policies and constraints"
+echo "==> verifying RLS policies and ledger constraints"
 psql_run -f /tmp/rls-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {
+  echo "verification produced no assertions — treating as failure"
+  exit 1
+}
+
+echo "==> verifying employee-record constraints"
+psql_run -f /tmp/employees-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {
   echo "verification produced no assertions — treating as failure"
   exit 1
 }

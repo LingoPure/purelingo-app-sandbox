@@ -12,6 +12,13 @@ const PROTECTED_PREFIXES = [
   // middleware; the layout component checks employer_admins for the
   // actual authorisation step.
   "/employer",
+  // /hr/* follows the same shape: any signed-in user passes here, and
+  // src/app/hr/layout.tsx checks hr_current_employee() for the real
+  // authorisation. Listed so that a missing Supabase env redirects to /login
+  // instead of rendering a page that then talks to a null client. Note this is
+  // a HOST-APP mount point, not part of the portable HR module — the handover
+  // manifest records it as one of the edits the destination repo must make.
+  "/hr",
 ];
 
 export async function updateSession(request: NextRequest) {
