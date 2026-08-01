@@ -50,11 +50,17 @@ psql_run() {
 # MSYS_NO_PATHCONV=1 (needed for the container-side /tmp paths) switches off the
 # translation that would otherwise fix it. Relative paths sidestep both.
 cd "$REPO_ROOT"
+# HR migrations are discovered by glob and applied in filename order, so a new
+# one is picked up without editing this script. The *_hr_NN_* naming is what
+# carries the module's internal ordering through a renumbering into another repo.
+HR_MIGRATIONS=$(ls supabase/migrations/*_hr_*.sql | sort)
+
 for f in \
   "tests/hr/supabase-shim.sql" \
-  "supabase/migrations/0027_hr_01_foundation.sql" \
+  $HR_MIGRATIONS \
   "tests/hr/rls-verify.sql" \
-  "tests/hr/employees-verify.sql"
+  "tests/hr/employees-verify.sql" \
+  "tests/hr/calendar-verify.sql"
 do
   docker cp "$f" "$CONTAINER:/tmp/$(basename "$f")" >/dev/null
 done
@@ -62,11 +68,16 @@ done
 echo "==> applying Supabase shim (auth.users, auth.uid, auth.jwt, role grants)"
 psql_run -q -f /tmp/supabase-shim.sql
 
-echo "==> applying HR migration to an EMPTY database"
-psql_run -q -f /tmp/0027_hr_01_foundation.sql 2>&1 | grep -v "NOTICE" || true
+echo "==> applying HR migrations to an EMPTY database"
+for f in $HR_MIGRATIONS; do
+  echo "    $(basename "$f")"
+  psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
+done
 
 echo "==> re-applying to prove idempotency"
-psql_run -q -f /tmp/0027_hr_01_foundation.sql >/dev/null 2>&1
+for f in $HR_MIGRATIONS; do
+  psql_run -q -f "/tmp/$(basename "$f")" >/dev/null 2>&1
+done
 echo "    idempotent re-run: ok"
 
 echo "==> verifying RLS policies and ledger constraints"
@@ -77,6 +88,12 @@ psql_run -f /tmp/rls-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {
 
 echo "==> verifying employee-record constraints"
 psql_run -f /tmp/employees-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {
+  echo "verification produced no assertions — treating as failure"
+  exit 1
+}
+
+echo "==> verifying team-calendar privacy"
+psql_run -f /tmp/calendar-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {
   echo "verification produced no assertions — treating as failure"
   exit 1
 }

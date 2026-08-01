@@ -1,0 +1,140 @@
+# HR & Leave module checks.
+#
+# A separate workflow from `gate.yml` on purpose. That one enforces the
+# portfolio-wide standard and is synced from a shared template; these checks are
+# specific to a module that is designed to LEAVE this repo, and they need to
+# travel with it. Keeping them separate means the handover copies one file
+# rather than picking apart a shared workflow.
+#
+# What each layer catches, and why all four exist:
+#
+#   portability  a grep — only deps.ts may import outward, no FK escapes hr_
+#   lift         actually resolves those imports in an empty scratch project.
+#                A grep cannot catch a transitive dependency pulled in through a
+#                type, or a package the destination will not have installed.
+#   unit         the day count, dates, i18n drift, and the machine-route guard
+#   database     RLS and constraints against a real Postgres, on an EMPTY
+#                database — which is what tests the "applies with nothing else
+#                present" claim the migrations make
+#
+# The integration suite is NOT here. It needs Supabase credentials and creates
+# real rows; running it on every push would put CI secrets in reach of any fork
+# and write to a shared project. Run it locally before opening a PR.
+
+name: hr-module
+
+on:
+  pull_request:
+    paths:
+      - 'src/lib/hr/**'
+      - 'src/app/hr/**'
+      - 'src/app/api/hr/**'
+      - 'supabase/migrations/*_hr_*.sql'
+      - 'tests/hr/**'
+      - 'scripts/hr-*'
+      - 'scripts/check-hr-portability.mjs'
+      - '.github/workflows/hr-module.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/hr/**'
+      - 'src/app/hr/**'
+      - 'src/app/api/hr/**'
+      - 'supabase/migrations/*_hr_*.sql'
+
+jobs:
+  hr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # A throwaway Postgres for the SQL suites. Not Supabase — the shim in
+    # tests/hr/supabase-shim.sql stubs the three things the migrations need
+    # (auth.users, auth.uid, auth.jwt) so the schema can be verified with no
+    # Supabase project at all. That portability is the point: the destination
+    # repo can run this on day one, before it has provisioned anything.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: hrtest
+          POSTGRES_DB: hrverify
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@caistech'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # ── The portability contract ────────────────────────────────────────
+      - name: Portability contract
+        run: npm run check:hr
+
+      # ── The claim every PR in this epic has made ────────────────────────
+      - name: Dry-run lift into an empty project
+        run: npm run test:hr:lift
+
+      # ── Pure logic ──────────────────────────────────────────────────────
+      - name: Unit tests
+        run: npm run test:hr
+
+      # ── Schema, RLS and calendar privacy against a real Postgres ────────
+      #
+      # Runs the SQL directly rather than through scripts/hr-db-verify.sh: that
+      # script spins up its own container, which would be a container inside a
+      # container here. Same files, same assertions, different harness.
+      - name: Apply HR migrations to an empty database
+        run: |
+          export PGPASSWORD=hrtest
+          psql -h localhost -U postgres -d hrverify -v ON_ERROR_STOP=1 -q \
+            -f tests/hr/supabase-shim.sql
+          for f in $(ls supabase/migrations/*_hr_*.sql | sort); do
+            echo "applying $(basename "$f")"
+            psql -h localhost -U postgres -d hrverify -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Re-apply to prove idempotency
+        run: |
+          export PGPASSWORD=hrtest
+          for f in $(ls supabase/migrations/*_hr_*.sql | sort); do
+            psql -h localhost -U postgres -d hrverify -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Verify RLS, constraints and calendar privacy
+        run: |
+          export PGPASSWORD=hrtest
+          for suite in rls-verify employees-verify calendar-verify; do
+            echo "--- $suite ---"
+            psql -h localhost -U postgres -d hrverify -v ON_ERROR_STOP=1 \
+              -f "tests/hr/$suite.sql" 2>&1 | grep -E 'ok:|FAIL|ERROR|PASSED'
+          done
+
+      - name: Typecheck and lint the module
+        run: |
+          npx tsc --noEmit
+          npx eslint src/lib/hr src/app/hr src/app/api/hr
+
+      # A reminder rather than a gate. The integration suite covers the
+      # authorisation logic that lives in TypeScript, and CI cannot run it
+      # without handing secrets to every fork.
+      - name: Remind about the integration suite
+        if: always()
+        run: |
+          echo "::notice title=Integration tests not run in CI::npm run test:hr:integration covers the TypeScript authorisation logic (approval race, cancel-restores, cross-role denials) against real RLS. It needs Supabase credentials and writes real rows, so it runs locally before opening a PR — not here."

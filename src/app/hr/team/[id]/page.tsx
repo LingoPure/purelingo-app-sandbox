@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getHrIdentity, HrAuthError } from "@/lib/hr/auth";
 import { getEmployee, listPotentialManagers, displayName } from "@/lib/hr/employees";
+import { getHrI18n } from "@/lib/hr/i18n";
 import { PageHeader, Panel, PanelHeader, StatusPill, RolePill } from "../../ui";
 import { EditMemberPanel, ResendInvitePanel, DeactivatePanel } from "./member-admin";
 
@@ -39,9 +40,10 @@ export default async function TeamMemberPage({
   if (!employee) notFound();
 
   const isSuperAdmin = identity.role === "super_admin";
-  const [managers, headerList] = await Promise.all([
+  const [managers, headerList, { t }] = await Promise.all([
     isSuperAdmin ? listPotentialManagers() : Promise.resolve([]),
     headers(),
+    getHrI18n(),
   ]);
 
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "";
@@ -52,58 +54,91 @@ export default async function TeamMemberPage({
     ? (await listPotentialManagers().catch(() => [])).find((m) => m.id === employee.managerId)
     : null;
 
+  // Resolved here because the panels below are client components and cannot
+  // reach the translator — see src/lib/hr/i18n for why locale resolution is a
+  // server-side database read.
+  const adminLabels = {
+    editTitle: t("teamForm.editTitle"),
+    editIntro: t("teamForm.editIntro"),
+    firstName: t("teamForm.firstName"),
+    lastName: t("teamForm.lastName"),
+    jobTitle: t("settings.jobTitle"),
+    department: t("settings.department"),
+    role: t("settings.role"),
+    roleStaff: t("role.staff"),
+    roleAdmin: t("role.admin"),
+    roleSuperAdmin: t("role.super_admin"),
+    reportsTo: t("teamForm.reportsTo"),
+    reportsToHintShort: t("teamForm.reportsToHintShort"),
+    noManager: t("teamForm.noManager"),
+    startDate: t("teamForm.startDate"),
+    language: t("team.language"),
+    companyDefault: t("common.companyDefault"),
+    saveChanges: t("teamForm.saveChanges"),
+    saving: t("common.saving"),
+    inviteTitle: t("teamForm.inviteTitle"),
+    inviteAccepted: t("teamForm.inviteAccepted"),
+    invitePending: t("teamForm.invitePending"),
+    resend: t("teamForm.resend"),
+    resending: t("teamForm.resending"),
+    deactivateTitle: t("teamForm.deactivateTitle"),
+    deactivateIntro: t("teamForm.deactivateIntro"),
+    deactivateStart: t("teamForm.deactivateStart"),
+    deactivateConfirmLabel: t("teamForm.deactivateConfirmLabel"),
+    deactivateConfirmHint: t("teamForm.deactivateConfirmHint"),
+    deactivateButton: t("teamForm.deactivateButton"),
+    deactivating: t("teamForm.deactivating"),
+    cancel: t("common.cancel"),
+  };
+
   return (
     <>
       <PageHeader title={displayName(employee)}>
-        {isSuperAdmin
-          ? "Their profile, role and reporting line. Changes here affect who approves their leave and what they can see."
-          : "Their profile and reporting line. Only a Super Admin can change these details."}
+        {isSuperAdmin ? t("team.detailIntroAdmin") : t("team.detailIntroReadOnly")}
       </PageHeader>
 
       <p className="mb-6">
         <Link href="/hr/team" className="text-sm text-navy underline underline-offset-4">
-          ← Back to team members
+          ← {t("team.backToList")}
         </Link>
       </p>
 
       <Panel className="mb-6">
-        <PanelHeader title="Details" />
+        <PanelHeader title={t("team.detailsTitle")} />
         <dl className="grid gap-4 sm:grid-cols-2">
-          <Detail label="Work email">
+          <Detail label={t("settings.workEmail")}>
             <span className="break-all">{employee.email}</span>
           </Detail>
-          <Detail label="Status"><StatusPill status={employee.status} /></Detail>
-          <Detail label="Role"><RolePill role={employee.hrRole} /></Detail>
-          <Detail label="Reports to">
-            {manager ? displayName(manager) : "No manager assigned"}
+          <Detail label={t("settings.status")}><StatusPill status={employee.status} t={t} /></Detail>
+          <Detail label={t("settings.role")}><RolePill role={employee.hrRole} t={t} /></Detail>
+          <Detail label={t("team.colReportsTo")}>
+            {manager ? displayName(manager) : t("team.noManager")}
           </Detail>
-          <Detail label="Job title">{employee.jobTitle ?? "—"}</Detail>
-          <Detail label="Department">{employee.department ?? "—"}</Detail>
-          <Detail label="Employment start">{employee.employmentStartDate}</Detail>
-          <Detail label="Language">
+          <Detail label={t("settings.jobTitle")}>{employee.jobTitle ?? t("common.none")}</Detail>
+          <Detail label={t("settings.department")}>{employee.department ?? t("common.none")}</Detail>
+          <Detail label={t("team.employmentStart")}>{employee.employmentStartDate}</Detail>
+          <Detail label={t("team.language")}>
             {employee.locale === "vi"
               ? "Tiếng Việt"
               : employee.locale === "en"
                 ? "English"
-                : "Company default"}
+                : t("common.companyDefault")}
           </Detail>
         </dl>
       </Panel>
 
       {isSuperAdmin ? (
         <>
-          <EditMemberPanel employee={employee} managers={managers} />
+          <EditMemberPanel employee={employee} managers={managers} labels={adminLabels} />
           {employee.status !== "deactivated" ? (
             <>
-              <ResendInvitePanel employee={employee} origin={origin} />
-              <DeactivatePanel employee={employee} />
+              <ResendInvitePanel employee={employee} origin={origin} labels={adminLabels} />
+              <DeactivatePanel employee={employee} labels={adminLabels} />
             </>
           ) : (
             <Panel>
-              <PanelHeader title="Deactivated">
-                This person cannot sign in. Their leave history is retained. To
-                restore access, save their profile above with an active role and
-                resend an invitation.
+              <PanelHeader title={t("team.deactivatedPanelTitle")}>
+                {t("team.deactivatedPanelBody")}
               </PanelHeader>
             </Panel>
           )}

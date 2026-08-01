@@ -29,11 +29,14 @@ export function HrNav({
   role,
   displayName,
   roleLabel,
+  menuLabels,
 }: {
   items: HrNavItem[];
   role: HrRole;
   displayName: string;
   roleLabel: string;
+  /** Screen-reader labels, resolved on the server like every other string. */
+  menuLabels: { open: string; close: string; sections: string };
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -53,7 +56,7 @@ export function HrNav({
     ].join(" ");
 
   const navLinks = (
-    <nav className="flex flex-col gap-1" aria-label="HR sections">
+    <nav className="flex flex-col gap-1" aria-label={menuLabels.sections}>
       {visible.map((item) => (
         <Link
           key={item.href}
@@ -80,7 +83,7 @@ export function HrNav({
           aria-controls="hr-mobile-nav"
           className="inline-flex h-11 w-11 items-center justify-center rounded-md text-navy hover:bg-mist"
         >
-          <span className="sr-only">{open ? "Close menu" : "Open menu"}</span>
+          <span className="sr-only">{open ? menuLabels.close : menuLabels.open}</span>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             {open ? (
               <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

@@ -11,6 +11,10 @@
     "check:hr": "node scripts/check-hr-portability.mjs",
     "test:hr": "tsx --test tests/hr/*.test.ts",
     "test:hr:db": "bash scripts/hr-db-verify.sh",
+    "test:hr:integration": "bash scripts/hr-integration-test.sh",
+    "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",
+    "hr:seed": "tsx scripts/hr-seed-demo.ts",
+    "hr:import-balances": "tsx scripts/hr-import-balances.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

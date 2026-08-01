@@ -6,20 +6,40 @@ import {
   updateOwnPasswordAction,
   type ActionResult,
 } from "../actions";
-import {
-  Field,
-  Panel,
-  PanelHeader,
-  inputClass,
-  buttonPrimaryClass,
-} from "../ui";
+import { Field, Panel, PanelHeader, inputClass, buttonPrimaryClass } from "../ui";
+import { HR_LOCALES } from "@/lib/hr/i18n/dictionary";
 import type { HrLocale } from "@/lib/hr/types";
+
+/**
+ * Strings arrive pre-translated. A client component cannot resolve a locale —
+ * that means a database read — so the server page does it and hands the result
+ * over as plain data.
+ */
+export type LanguageLabels = {
+  title: string;
+  intro: string;
+  field: string;
+  companyDefault: string;
+  save: string;
+  saving: string;
+};
+
+export type PasswordLabels = {
+  title: string;
+  intro: string;
+  newPassword: string;
+  confirmPassword: string;
+  submit: string;
+  working: string;
+  show: string;
+  hide: string;
+};
 
 function Result({ state }: { state: ActionResult | null }) {
   if (!state) return null;
   return state.ok ? (
     <p className="rounded-md bg-ai-green/10 px-4 py-3 text-sm text-ai-green">
-      {state.message ?? "Saved."}
+      {state.message ?? ""}
     </p>
   ) : (
     <p role="alert" className="rounded-md bg-coral/10 px-4 py-3 text-sm text-coral">
@@ -28,7 +48,13 @@ function Result({ state }: { state: ActionResult | null }) {
   );
 }
 
-export function LanguageForm({ current }: { current: HrLocale | null }) {
+export function LanguageForm({
+  current,
+  labels,
+}: {
+  current: HrLocale | null;
+  labels: LanguageLabels;
+}) {
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, form: FormData) => updateOwnLocaleAction(form),
     null
@@ -36,17 +62,20 @@ export function LanguageForm({ current }: { current: HrLocale | null }) {
 
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Language">
-        Sets the language of this interface and of the emails we send you about
-        your leave.
-      </PanelHeader>
+      <PanelHeader title={labels.title}>{labels.intro}</PanelHeader>
 
       <form action={formAction} className="flex flex-col gap-4">
-        <Field id="locale" label="Display language">
+        <Field id="locale" label={labels.field}>
           <select id="locale" name="locale" defaultValue={current ?? ""} className={inputClass}>
-            <option value="">Company default</option>
-            <option value="vi">Tiếng Việt</option>
-            <option value="en">English</option>
+            <option value="">{labels.companyDefault}</option>
+            {/* Language names are always shown in their OWN language. Someone
+                looking for Vietnamese scans for "Tiếng Việt", not for whatever
+                the current interface calls it. */}
+            {HR_LOCALES.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
           </select>
         </Field>
 
@@ -54,7 +83,7 @@ export function LanguageForm({ current }: { current: HrLocale | null }) {
 
         <div>
           <button type="submit" disabled={pending} className={`${buttonPrimaryClass} disabled:opacity-60`}>
-            {pending ? "Saving…" : "Save language"}
+            {pending ? labels.saving : labels.save}
           </button>
         </div>
       </form>
@@ -69,7 +98,7 @@ export function LanguageForm({ current }: { current: HrLocale | null }) {
  * is `tabIndex={-1}` so keyboard users tabbing through the form go straight
  * from one password field to the next rather than through a decoration.
  */
-export function PasswordForm() {
+export function PasswordForm({ labels }: { labels: PasswordLabels }) {
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, form: FormData) => updateOwnPasswordAction(form),
     null
@@ -77,20 +106,31 @@ export function PasswordForm() {
 
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Password">
-        Changing your password signs you out of nothing else — your other
-        sessions stay open. Use at least 10 characters.
-      </PanelHeader>
+      <PanelHeader title={labels.title}>{labels.intro}</PanelHeader>
 
       <form action={formAction} className="flex flex-col gap-5">
-        <PasswordField id="password" name="password" label="New password" autoComplete="new-password" />
-        <PasswordField id="confirmPassword" name="confirmPassword" label="Confirm new password" autoComplete="new-password" />
+        <PasswordField
+          id="password"
+          name="password"
+          label={labels.newPassword}
+          autoComplete="new-password"
+          show={labels.show}
+          hide={labels.hide}
+        />
+        <PasswordField
+          id="confirmPassword"
+          name="confirmPassword"
+          label={labels.confirmPassword}
+          autoComplete="new-password"
+          show={labels.show}
+          hide={labels.hide}
+        />
 
         <Result state={state} />
 
         <div>
           <button type="submit" disabled={pending} className={`${buttonPrimaryClass} disabled:opacity-60`}>
-            {pending ? "Updating…" : "Update password"}
+            {pending ? labels.working : labels.submit}
           </button>
         </div>
       </form>
@@ -103,11 +143,15 @@ function PasswordField({
   name,
   label,
   autoComplete,
+  show,
+  hide,
 }: {
   id: string;
   name: string;
   label: string;
   autoComplete: string;
+  show: string;
+  hide: string;
 }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -126,7 +170,7 @@ function PasswordField({
           type="button"
           tabIndex={-1}
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? "Hide password" : "Show password"}
+          aria-label={visible ? hide : show}
           className="absolute inset-y-0 right-0 inline-flex w-11 items-center justify-center text-mute hover:text-navy"
         >
           {visible ? (

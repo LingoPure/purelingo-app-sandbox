@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode } from "react";
+import type { HrTranslate } from "@/lib/hr/i18n";
 
 /**
  * The header every HR page opens with.
@@ -120,16 +121,16 @@ export const buttonDangerClass =
   "inline-flex min-h-[44px] w-full items-center justify-center rounded-md bg-coral px-5 py-2.5 " +
   "text-sm font-semibold text-paper transition hover:opacity-90 sm:w-auto";
 
-export function StatusPill({ status }: { status: string }) {
+export function StatusPill({ status, t }: { status: string; t: HrTranslate }) {
   const tone: Record<string, string> = {
     active: "bg-ai-green/10 text-ai-green",
     invited: "bg-gold/15 text-gold",
     deactivated: "bg-mute/15 text-mute",
   };
   const label: Record<string, string> = {
-    active: "Active",
-    invited: "Invited",
-    deactivated: "Deactivated",
+    active: t("status.active"),
+    invited: t("status.invited"),
+    deactivated: t("status.deactivated"),
   };
   return (
     <span
@@ -142,11 +143,40 @@ export function StatusPill({ status }: { status: string }) {
   );
 }
 
-export function RolePill({ role }: { role: string }) {
+export function RequestStatusPill({ status, t }: { status: string; t: HrTranslate }) {
+  const tone: Record<string, string> = {
+    pending: "bg-gold/15 text-gold",
+    approved: "bg-ai-green/10 text-ai-green",
+    declined: "bg-coral/10 text-coral",
+    cancelled: "bg-mute/15 text-mute",
+  };
   const label: Record<string, string> = {
-    super_admin: "Super Admin",
-    admin: "Manager",
-    staff: "Staff",
+    pending: t("request.pending"),
+    approved: t("request.approved"),
+    declined: t("request.declined"),
+    cancelled: t("request.cancelled"),
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+        tone[status] ?? "bg-mute/15 text-mute"
+      }`}
+    >
+      {label[status] ?? status}
+    </span>
+  );
+}
+
+/** A date range, collapsed to one date when both ends match. */
+export function DateRange({ from, to }: { from: string; to: string }) {
+  return <span>{from === to ? from : `${from} → ${to}`}</span>;
+}
+
+export function RolePill({ role, t }: { role: string; t: HrTranslate }) {
+  const label: Record<string, string> = {
+    super_admin: t("role.super_admin"),
+    admin: t("role.admin"),
+    staff: t("role.staff"),
   };
   return (
     <span className="inline-flex items-center rounded-full bg-mist px-2.5 py-1 text-xs font-medium text-navy">
