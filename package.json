@@ -15,6 +15,7 @@
     "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",
     "hr:seed": "tsx scripts/hr-seed-demo.ts",
     "hr:import-balances": "tsx scripts/hr-import-balances.ts",
+    "hr:test-identities": "tsx scripts/hr-test-identities.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
