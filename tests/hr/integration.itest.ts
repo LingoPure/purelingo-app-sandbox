@@ -32,7 +32,8 @@ import {
   cancelRequest,
   previewRequest,
 } from "../../src/lib/hr/requests";
-import { getBalanceForAsService } from "../../src/lib/hr/balances";
+import { getBalanceForAsService, getAdjustmentHistory } from "../../src/lib/hr/balances";
+import { applyAdjustment, previewAdjustment } from "../../src/lib/hr/adjustments";
 import { HrAuthError } from "../../src/lib/hr/auth";
 
 let ctx: TestContext;
@@ -417,6 +418,217 @@ describe("Over-balance policy", () => {
     assert.ok(preview.warnings.some((w) => /negative balance/i.test(w)));
 
     await setPolicy(ctx.orgId, { over_balance_policy: "block" });
+  });
+});
+
+describe("Balance adjustment", () => {
+  async function ledgerCount(employeeId: string): Promise<number> {
+    const { data } = await serviceClient()
+      .from("hr_leave_ledger")
+      .select("id")
+      .eq("employee_id", employeeId)
+      .eq("entry_type", "manual_adjustment");
+    return (data ?? []).length;
+  }
+
+  test("add and deduct move the balance by exactly the days given", async () => {
+    actAs(ctx.superAdmin);
+    const before = await annualBalance(ctx.staff.employeeId);
+
+    await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "add",
+      value: 2.5,
+      reason: "Accrued in lieu",
+    });
+    assert.equal(await annualBalance(ctx.staff.employeeId), before + 2.5);
+
+    await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "deduct",
+      value: 0.5,
+      reason: "Correcting a mistake",
+    });
+    assert.equal(await annualBalance(ctx.staff.employeeId), before + 2);
+  });
+
+  test("set writes the DELTA, landing exactly on the target", async () => {
+    actAs(ctx.superAdmin);
+    await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "set",
+      value: 7.5,
+      reason: "Reconciled with the old spreadsheet",
+    });
+    assert.equal(await annualBalance(ctx.staff.employeeId), 7.5);
+  });
+
+  test("setting the value it already holds writes nothing", async () => {
+    // A zero-day ledger row is noise in a history whose only job is to explain
+    // movements.
+    actAs(ctx.superAdmin);
+    const rowsBefore = await ledgerCount(ctx.staff.employeeId);
+
+    const result = await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "set",
+      value: 7.5,
+      reason: "No change intended",
+    });
+
+    assert.equal(result.noop, true);
+    assert.equal(await ledgerCount(ctx.staff.employeeId), rowsBefore);
+    assert.equal(await annualBalance(ctx.staff.employeeId), 7.5);
+  });
+
+  test("changing the allowance writes NO ledger row and leaves the balance alone", async () => {
+    // The distinction the whole design rests on: an allowance is the
+    // entitlement, not the balance. Moving someone from 12 to 14 days has not
+    // given them two days retroactively.
+    actAs(ctx.superAdmin);
+    const balanceBefore = await annualBalance(ctx.staff.employeeId);
+    const rowsBefore = await ledgerCount(ctx.staff.employeeId);
+
+    const result = await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "allowance",
+      value: 14,
+      reason: "Five years of service",
+    });
+
+    assert.equal(result.allowanceAfter, 14);
+    assert.equal(await ledgerCount(ctx.staff.employeeId), rowsBefore, "no ledger row");
+    assert.equal(await annualBalance(ctx.staff.employeeId), balanceBefore, "balance unchanged");
+  });
+
+  test("an adjustment without a reason is refused", async () => {
+    actAs(ctx.superAdmin);
+    for (const reason of ["", "   "]) {
+      await assert.rejects(
+        () =>
+          applyAdjustment({
+            employeeId: ctx.staff.employeeId,
+            leaveTypeId: ctx.leaveTypes.annual,
+            leaveYear: YEAR,
+            action: "add",
+            value: 1,
+            reason,
+          }),
+        (error: unknown) => error instanceof HrAuthError && /reason/i.test(error.message)
+      );
+    }
+  });
+
+  test("values must be in whole or half days", async () => {
+    actAs(ctx.superAdmin);
+    await assert.rejects(
+      () =>
+        applyAdjustment({
+          employeeId: ctx.staff.employeeId,
+          leaveTypeId: ctx.leaveTypes.annual,
+          leaveYear: YEAR,
+          action: "add",
+          value: 0.3,
+          reason: "Should be rejected",
+        }),
+      (error: unknown) => error instanceof HrAuthError && /half days/i.test(error.message)
+    );
+  });
+
+  test("adjusting one employee changes no other employee", async () => {
+    // Structural rather than careful: a balance is the sum of THAT employee's
+    // ledger rows, so there is no company-wide write path to get wrong.
+    actAs(ctx.superAdmin);
+    const peerBefore = await annualBalance(ctx.staffPeer.employeeId);
+
+    await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "add",
+      value: 3,
+      reason: "Isolation check",
+    });
+
+    assert.equal(await annualBalance(ctx.staffPeer.employeeId), peerBefore);
+  });
+
+  test("a manager can PREVIEW a report's adjustment but cannot APPLY one", async () => {
+    actAs(ctx.manager);
+
+    // Viewing what a change would mean is reasonable for someone who can
+    // already see the balance.
+    const preview = await previewAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "add",
+      value: 1,
+      reason: "preview",
+    });
+    assert.equal(typeof preview.balanceAfter, "number");
+
+    await assert.rejects(
+      () =>
+        applyAdjustment({
+          employeeId: ctx.staff.employeeId,
+          leaveTypeId: ctx.leaveTypes.annual,
+          leaveYear: YEAR,
+          action: "add",
+          value: 1,
+          reason: "Should be refused",
+        }),
+      (error: unknown) => error instanceof HrAuthError && error.status === 403
+    );
+  });
+
+  test("staff cannot adjust their own balance", async () => {
+    actAs(ctx.staff);
+    await assert.rejects(
+      () =>
+        applyAdjustment({
+          employeeId: ctx.staff.employeeId,
+          leaveTypeId: ctx.leaveTypes.annual,
+          leaveYear: YEAR,
+          action: "add",
+          value: 5,
+          reason: "Should be refused",
+        }),
+      (error: unknown) => error instanceof HrAuthError && error.status === 403
+    );
+  });
+
+  test("the history records reason, days and the running balance", async () => {
+    actAs(ctx.superAdmin);
+    await applyAdjustment({
+      employeeId: ctx.staff.employeeId,
+      leaveTypeId: ctx.leaveTypes.annual,
+      leaveYear: YEAR,
+      action: "add",
+      value: 1,
+      reason: "A distinctive reason for the history",
+      effectiveDate: `${YEAR}-06-15`,
+    });
+
+    const history = await getAdjustmentHistory(ctx.staff.employeeId, YEAR);
+    const entry = history.find((e) => e.reason === "A distinctive reason for the history");
+    assert.ok(entry, "the adjustment must appear in the history");
+    assert.equal(entry.days, 1);
+    assert.equal(entry.effectiveDate, `${YEAR}-06-15`);
+    assert.equal(entry.createdBy, ctx.superAdmin.employeeId);
+    assert.equal(typeof entry.balanceAfter, "number");
+    // Every row in the history is an adjustment, not an approval.
+    assert.ok(history.every((e) => e.entryType === "manual_adjustment"));
   });
 });
 
