@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getHrIdentity } from "@/lib/hr/auth";
 import { getOwnEmployee, displayName } from "@/lib/hr/employees";
+import { getHrI18n } from "@/lib/hr/i18n";
 import { HrNav, type HrNavItem } from "./hr-nav";
 import { hrSignOut } from "./actions";
 import type { HrRole } from "@/lib/hr/types";
@@ -24,20 +25,29 @@ export const metadata = {
  * entries then.
  */
 
-const ROLE_LABELS: Record<HrRole, string> = {
-  super_admin: "Super Admin",
-  admin: "Manager",
-  staff: "Staff",
-};
+/**
+ * Nav items, localised.
+ *
+ * Built here in the SERVER layout rather than inside `HrNav`, which is a client
+ * component. Resolving an employee's language means a database read, and the
+ * translator is not something to ship to the browser — so the labels arrive
+ * already translated and `HrNav` stays a presentational component that knows
+ * nothing about locales.
+ */
+function navItems(t: (key: string) => string): HrNavItem[] {
+  return [
+    { href: "/hr", label: t("nav.overview") },
+    { href: "/hr/requests", label: t("nav.myLeave") },
+    { href: "/hr/calendar", label: t("nav.calendar") },
+    { href: "/hr/approvals", label: t("nav.approvals"), roles: ["super_admin", "admin"] },
+    { href: "/hr/team", label: t("nav.team"), roles: ["super_admin"] },
+    { href: "/hr/holidays", label: t("nav.holidays"), roles: ["super_admin"] },
+  ];
+}
 
-const NAV_ITEMS: HrNavItem[] = [
-  { href: "/hr", label: "Overview" },
-  { href: "/hr/requests", label: "My leave" },
-  { href: "/hr/calendar", label: "Team calendar" },
-  { href: "/hr/approvals", label: "Approvals", roles: ["super_admin", "admin"] },
-  { href: "/hr/team", label: "Team members", roles: ["super_admin"] },
-  { href: "/hr/holidays", label: "Public holidays", roles: ["super_admin"] },
-];
+function roleLabel(role: HrRole, t: (key: string) => string): string {
+  return t(`role.${role}`);
+}
 
 export default async function HrLayout({
   children,
@@ -47,16 +57,16 @@ export default async function HrLayout({
   const identity = await getHrIdentity();
   if (!identity) redirect("/login?next=/hr");
 
-  const me = await getOwnEmployee();
-  const name = me ? displayName(me) : "Signed in";
+  const [me, { t }] = await Promise.all([getOwnEmployee(), getHrI18n()]);
+  const name = me ? displayName(me) : t("nav.people");
 
   return (
     <div className="flex min-h-screen flex-col bg-mist md:flex-row">
       <HrNav
-        items={NAV_ITEMS}
+        items={navItems(t)}
         role={identity.role}
         displayName={name}
-        roleLabel={ROLE_LABELS[identity.role]}
+        roleLabel={roleLabel(identity.role, t)}
       />
 
       <div className="flex min-h-screen flex-1 flex-col">
@@ -74,14 +84,14 @@ export default async function HrLayout({
               href="/hr/settings"
               className="inline-flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm font-medium text-mute transition hover:bg-mist hover:text-navy"
             >
-              Settings
+              {t("nav.settings")}
             </a>
             <form action={hrSignOut}>
               <button
                 type="submit"
                 className="inline-flex min-h-[44px] w-full items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-mute transition hover:bg-mist hover:text-navy sm:w-auto"
               >
-                Sign out
+                {t("nav.signOut")}
               </button>
             </form>
           </div>

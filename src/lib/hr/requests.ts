@@ -32,8 +32,34 @@ import { countLeaveDays, type LeaveCalendar } from "./leave-days";
 import { buildLeaveCalendar, getOrgPolicy, getOrgTimezone, listLeaveTypes } from "./policy";
 import { getBalanceForAsService } from "./balances";
 import { leaveYearOf, todayInTimeZone, type DateOnly } from "./dates";
-import { writeAudit } from "./employees";
-import type { HrHalfDay, HrLeaveRequest, HrRequestStatus, HrOrgPolicy } from "./types";
+import { writeAudit, getEmployee, displayName } from "./employees";
+import {
+  notifyRequestSubmitted,
+  notifyRequestApproved,
+  notifyRequestDeclined,
+  notifyRequestCancelled,
+} from "./notifications";
+import type { HrHalfDay, HrLeaveRequest, HrRequestStatus, HrOrgPolicy, HrLeaveType } from "./types";
+
+/**
+ * Absolute origin for links inside notification emails.
+ *
+ * Read from env rather than threaded down from the request, because the same
+ * notifications are sent from a cron job where there is no request to read a
+ * host header from. A missing value means the email ships without a button
+ * rather than with a broken link to `undefined/hr`.
+ */
+function notificationBaseUrl(): string | undefined {
+  return (
+    process.env.HR_PUBLIC_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+  );
+}
+
+function leaveTypeNames(type: HrLeaveType | undefined): { en: string; vi: string } {
+  return { en: type?.nameEn ?? "Leave", vi: type?.nameVi ?? "Nghỉ phép" };
+}
 
 type RequestRow = {
   id: string;
@@ -380,6 +406,22 @@ export async function submitRequest(
   await writeAudit(me.employeeId, me.orgId, "request.submitted", "hr_leave_requests",
     request.id, null, { days: preview.days, type: input.leaveTypeId });
 
+  // Awaited, not fire-and-forget. A serverless function can be frozen the
+  // moment its response is returned, so a dangling promise is simply dropped
+  // and the manager is never told. `notifyRequestSubmitted` swallows its own
+  // failures, so awaiting it cannot fail the submission.
+  const [subject, types] = await Promise.all([
+    getEmployee(input.employeeId).catch(() => null),
+    listLeaveTypes(me.orgId),
+  ]);
+  await notifyRequestSubmitted({
+    request,
+    subjectEmployeeId: input.employeeId,
+    subjectName: subject ? displayName(subject) : "A colleague",
+    leaveTypeName: leaveTypeNames(types.find((t) => t.id === request.leaveTypeId)),
+    baseUrl: notificationBaseUrl(),
+  });
+
   void policy; // policy is read above for validation; retained for clarity
   return request;
 }
@@ -484,6 +526,25 @@ export async function approveRequest(
     "hr_leave_requests", request.id, { status: "pending" },
     { status: "approved", days });
 
+  const [subject, actor] = await Promise.all([
+    getEmployee(request.employeeId).catch(() => null),
+    getEmployee(approver.employeeId).catch(() => null),
+  ]);
+  await notifyRequestApproved({
+    request,
+    subjectEmployeeId: request.employeeId,
+    subjectName: subject ? displayName(subject) : "",
+    leaveTypeName: leaveTypeNames(leaveType),
+    actorName: actor ? displayName(actor) : "",
+    // Read AFTER the ledger write, so the figure quoted in the email is the
+    // balance the employee actually has now — not the one before their own
+    // deduction landed.
+    balanceAfter: leaveType?.deductsBalance
+      ? await getBalanceForAsService(request.employeeId, request.leaveTypeId, leaveYear)
+      : null,
+    baseUrl: notificationBaseUrl(),
+  });
+
   return { ok: true, request };
 }
 
@@ -524,7 +585,23 @@ export async function declineRequest(
   await writeAudit(approver.employeeId, approver.orgId, "request.declined",
     "hr_leave_requests", requestId, { status: "pending" }, { status: "declined" });
 
-  return { ok: true, request: toRequest(claimed as unknown as RequestRow) };
+  const request = toRequest(claimed as unknown as RequestRow);
+  const [subject, actor, types] = await Promise.all([
+    getEmployee(request.employeeId).catch(() => null),
+    getEmployee(approver.employeeId).catch(() => null),
+    listLeaveTypes(approver.orgId),
+  ]);
+  await notifyRequestDeclined({
+    request,
+    subjectEmployeeId: request.employeeId,
+    subjectName: subject ? displayName(subject) : "",
+    leaveTypeName: leaveTypeNames(types.find((t) => t.id === request.leaveTypeId)),
+    actorName: actor ? displayName(actor) : "",
+    reason: note?.trim() || null,
+    baseUrl: notificationBaseUrl(),
+  });
+
+  return { ok: true, request };
 }
 
 /**
@@ -628,6 +705,23 @@ export async function cancelRequest(
 
   await writeAudit(me.employeeId, me.orgId, "request.cancelled", "hr_leave_requests",
     requestId, { status: existing.status }, { status: "cancelled" });
+
+  const [subject, actor, allTypes] = await Promise.all([
+    getEmployee(request.employeeId).catch(() => null),
+    getEmployee(me.employeeId).catch(() => null),
+    listLeaveTypes(me.orgId),
+  ]);
+  await notifyRequestCancelled({
+    request,
+    subjectEmployeeId: request.employeeId,
+    subjectName: subject ? displayName(subject) : "",
+    leaveTypeName: leaveTypeNames(allTypes.find((t) => t.id === request.leaveTypeId)),
+    actorName: actor ? displayName(actor) : "",
+    // Only an approved request ever deducted, and only its cancellation is
+    // news to the manager who had planned around the absence.
+    wasApproved: existing.status === "approved",
+    baseUrl: notificationBaseUrl(),
+  });
 
   return { ok: true, request };
 }

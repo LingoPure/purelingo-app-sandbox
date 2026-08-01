@@ -122,6 +122,16 @@ function wrap(bodyHtml: string, sender: HrEmailSender): string {
  * bakes in "unconfigured" for the lifetime of the deployment.
  */
 export async function sendHrEmail(input: HrEmailInput): Promise<HrEmailResult> {
+  // The integration harness creates real employees with @example.test addresses
+  // and drives the real approval paths, which now send real notifications.
+  // Without this, every test run would hand Resend a batch of undeliverable
+  // addresses — noise in the provider's logs at best, and a bounce rate that
+  // damages the sending domain's reputation at worst. The harness already sets
+  // this flag to enable the client seam, so there is nothing extra to remember.
+  if (process.env.HR_TEST_HARNESS === "1") {
+    return { ok: true, id: "suppressed-in-test-harness" };
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "RESEND_API_KEY is not configured" };

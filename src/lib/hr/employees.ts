@@ -314,6 +314,21 @@ export async function updateEmployee(
     { hr_role: after.hrRole, manager_id: after.managerId }
   );
 
+  // Only a ROLE change is notified. Correcting a job title or department is
+  // routine admin; changing what somebody can see and do in the system is not,
+  // and both the person and every Super Admin should know it happened.
+  if (action === "employee.role_changed") {
+    const { notifyRoleChanged } = await import("./notifications");
+    const actorEmployee = await getEmployee(actor.employeeId).catch(() => null);
+    await notifyRoleChanged({
+      orgId: actor.orgId,
+      employeeId,
+      before: before.hrRole,
+      after: after.hrRole,
+      actorName: actorEmployee ? displayName(actorEmployee) : "a Super Admin",
+    });
+  }
+
   return after;
 }
 
