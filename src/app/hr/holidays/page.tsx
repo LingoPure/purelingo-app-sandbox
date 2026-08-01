@@ -50,6 +50,38 @@ export default async function HolidaysPage({
   ]);
 
   const groups = groupHolidays(holidays);
+
+  // Resolved server-side; the panels below are client components.
+  const formLabels = {
+    addTitle: t("holidayForm.addTitle"),
+    addIntro: t("holidayForm.addIntro"),
+    nameEn: t("holidayForm.nameEn"),
+    nameVi: t("holidayForm.nameVi"),
+    nameViHint: t("holidayForm.nameViHint"),
+    firstDay: t("newRequest.firstDay"),
+    lastDay: t("newRequest.lastDay"),
+    lastDayHint: t("holidayForm.lastDayHint"),
+    date: t("newRequest.date"),
+    multiDay: t("holidayForm.multiDay"),
+    recurring: t("holidayForm.recurring"),
+    recurringHint: t("holidayForm.recurringHint"),
+    add: t("holidayForm.add"),
+    adding: t("holidayForm.adding"),
+    remove: t("common.remove"),
+    removeIntro: t("holidayForm.removeIntro"),
+    removeConfirm: t("holidayForm.removeConfirm"),
+    removing: t("holidayForm.removing"),
+    keep: t("holidayForm.keep"),
+    overrideTitle: t("holidayForm.overrideTitle"),
+    overrideIntro: t("holidayForm.overrideIntro"),
+    onThisDay: t("holidayForm.onThisDay"),
+    optionWorks: t("holidayForm.optionWorks"),
+    optionClosed: t("holidayForm.optionClosed"),
+    note: t("holidayForm.note"),
+    noteHint: t("holidayForm.noteHint"),
+    saveDay: t("holidayForm.saveDay"),
+    saving: t("common.saving"),
+  };
   const defaultDate = year === yearOf(today) ? today : `${year}-01-01`;
 
   return (
@@ -74,7 +106,7 @@ export default async function HolidaysPage({
         </Link>
       </nav>
 
-      <AddHolidayForm defaultDate={defaultDate} />
+      <AddHolidayForm defaultDate={defaultDate} labels={formLabels} />
 
       <Panel className="mb-6">
         <PanelHeader title={t("holidays.inYear", { year })}>
@@ -104,7 +136,7 @@ export default async function HolidaysPage({
                   <p className="mt-1 text-sm text-mute">
                     {group.startDate === group.endDate
                       ? group.startDate
-                      : `${group.startDate} → ${group.endDate} (${group.dates.length} days)`}
+                      : `${group.startDate} → ${group.endDate} (${group.dates.length} ${t("common.days")})`}
                     {group.isRecurring ? ` · ${t("holidays.sameDateEachYear")}` : ""}
                   </p>
                   {group.dates.some((d) => d.notifiedAt) ? (
@@ -115,6 +147,7 @@ export default async function HolidaysPage({
                   nameEn={group.nameEn}
                   startDate={group.startDate}
                   endDate={group.endDate}
+                  labels={formLabels}
                 />
               </li>
             ))}
@@ -122,7 +155,7 @@ export default async function HolidaysPage({
         )}
       </Panel>
 
-      <OverrideForm defaultDate={defaultDate} />
+      <OverrideForm defaultDate={defaultDate} labels={formLabels} />
 
       <Panel>
         <PanelHeader title={t("holidays.overridesTitle", { year })}>
@@ -149,7 +182,7 @@ export default async function HolidaysPage({
                     <p className="text-sm text-mute">{override.note}</p>
                   ) : null}
                 </div>
-                <RemoveOverrideButton date={override.date} />
+                <RemoveOverrideButton date={override.date} labels={formLabels} />
               </li>
             ))}
           </ul>

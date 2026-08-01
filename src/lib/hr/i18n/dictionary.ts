@@ -241,6 +241,79 @@ const en: Dict = {
   "team.deactivatedPanelBody":
     "This person cannot sign in. Their leave history is retained. To restore access, save their profile above with an active role and resend an invitation.",
 
+  // ── Team admin forms (Super Admin) ───────────────────────────────────────
+  "teamForm.addTitle": "Add a team member",
+  "teamForm.addIntro":
+    "Creates their record and emails an invitation. They can sign in as soon as they accept; their leave balance starts from the allowances below.",
+  "teamForm.addButton": "Add a team member",
+  "teamForm.submit": "Add and send invitation",
+  "teamForm.submitting": "Adding…",
+  "teamForm.firstName": "First name",
+  "teamForm.lastName": "Last name",
+  "teamForm.workEmail": "Work email",
+  "teamForm.workEmailHint": "The invitation goes here, and it is how they sign in.",
+  "teamForm.roleHint":
+    "Staff request leave. Managers approve for their own team. Super Admins manage everyone.",
+  "teamForm.reportsTo": "Reports to",
+  "teamForm.reportsToHint":
+    "Their manager approves their leave. Leave blank to route approvals to a Super Admin.",
+  "teamForm.reportsToHintShort": "Their manager approves their leave requests.",
+  "teamForm.noManager": "No manager assigned",
+  "teamForm.startDate": "Employment start date",
+  "teamForm.annualDays": "Annual leave (days)",
+  "teamForm.annualHint": "Defaults to 12.",
+  "teamForm.sickDays": "Sick leave (days)",
+  "teamForm.sickHint": "Defaults to 3.",
+  "teamForm.languageHint": "Used for the interface and their notification emails.",
+  "teamForm.editTitle": "Profile and role",
+  "teamForm.editIntro":
+    "Changing someone's manager changes who approves their leave. Changing their role changes what they can see across the whole system.",
+  "teamForm.saveChanges": "Save changes",
+  "teamForm.inviteTitle": "Invitation",
+  "teamForm.inviteAccepted": "This person has activated their account.",
+  "teamForm.invitePending":
+    "This person has not signed in yet. Resending issues a fresh link and invalidates the previous one.",
+  "teamForm.resend": "Resend invitation",
+  "teamForm.resending": "Sending…",
+  "teamForm.deactivateTitle": "Deactivate this person",
+  "teamForm.deactivateIntro":
+    "They lose access immediately and any leave request still waiting for a decision is declined. Their leave history and balances are kept, so past approvals stay auditable. This is not a deletion, and it can be undone by setting their role again.",
+  "teamForm.deactivateStart": "Deactivate {name}…",
+  "teamForm.deactivateConfirmLabel": "Type {email} to confirm",
+  "teamForm.deactivateConfirmHint":
+    "Typing the address confirms you are deactivating the right person.",
+  "teamForm.deactivateButton": "Deactivate",
+  "teamForm.deactivating": "Deactivating…",
+
+  // ── Holiday admin forms (Super Admin) ────────────────────────────────────
+  "holidayForm.addTitle": "Add a public holiday",
+  "holidayForm.addIntro":
+    "Days on this list are never deducted from anyone's leave, and a leave request spanning one does not count it. Staff are emailed in advance.",
+  "holidayForm.nameEn": "Name (English)",
+  "holidayForm.nameVi": "Name (Tiếng Việt)",
+  "holidayForm.nameViHint": "Falls back to the English name.",
+  "holidayForm.multiDay": "This holiday runs for more than one day",
+  "holidayForm.lastDayHint": "Tết usually runs five days.",
+  "holidayForm.recurring": "Falls on the same date every year",
+  "holidayForm.recurringHint":
+    "(National Day does; Tết does not — it moves with the lunar calendar)",
+  "holidayForm.add": "Add holiday",
+  "holidayForm.adding": "Adding…",
+  "holidayForm.removeIntro":
+    "Removing this means future leave requests will count these days again. Leave already approved keeps the day count it was approved on.",
+  "holidayForm.removeConfirm": "Yes, remove it",
+  "holidayForm.removing": "Removing…",
+  "holidayForm.keep": "Keep it",
+  "holidayForm.overrideTitle": "Compensatory and closure days",
+  "holidayForm.overrideIntro":
+    "Use this when a Saturday is worked to bridge a holiday (làm bù), or when the office closes on a day that is not a public holiday. Both change how leave is counted that week.",
+  "holidayForm.onThisDay": "On this day",
+  "holidayForm.optionWorks": "Everybody works (làm bù)",
+  "holidayForm.optionClosed": "The office is closed",
+  "holidayForm.note": "Note",
+  "holidayForm.noteHint": "Why, for whoever reads this next year.",
+  "holidayForm.saveDay": "Save this day",
+
   // ── Public holidays (Super Admin) ────────────────────────────────────────
   "holidays.title": "Public holidays",
   "holidays.intro":
@@ -493,6 +566,77 @@ const vi: Dict = {
   "team.deactivatedPanelTitle": "Đã vô hiệu hóa",
   "team.deactivatedPanelBody":
     "Người này không đăng nhập được. Lịch sử nghỉ phép vẫn được giữ. Để khôi phục quyền truy cập, lưu hồ sơ ở trên với vai trò đang hoạt động rồi gửi lại lời mời.",
+
+  "teamForm.addTitle": "Thêm thành viên",
+  "teamForm.addIntro":
+    "Tạo hồ sơ và gửi email mời. Họ có thể đăng nhập ngay khi chấp nhận; số ngày phép bắt đầu từ mức được đặt bên dưới.",
+  "teamForm.addButton": "Thêm thành viên",
+  "teamForm.submit": "Thêm và gửi lời mời",
+  "teamForm.submitting": "Đang thêm…",
+  "teamForm.firstName": "Tên",
+  "teamForm.lastName": "Họ",
+  "teamForm.workEmail": "Email công việc",
+  "teamForm.workEmailHint": "Lời mời sẽ gửi tới đây, và đây cũng là email đăng nhập.",
+  "teamForm.roleHint":
+    "Nhân viên gửi đơn xin nghỉ. Quản lý duyệt đơn cho nhóm của mình. Quản trị viên cấp cao quản lý tất cả.",
+  "teamForm.reportsTo": "Quản lý trực tiếp",
+  "teamForm.reportsToHint":
+    "Quản lý của họ sẽ duyệt đơn nghỉ. Để trống nếu muốn quản trị viên cấp cao duyệt.",
+  "teamForm.reportsToHintShort": "Quản lý của họ sẽ duyệt đơn xin nghỉ.",
+  "teamForm.noManager": "Chưa gán quản lý",
+  "teamForm.startDate": "Ngày bắt đầu làm việc",
+  "teamForm.annualDays": "Phép năm (ngày)",
+  "teamForm.annualHint": "Mặc định 12.",
+  "teamForm.sickDays": "Nghỉ ốm (ngày)",
+  "teamForm.sickHint": "Mặc định 3.",
+  "teamForm.languageHint": "Dùng cho giao diện và email thông báo của họ.",
+  "teamForm.editTitle": "Hồ sơ và vai trò",
+  "teamForm.editIntro":
+    "Đổi quản lý của một người sẽ đổi người duyệt đơn nghỉ của họ. Đổi vai trò sẽ đổi những gì họ thấy được trong toàn hệ thống.",
+  "teamForm.saveChanges": "Lưu thay đổi",
+  "teamForm.inviteTitle": "Lời mời",
+  "teamForm.inviteAccepted": "Người này đã kích hoạt tài khoản.",
+  "teamForm.invitePending":
+    "Người này chưa đăng nhập lần nào. Gửi lại sẽ tạo liên kết mới và vô hiệu hóa liên kết cũ.",
+  "teamForm.resend": "Gửi lại lời mời",
+  "teamForm.resending": "Đang gửi…",
+  "teamForm.deactivateTitle": "Vô hiệu hóa người này",
+  "teamForm.deactivateIntro":
+    "Họ mất quyền truy cập ngay lập tức và mọi đơn xin nghỉ đang chờ sẽ bị từ chối. Lịch sử và số ngày phép vẫn được giữ để có thể tra cứu. Đây không phải là xóa, và có thể hoàn tác bằng cách đặt lại vai trò cho họ.",
+  "teamForm.deactivateStart": "Vô hiệu hóa {name}…",
+  "teamForm.deactivateConfirmLabel": "Nhập {email} để xác nhận",
+  "teamForm.deactivateConfirmHint":
+    "Nhập đúng địa chỉ email để xác nhận bạn đang vô hiệu hóa đúng người.",
+  "teamForm.deactivateButton": "Vô hiệu hóa",
+  "teamForm.deactivating": "Đang vô hiệu hóa…",
+
+  "holidayForm.addTitle": "Thêm ngày lễ",
+  "holidayForm.addIntro":
+    "Những ngày trong danh sách này không bao giờ bị trừ vào phép của ai, và đơn xin nghỉ trùng ngày lễ sẽ không tính ngày đó. Nhân viên được thông báo trước.",
+  "holidayForm.nameEn": "Tên (tiếng Anh)",
+  "holidayForm.nameVi": "Tên (tiếng Việt)",
+  "holidayForm.nameViHint": "Nếu bỏ trống sẽ dùng tên tiếng Anh.",
+  "holidayForm.multiDay": "Kỳ nghỉ này kéo dài hơn một ngày",
+  "holidayForm.lastDayHint": "Tết thường kéo dài năm ngày.",
+  "holidayForm.recurring": "Rơi vào cùng một ngày mỗi năm",
+  "holidayForm.recurringHint":
+    "(Quốc khánh thì có; Tết thì không — Tết theo lịch âm nên thay đổi mỗi năm)",
+  "holidayForm.add": "Thêm ngày lễ",
+  "holidayForm.adding": "Đang thêm…",
+  "holidayForm.removeIntro":
+    "Xóa đi nghĩa là các đơn xin nghỉ sau này sẽ tính lại những ngày này. Đơn đã duyệt vẫn giữ nguyên số ngày lúc được duyệt.",
+  "holidayForm.removeConfirm": "Đồng ý, xóa đi",
+  "holidayForm.removing": "Đang xóa…",
+  "holidayForm.keep": "Giữ lại",
+  "holidayForm.overrideTitle": "Ngày làm bù và ngày đóng cửa",
+  "holidayForm.overrideIntro":
+    "Dùng khi có thứ Bảy đi làm để nối ngày lễ (làm bù), hoặc khi văn phòng đóng cửa vào ngày không phải ngày lễ. Cả hai đều ảnh hưởng tới cách tính ngày nghỉ trong tuần đó.",
+  "holidayForm.onThisDay": "Ngày này",
+  "holidayForm.optionWorks": "Cả công ty đi làm (làm bù)",
+  "holidayForm.optionClosed": "Văn phòng đóng cửa",
+  "holidayForm.note": "Ghi chú",
+  "holidayForm.noteHint": "Lý do, để người đọc lại năm sau còn hiểu.",
+  "holidayForm.saveDay": "Lưu ngày này",
 
   "holidays.title": "Ngày lễ",
   "holidays.intro":

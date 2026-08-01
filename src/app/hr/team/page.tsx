@@ -49,6 +49,36 @@ export default async function TeamPage() {
         managers={managers}
         origin={origin}
         defaultStartDate={todayInTimeZone("Asia/Ho_Chi_Minh")}
+        labels={{
+          addButton: t("teamForm.addButton"),
+          addTitle: t("teamForm.addTitle"),
+          addIntro: t("teamForm.addIntro"),
+          firstName: t("teamForm.firstName"),
+          lastName: t("teamForm.lastName"),
+          workEmail: t("teamForm.workEmail"),
+          workEmailHint: t("teamForm.workEmailHint"),
+          jobTitle: t("settings.jobTitle"),
+          department: t("settings.department"),
+          role: t("settings.role"),
+          roleHint: t("teamForm.roleHint"),
+          roleStaff: t("role.staff"),
+          roleAdmin: t("role.admin"),
+          roleSuperAdmin: t("role.super_admin"),
+          reportsTo: t("teamForm.reportsTo"),
+          reportsToHint: t("teamForm.reportsToHint"),
+          noManager: t("teamForm.noManager"),
+          startDate: t("teamForm.startDate"),
+          annualDays: t("teamForm.annualDays"),
+          annualHint: t("teamForm.annualHint"),
+          sickDays: t("teamForm.sickDays"),
+          sickHint: t("teamForm.sickHint"),
+          language: t("team.language"),
+          languageHint: t("teamForm.languageHint"),
+          companyDefault: t("common.companyDefault"),
+          submit: t("teamForm.submit"),
+          submitting: t("teamForm.submitting"),
+          cancel: t("common.cancel"),
+        }}
       />
 
       {active.length === 0 ? (

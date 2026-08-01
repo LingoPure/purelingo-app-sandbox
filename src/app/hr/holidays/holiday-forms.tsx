@@ -17,11 +17,14 @@ import {
   buttonQuietClass,
 } from "../ui";
 
+/** Pre-translated strings from the server page. */
+export type HolidayLabels = Record<string, string>;
+
 function Result({ state }: { state: ActionResult | null }) {
   if (!state) return null;
   return state.ok ? (
     <p className="rounded-md bg-ai-green/10 px-4 py-3 text-sm text-ai-green">
-      {state.message ?? "Saved."}
+      {state.message ?? ""}
     </p>
   ) : (
     <p role="alert" className="rounded-md bg-coral/10 px-4 py-3 text-sm text-coral">
@@ -37,7 +40,13 @@ function Result({ state }: { state: ActionResult | null }) {
  * dates: most holidays are one day, and making everyone enter the same date
  * twice for the common case to serve Tết is the wrong trade.
  */
-export function AddHolidayForm({ defaultDate }: { defaultDate: string }) {
+export function AddHolidayForm({
+  defaultDate,
+  labels,
+}: {
+  defaultDate: string;
+  labels: HolidayLabels;
+}) {
   const [multiDay, setMultiDay] = useState(false);
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, form: FormData) => createHolidayAction(form),
@@ -46,24 +55,20 @@ export function AddHolidayForm({ defaultDate }: { defaultDate: string }) {
 
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Add a public holiday">
-        Days on this list are never deducted from anyone&rsquo;s leave, and a
-        leave request spanning one does not count it. Staff are emailed in
-        advance.
-      </PanelHeader>
+      <PanelHeader title={labels.addTitle}>{labels.addIntro}</PanelHeader>
 
       <form action={formAction} className="flex flex-col gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="nameEn" label="Name (English)" required>
+          <Field id="nameEn" label={labels.nameEn} required>
             <input id="nameEn" name="nameEn" required defaultValue="" className={inputClass} />
           </Field>
-          <Field id="nameVi" label="Name (Tiếng Việt)" hint="Falls back to the English name.">
+          <Field id="nameVi" label={labels.nameVi} hint={labels.nameViHint}>
             <input id="nameVi" name="nameVi" className={inputClass} />
           </Field>
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="startDate" label={multiDay ? "First day" : "Date"} required>
+          <Field id="startDate" label={multiDay ? labels.firstDay : labels.date} required>
             <input
               id="startDate"
               name="startDate"
@@ -74,7 +79,7 @@ export function AddHolidayForm({ defaultDate }: { defaultDate: string }) {
             />
           </Field>
           {multiDay ? (
-            <Field id="endDate" label="Last day" hint="Tết usually runs five days.">
+            <Field id="endDate" label={labels.lastDay} hint={labels.lastDayHint}>
               <input id="endDate" name="endDate" type="date" className={inputClass} />
             </Field>
           ) : null}
@@ -87,22 +92,20 @@ export function AddHolidayForm({ defaultDate }: { defaultDate: string }) {
             onChange={(e) => setMultiDay(e.target.checked)}
             className="h-4 w-4"
           />
-          This holiday runs for more than one day
+          {labels.multiDay}
         </label>
 
         <label className="flex min-h-[44px] items-center gap-2 text-sm text-ink">
           <input type="checkbox" name="isRecurring" className="h-4 w-4" />
-          Falls on the same date every year
-          <span className="text-mute">
-            (National Day does; Tết does not — it moves with the lunar calendar)
-          </span>
+          {labels.recurring}
+          <span className="text-mute">{labels.recurringHint}</span>
         </label>
 
         <Result state={state} />
 
         <div>
           <button type="submit" disabled={pending} className={`${buttonPrimaryClass} disabled:opacity-60`}>
-            {pending ? "Adding…" : "Add holiday"}
+            {pending ? labels.adding : labels.add}
           </button>
         </div>
       </form>
@@ -115,10 +118,12 @@ export function DeleteHolidayButton({
   nameEn,
   startDate,
   endDate,
+  labels,
 }: {
   nameEn: string;
   startDate: string;
   endDate: string;
+  labels: HolidayLabels;
 }) {
   const [armed, setArmed] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -135,7 +140,7 @@ export function DeleteHolidayButton({
         onClick={() => setArmed(true)}
         className="min-h-[44px] text-sm font-medium text-coral underline-offset-4 hover:underline"
       >
-        Remove
+        {labels.remove}
       </button>
     );
   }
@@ -145,10 +150,7 @@ export function DeleteHolidayButton({
       <input type="hidden" name="nameEn" value={nameEn} />
       <input type="hidden" name="startDate" value={startDate} />
       <input type="hidden" name="endDate" value={endDate} />
-      <p className="text-sm text-ink/80">
-        Removing this means future leave requests will count these days again.
-        Leave already approved keeps the day count it was approved on.
-      </p>
+      <p className="text-sm text-ink/80">{labels.removeIntro}</p>
       <Result state={state} />
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
@@ -156,10 +158,10 @@ export function DeleteHolidayButton({
           disabled={pending}
           className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-coral px-4 py-2 text-sm font-semibold text-paper disabled:opacity-60"
         >
-          {pending ? "Removing…" : "Yes, remove it"}
+          {pending ? labels.removing : labels.removeConfirm}
         </button>
         <button type="button" onClick={() => setArmed(false)} className={buttonQuietClass}>
-          Keep it
+          {labels.keep}
         </button>
       </div>
     </form>
@@ -173,7 +175,13 @@ export function DeleteHolidayButton({
  * the opposite statement. A holiday says "nobody works"; `làm bù` says "this
  * Saturday, everybody does".
  */
-export function OverrideForm({ defaultDate }: { defaultDate: string }) {
+export function OverrideForm({
+  defaultDate,
+  labels,
+}: {
+  defaultDate: string;
+  labels: HolidayLabels;
+}) {
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, form: FormData) => setOverrideAction(form),
     null
@@ -181,15 +189,11 @@ export function OverrideForm({ defaultDate }: { defaultDate: string }) {
 
   return (
     <Panel className="mb-6">
-      <PanelHeader title="Compensatory and closure days">
-        Use this when a Saturday is worked to bridge a holiday (làm bù), or when
-        the office closes on a day that is not a public holiday. Both change how
-        leave is counted that week.
-      </PanelHeader>
+      <PanelHeader title={labels.overrideTitle}>{labels.overrideIntro}</PanelHeader>
 
       <form action={formAction} className="flex flex-col gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="override-date" label="Date" required>
+          <Field id="override-date" label={labels.date} required>
             <input
               id="override-date"
               name="date"
@@ -199,15 +203,15 @@ export function OverrideForm({ defaultDate }: { defaultDate: string }) {
               className={inputClass}
             />
           </Field>
-          <Field id="kind" label="On this day" required>
+          <Field id="kind" label={labels.onThisDay} required>
             <select id="kind" name="kind" required defaultValue="working" className={inputClass}>
-              <option value="working">Everybody works (làm bù)</option>
-              <option value="closed">The office is closed</option>
+              <option value="working">{labels.optionWorks}</option>
+              <option value="closed">{labels.optionClosed}</option>
             </select>
           </Field>
         </div>
 
-        <Field id="override-note" label="Note" hint="Why, for whoever reads this next year.">
+        <Field id="override-note" label={labels.note} hint={labels.noteHint}>
           <input id="override-note" name="note" className={inputClass} />
         </Field>
 
@@ -215,7 +219,7 @@ export function OverrideForm({ defaultDate }: { defaultDate: string }) {
 
         <div>
           <button type="submit" disabled={pending} className={`${buttonPrimaryClass} disabled:opacity-60`}>
-            {pending ? "Saving…" : "Save this day"}
+            {pending ? labels.saving : labels.saveDay}
           </button>
         </div>
       </form>
@@ -223,7 +227,13 @@ export function OverrideForm({ defaultDate }: { defaultDate: string }) {
   );
 }
 
-export function RemoveOverrideButton({ date }: { date: string }) {
+export function RemoveOverrideButton({
+  date,
+  labels,
+}: {
+  date: string;
+  labels: HolidayLabels;
+}) {
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult | null, form: FormData) => removeOverrideAction(form),
     null
@@ -239,7 +249,7 @@ export function RemoveOverrideButton({ date }: { date: string }) {
         disabled={pending}
         className="min-h-[44px] text-sm font-medium text-coral underline-offset-4 hover:underline disabled:opacity-60"
       >
-        {pending ? "Removing…" : "Remove"}
+        {pending ? labels.removing : labels.remove}
       </button>
       <Result state={state} />
     </form>

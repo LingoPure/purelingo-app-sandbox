@@ -54,6 +54,43 @@ export default async function TeamMemberPage({
     ? (await listPotentialManagers().catch(() => [])).find((m) => m.id === employee.managerId)
     : null;
 
+  // Resolved here because the panels below are client components and cannot
+  // reach the translator — see src/lib/hr/i18n for why locale resolution is a
+  // server-side database read.
+  const adminLabels = {
+    editTitle: t("teamForm.editTitle"),
+    editIntro: t("teamForm.editIntro"),
+    firstName: t("teamForm.firstName"),
+    lastName: t("teamForm.lastName"),
+    jobTitle: t("settings.jobTitle"),
+    department: t("settings.department"),
+    role: t("settings.role"),
+    roleStaff: t("role.staff"),
+    roleAdmin: t("role.admin"),
+    roleSuperAdmin: t("role.super_admin"),
+    reportsTo: t("teamForm.reportsTo"),
+    reportsToHintShort: t("teamForm.reportsToHintShort"),
+    noManager: t("teamForm.noManager"),
+    startDate: t("teamForm.startDate"),
+    language: t("team.language"),
+    companyDefault: t("common.companyDefault"),
+    saveChanges: t("teamForm.saveChanges"),
+    saving: t("common.saving"),
+    inviteTitle: t("teamForm.inviteTitle"),
+    inviteAccepted: t("teamForm.inviteAccepted"),
+    invitePending: t("teamForm.invitePending"),
+    resend: t("teamForm.resend"),
+    resending: t("teamForm.resending"),
+    deactivateTitle: t("teamForm.deactivateTitle"),
+    deactivateIntro: t("teamForm.deactivateIntro"),
+    deactivateStart: t("teamForm.deactivateStart"),
+    deactivateConfirmLabel: t("teamForm.deactivateConfirmLabel"),
+    deactivateConfirmHint: t("teamForm.deactivateConfirmHint"),
+    deactivateButton: t("teamForm.deactivateButton"),
+    deactivating: t("teamForm.deactivating"),
+    cancel: t("common.cancel"),
+  };
+
   return (
     <>
       <PageHeader title={displayName(employee)}>
@@ -92,11 +129,11 @@ export default async function TeamMemberPage({
 
       {isSuperAdmin ? (
         <>
-          <EditMemberPanel employee={employee} managers={managers} />
+          <EditMemberPanel employee={employee} managers={managers} labels={adminLabels} />
           {employee.status !== "deactivated" ? (
             <>
-              <ResendInvitePanel employee={employee} origin={origin} />
-              <DeactivatePanel employee={employee} />
+              <ResendInvitePanel employee={employee} origin={origin} labels={adminLabels} />
+              <DeactivatePanel employee={employee} labels={adminLabels} />
             </>
           ) : (
             <Panel>
