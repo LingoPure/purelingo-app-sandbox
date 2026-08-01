@@ -4,8 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import { getHrIdentity, HrAuthError } from "@/lib/hr/auth";
 import { getEmployee, listPotentialManagers, displayName } from "@/lib/hr/employees";
 import { getHrI18n } from "@/lib/hr/i18n";
+import { getBalances, getAdjustmentHistory } from "@/lib/hr/balances";
+import { listLeaveTypes, getOrgPolicy, getOrgTimezone } from "@/lib/hr/policy";
+import { todayInTimeZone, leaveYearOf } from "@/lib/hr/dates";
 import { PageHeader, Panel, PanelHeader, StatusPill, RolePill } from "../../ui";
 import { EditMemberPanel, ResendInvitePanel, DeactivatePanel } from "./member-admin";
+import { AdjustBalancePanel } from "./balance-panel";
 
 export const metadata = { title: "Team member · LingoPure People" };
 
@@ -40,7 +44,7 @@ export default async function TeamMemberPage({
   if (!employee) notFound();
 
   const isSuperAdmin = identity.role === "super_admin";
-  const [managers, headerList, { t }] = await Promise.all([
+  const [managers, headerList, { t, locale }] = await Promise.all([
     isSuperAdmin ? listPotentialManagers() : Promise.resolve([]),
     headers(),
     getHrI18n(),
@@ -53,6 +57,59 @@ export default async function TeamMemberPage({
   const manager = employee.managerId
     ? (await listPotentialManagers().catch(() => [])).find((m) => m.id === employee.managerId)
     : null;
+
+  // Balances are readable by anyone who may view the employee — a Manager can
+  // see a report's remaining days. Only a Super Admin gets the adjust panel.
+  const [leaveTypes, policy, timezone] = await Promise.all([
+    listLeaveTypes(identity.orgId),
+    getOrgPolicy(identity.orgId),
+    getOrgTimezone(identity.orgId),
+  ]);
+  const today = todayInTimeZone(timezone);
+  const leaveYear = leaveYearOf(today, policy.leaveYearBasis, undefined);
+
+  const [balances, adjustments] = await Promise.all([
+    getBalances(employee.id, leaveYear, leaveTypes).catch(() => []),
+    getAdjustmentHistory(employee.id, leaveYear).catch(() => []),
+  ]);
+
+  const localeName = (typeId: string) => {
+    const type = leaveTypes.find((t) => t.id === typeId);
+    return (locale === "vi" ? type?.nameVi : type?.nameEn) ?? "";
+  };
+  const deducting = balances.filter((b) => b.deductsBalance);
+
+  const balanceLabels = {
+    panelTitle: t("balance.panelTitle"),
+    panelIntro: t("balance.panelIntro"),
+    remaining: t("balance.remaining"),
+    allowance: t("balance.allowance"),
+    taken: t("balance.taken"),
+    adjustTitle: t("balance.adjustTitle"),
+    adjustIntro: t("balance.adjustIntro"),
+    leaveType: t("balance.leaveType"),
+    action: t("balance.action"),
+    actionAdd: t("balance.actionAdd"),
+    actionDeduct: t("balance.actionDeduct"),
+    actionSet: t("balance.actionSet"),
+    actionAllowance: t("balance.actionAllowance"),
+    actionAddHint: t("balance.actionAddHint"),
+    actionDeductHint: t("balance.actionDeductHint"),
+    actionSetHint: t("balance.actionSetHint"),
+    actionAllowanceHint: t("balance.actionAllowanceHint"),
+    days: t("balance.days"),
+    newAllowance: t("balance.newAllowance"),
+    effectiveDate: t("balance.effectiveDate"),
+    effectiveHint: t("balance.effectiveHint"),
+    reason: t("balance.reason"),
+    reasonHint: t("balance.reasonHint"),
+    apply: t("balance.apply"),
+    applying: t("balance.applying"),
+    previewNoChange: t("balance.previewNoChange"),
+    previewBalance: t("balance.previewBalance"),
+    previewAllowance: t("balance.previewAllowance"),
+    previewAllowanceNote: t("balance.previewAllowanceNote"),
+  };
 
   // Resolved here because the panels below are client components and cannot
   // reach the translator — see src/lib/hr/i18n for why locale resolution is a
@@ -125,6 +182,82 @@ export default async function TeamMemberPage({
                 : t("common.companyDefault")}
           </Detail>
         </dl>
+      </Panel>
+
+      {deducting.length > 0 ? (
+        <Panel className="mb-6">
+          <PanelHeader title={balanceLabels.panelTitle}>
+            {balanceLabels.panelIntro}
+          </PanelHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {deducting.map((balance) => (
+              <div key={balance.leaveTypeId} className="rounded-md bg-mist/60 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-mute">
+                  {localeName(balance.leaveTypeId) || balance.leaveTypeName}
+                </p>
+                <p className="mt-1 font-serif text-2xl text-navy">
+                  {balance.remaining}
+                  <span className="ml-1 text-sm text-mute">{balanceLabels.remaining}</span>
+                </p>
+                <p className="mt-1 text-xs text-mute">
+                  {balanceLabels.allowance}: {balance.allowance ?? t("common.none")} ·{" "}
+                  {balanceLabels.taken}: {balance.taken}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
+
+      {isSuperAdmin && deducting.length > 0 ? (
+        <AdjustBalancePanel
+          employeeId={employee.id}
+          leaveYear={leaveYear}
+          today={today}
+          balances={deducting.map((b) => ({
+            leaveTypeId: b.leaveTypeId,
+            name: localeName(b.leaveTypeId) || b.leaveTypeName,
+            remaining: b.remaining,
+            allowance: b.allowance,
+            taken: b.taken,
+          }))}
+          labels={balanceLabels}
+        />
+      ) : null}
+
+      {/* History is readable by anyone who may view the employee. A Manager
+          seeing why a report's balance moved is reasonable; changing it is not. */}
+      <Panel className="mb-6">
+        <PanelHeader title={t("balance.historyTitle")}>
+          {t("balance.historyIntro")}
+        </PanelHeader>
+        {adjustments.length === 0 ? (
+          <p className="text-sm text-mute">{t("balance.historyEmpty")}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-cream">
+            {adjustments.map((entry) => (
+              <li key={entry.id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-sm font-medium text-navy">
+                    {entry.days > 0 ? "+" : ""}
+                    {entry.days} {t("common.days")} ·{" "}
+                    {localeName(entry.leaveTypeId)}
+                  </span>
+                  <span className="text-xs text-mute">
+                    {t("balance.colDate")}: {entry.effectiveDate} ·{" "}
+                    {t("balance.colAfter")}: {entry.balanceAfter}
+                  </span>
+                </div>
+                {entry.reason ? (
+                  <p className="mt-1 text-sm text-ink/80">{entry.reason}</p>
+                ) : null}
+                <p className="mt-1 text-xs text-mute">
+                  {new Date(entry.createdAt).toISOString().slice(0, 16).replace("T", " ")}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Panel>
 
       {isSuperAdmin ? (
