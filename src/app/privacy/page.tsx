@@ -23,7 +23,7 @@ const SECTIONS = [
   },
   {
     h: "5. Third parties",
-    p: "We share data only with processors required to run the service (hosting, database, email delivery, AI inference) under data-processing agreements. We do not sell your data. For classroom/enterprise plans, your administrator can see your progress within their organisation.",
+    p: "We share data only with processors required to run the service (hosting, database, email delivery, AI inference) under data-processing agreements. We do not sell your data. For classroom/enterprise plans, your administrator can see your progress within their organisation. Your information is stored and processed outside Australia: our database is hosted in Tokyo, Japan, and our hosting, email and AI providers operate overseas, including in the United States. We take reasonable steps to ensure overseas recipients protect your information, but we cannot control their handling to the same degree as our own.",
   },
   {
     h: "6. Your rights",
