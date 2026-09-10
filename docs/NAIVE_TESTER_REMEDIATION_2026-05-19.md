@@ -186,3 +186,27 @@ This remediation is complete when:
 ---
 
 *Generated as part of the 2026-05-19 naive-tester remediation pass. No fixes executed in this document — plan only.*
+---
+
+## 2026-05-20 Re-sweep addendum (cheap-probe)
+
+**Date:** 2026-05-20  
+**Method:** automated HTTP probe (curl-equivalent) of root + 3 key routes (see `cais-shared-services/probe-roster-2026-05-20.json`)  
+**Full portfolio brief:** `cais-shared-services/PORTFOLIO_NAIVE_RESWEEP_2026-05-20.md`
+
+**Re-test result:** 🟡 AMBER
+
+- Root: HTTP `200`
+- Title: `LingoPure AI · Strategic Platform Demo` (yes)
+- Key routes resolving: **0/3**
+- Broken: `/get-started` (404), `/pricing` (404), `/languages` (404)
+
+**BYOK-ready determination:** **NO — persona findings + plumbing gaps still standing**
+
+**What this re-test can and cannot say:**
+
+- ✅ It confirms the URL plumbing reachable from a 2026-05-20 curl.
+- ❌ It cannot verify the persona-level findings in this doc — copy quality, trust signals, CTAs that return 200 but go nowhere, RLS holes behind 200 auth pages.
+- The persona findings above remain authoritative until each is individually re-tested.
+
+<!-- /resweep-2026-05-20 -->
