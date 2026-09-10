@@ -70,6 +70,16 @@ tmp/
 
 .env.lingopure.tmp
 
+# Naive-tester QA artefacts (screenshots + reports, incl. other-product passes) — machine-local
+/naive-tester-reports/
+
+# Claude Code local session stub — uncustomised template; health-sensors.yml explicitly
+# excludes the session smoke until a real one is wired. Contains test creds.
+/session.config.json
+
+# One-off ops script — provisions a named demo admin with a temp password; not app code
+/scripts/setup-daniel-admin.ts
+
 # Investor dataroom SOURCE FILES — confidential (NDAs, contracts, cap table, board IC).
 # These live ONLY in the private Supabase 'dataroom' bucket behind the NDA/tier gate — never in git.
 /docs/LingoPure main documents/
