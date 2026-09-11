@@ -240,6 +240,12 @@ export function pseudonymousEmail(pseudonymous_id: string): string {
   return `bpo-${pseudonymous_id}@acme-pacific.demo`;
 }
 
+/** Resolve a demo agent's team (alpha|bravo) from their name. */
+export function agentTeamByName(name: string): string {
+  const agent = AGENTS.find((a) => a.name === name);
+  return agent?.team ?? "alpha";
+}
+
 // ─── Main generator ───────────────────────────────────────────────────────────
 
 /**

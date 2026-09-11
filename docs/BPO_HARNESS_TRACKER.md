@@ -23,7 +23,7 @@ Tracker pattern: `docs/ISSUES_TRACKER.md`
 
 ## Phase 5 — Org Intelligence (§12)
 
-- [ ] **BH-006**: §12 org rollup query + route (`GET /api/bpo/org/[employerId]/intelligence`): capability by role, by team, common gaps, training demand, improvement trend
+- [x] **BH-006**: §12 org rollup route (`GET /api/bpo/org/[employerId]/intelligence`): `loadOrgIntelligence()` pure + DB loader — overall capability, capability by role/team, common gaps (gap > GAP_MARGIN), training demand (lowest-first), improvement trend (employer + per-role delta); guarded by `requireEmployerAdmin`; 5/5 intelligence tests passing
 
 ## Phase 6 — Orchestrator + Delivery
 
