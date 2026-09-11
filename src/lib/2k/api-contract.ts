@@ -20,6 +20,8 @@ import type {
   AssessmentStatus,
   CanonicalAssessmentResult,
   LessonOutcome,
+  LP18StableState,
+  LP18WorkingState,
   ProcessingStage,
   QuestionStage,
   ResponseObject,
@@ -32,8 +34,9 @@ export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 /** A–I canonical families + J (probe/hold control when unsafe or uncertain). */
 export type RecommendationFamily = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J";
 
-export type HttpMethod = "GET" | "POST" | "PUT";
+export type HttpMethod = "GET" | "POST";
 
+/** Stage-level progress for GET /assessments/{id}. */
 export type AssessmentProgress = {
   total_questions: number;
   answered: number;
@@ -70,8 +73,10 @@ export interface ProcessingEventObject {
   terminal: boolean;
 }
 
-// ─── Actions / endpoint request types ───────────────────────────────────────
+// ─── Endpoint request types ────────────────────────────────────────────────
+// Canonical 12 from CEFR Commercial Implementation Master §6.
 
+/** #1 POST /assessments */
 export interface CreateAssessmentRequest {
   learner_id: string;
   session_id: string;
@@ -88,89 +93,107 @@ export interface CreateAssessmentRequest {
   };
 }
 
-export interface IngestionResponseInput {
-  response_id: string;            // client-generated — idempotency key
-  question_id: string;
-  stage: QuestionStage;
-  task: string;
-  receiver?: string;
-  context?: string;
-  client_transcript?: string;
-  timing: {
-    started_at: string;
-    ended_at: string;
-    duration_ms: number;
-  };
-  device: {
-    browser: string;
-    os: string;
-    is_mobile: boolean;
-  };
-  assistance_status: "none" | "partial" | "full";
-}
+/** #2 GET /assessments/{id} — no request body. */
 
+/** #3 POST /assessments/{id}/responses */
 export interface IngestResponseRequest {
-  response: IngestionResponseInput;
+  response: {
+    response_id: string;            // client-generated — idempotency key
+    question_id: string;
+    stage: QuestionStage;
+    task: string;
+    receiver?: string;
+    context?: string;
+    client_transcript?: string;
+    timing: {
+      started_at: string;
+      ended_at: string;
+      duration_ms: number;
+    };
+    device: {
+      browser: string;
+      os: string;
+      is_mobile: boolean;
+    };
+    assistance_status: "none" | "partial" | "full";
+  };
 }
 
+/** #4 POST /responses/{id}/audio — multipart upload or register. */
 export interface UploadAudioRequest {
   content_type: string;
   duration_ms: number;
   size_bytes: number;
 }
 
-export interface CompleteResponsesRequest {
-  expected_total: number;
+/** #5 GET /responses/{id}/processing — no request body. */
+
+/** #6 POST /assessments/{id}/evaluate */
+export interface EvaluateRequest {
+  reason?: string;
 }
 
-export interface RetryProcessingRequest {
-  reason: string;
+/** #7 GET /assessments/{id}/result — no request body. */
+
+/** #8 GET /assessments/{id}/report?type=learner|teacher */
+export interface GetReportRequest {
+  type: "learner" | "teacher";
 }
 
+/** #9 GET /learners/{id}/state — no request body. */
+
+/** #10 GET /learners/{id}/history — no request body. */
+
+/** #11 POST /interventions */
+export interface CreateInterventionRequest {
+  result_id: string;
+  family: string;                 // RecommendationFamily
+  learner_id: string;
+  priority: number;
+  exposure: string;
+  next_probe?: string;
+}
+
+/** #12 POST /interventions/{id}/outcome */
 export interface CaptureOutcomeRequest {
-  outcome: {
-    intervention_id?: string;       // which A-J intervention was applied
-    result_id: string;
-    teacher_action: string;
-    exposure: string;
-    learner_response: string;
-    teacher_observation: string;
-    artifacts: string[];
-    outcome_status: "positive" | "neutral" | "negative" | "inconclusive";
-    next_action?: string;
-  };
+  result_id: string;
+  intervention_id?: string;
+  teacher_action: string;
+  exposure: string;
+  learner_response: string;
+  teacher_observation: string;
+  artifacts: string[];
+  outcome_status: "positive" | "neutral" | "negative" | "inconclusive";
+  next_action?: string;
 }
 
-// ─── Actions / endpoint response types ──────────────────────────────────────
+// ─── Endpoint response types ─────────────────────────────────────────────
 
+/** #1 POST /assessments */
 export interface CreateAssessmentResponse {
   assessment: AssessmentSession;
 }
 
+/** #2 GET /assessments/{id} */
 export interface GetAssessmentResponse {
   assessment: AssessmentSession;
   progress: AssessmentProgress;
 }
 
-export interface GetAssessmentQuestionsResponse {
-  questions: AssessmentQuestion[];
-}
-
+/** #3 POST /assessments/{id}/responses */
 export interface IngestResponseResponse {
   response: ResponseObject;
 }
 
+/** #4 POST /responses/{id}/audio */
 export interface UploadAudioResponse {
   audio_id: string;
   storage_path: string;
   checksum: string;               // sha256 of uploaded bytes
 }
 
-export interface CompleteResponsesResponse {
-  assessment: AssessmentSession;  // RESPONSES_COMPLETE — pipeline enqueued
-}
-
-export interface GetProcessingStatusResponse {
+/** #5 GET /responses/{id}/processing */
+export interface GetResponseProcessingResponse {
   assessment_id: string;
   status: AssessmentStatus;
   processing_stage?: ProcessingStage;
@@ -181,51 +204,68 @@ export interface GetProcessingStatusResponse {
   last_events: ProcessingEventObject[];
 }
 
+/** #6 POST /assessments/{id}/evaluate */
+export interface EvaluateResponse {
+  assessment: AssessmentSession;  // RESPONSES_COMPLETE — pipeline enqueued
+}
+
+/** #7 GET /assessments/{id}/result */
 export interface GetResultResponse {
   result: CanonicalAssessmentResult;
 }
 
-export interface ListLearnerResultsResponse {
-  results: CanonicalAssessmentResult[];  // frozen results only, newest first
+/** #8 GET /assessments/{id}/report */
+export interface GetReportResponse {
+  result: CanonicalAssessmentResult;
+  type: "learner" | "teacher";
 }
 
-export interface RetryProcessingResponse {
-  assessment: AssessmentSession;  // RETRYING → re-entered the failed stage
+/** #9 GET /learners/{id}/state */
+export interface GetLearnerStateResponse {
+  working: LP18WorkingState;
+  stable: LP18StableState;
+  cefr_macro: string;
 }
 
+/** #10 GET /learners/{id}/history */
+export interface GetLearnerHistoryResponse {
+  results: CanonicalAssessmentResult[];
+}
+
+/** #11 POST /interventions */
+export interface CreateInterventionResponse {
+  intervention_id: string;
+  family: string;
+  learner_id: string;
+}
+
+/** #12 POST /interventions/{id}/outcome */
 export interface CaptureOutcomeResponse {
   outcome: LessonOutcome;
 }
 
-export interface GetTeacherInsightsResponse {
-  result: CanonicalAssessmentResult;   // projection only — never recalculated
-  next_probe: string;
-  intervention: string;
-}
-
-// ─── Endpoint registry (the 12-endpoint minimum contract) ───────────────────
+// ─── Endpoint registry (canonical 12 from §6) ─────────────────────────────
 
 export interface EndpointSpec {
   method: HttpMethod;
   /** Path template with :params, e.g. "/api/2k/assessments/:assessmentId". */
   path: string;
-  /** Enforcement action on client-supplied ids during ingest (C03 idempotency). */
   idempotent: boolean;
 }
 
 export const ENDPOINTS: readonly EndpointSpec[] = [
   { method: "POST", path: "/api/2k/assessments", idempotent: false },
   { method: "GET", path: "/api/2k/assessments/:assessmentId", idempotent: false },
-  { method: "GET", path: "/api/2k/assessments/:assessmentId/questions", idempotent: false },
   { method: "POST", path: "/api/2k/assessments/:assessmentId/responses", idempotent: true },
-  { method: "PUT", path: "/api/2k/assessments/:assessmentId/responses/:responseId/audio", idempotent: true },
-  { method: "POST", path: "/api/2k/assessments/:assessmentId/responses/complete", idempotent: false },
-  { method: "GET", path: "/api/2k/assessments/:assessmentId/status", idempotent: false },
-  { method: "GET", path: "/api/2k/results/:resultId", idempotent: false },
-  { method: "GET", path: "/api/2k/learners/:learnerId/results", idempotent: false },
-  { method: "POST", path: "/api/2k/results/:resultId/retry", idempotent: false },
-  { method: "POST", path: "/api/2k/outcomes", idempotent: false },
-  { method: "GET", path: "/api/2k/teachers/:teacherId/assessments/:assessmentId/insights", idempotent: false },
+  { method: "POST", path: "/api/2k/responses/:responseId/audio", idempotent: true },
+  { method: "GET", path: "/api/2k/responses/:responseId/processing", idempotent: false },
+  { method: "POST", path: "/api/2k/assessments/:assessmentId/evaluate", idempotent: false },
+  { method: "GET", path: "/api/2k/assessments/:assessmentId/result", idempotent: false },
+  { method: "GET", path: "/api/2k/assessments/:assessmentId/report", idempotent: false },
+  { method: "GET", path: "/api/2k/learners/:learnerId/state", idempotent: false },
+  { method: "GET", path: "/api/2k/learners/:learnerId/history", idempotent: false },
+  { method: "POST", path: "/api/2k/interventions", idempotent: false },
+  { method: "POST", path: "/api/2k/interventions/:interventionId/outcome", idempotent: false },
 ] as const;
 
 // ─── Processing state machine ──────────────────────────────────────────────
