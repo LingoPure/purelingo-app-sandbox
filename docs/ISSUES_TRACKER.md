@@ -29,7 +29,7 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 ## Phase 1 — Skeleton Pipe
 
 ### Assessment journey
-- [ ] **ISS-011**: Build 25Q assessment UI (LOCATE/BOUND/RESOLVE/PERTURB/CONFIRM stages)
+- [x] **ISS-011**: Build 25Q assessment UI — `src/app/(app)/assessment/` (server page + client runner with intro, mic, 25Q recording, timer, stage progress, processing, result); question bank ✅ `src/lib/2k/question-bank.ts`
 - [ ] **ISS-012**: Wire assessment to persistent backend (create assessment, save responses)
 - [ ] **ISS-013**: Build dummy CanonicalAssessmentResult from existing thin-prompt scoring
 - [ ] **ISS-014**: Wire frontend → backend → persistent storage → result display
