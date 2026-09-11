@@ -140,6 +140,21 @@ export function AssessmentRunner({ questions }: Props) {
     [assessmentId]
   );
 
+  const uploadAudio = useCallback(async (response: StoredResponse) => {
+    if (!response.audioBlob) return;
+    const form = new FormData();
+    form.append("file", response.audioBlob, `${response.response_id}.webm`);
+    form.append("duration_ms", String(response.timing.duration_ms || 0));
+    const res = await fetch(`/api/2k/responses/${response.response_id}/audio`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error((body as { error?: string } | null)?.error ?? "Could not upload audio");
+    }
+  }, []);
+
   const evaluateAssessment = useCallback(async () => {
     if (!assessmentId) return;
     const res = await fetch(`/api/2k/assessments/${assessmentId}/evaluate`, {
@@ -165,9 +180,14 @@ export function AssessmentRunner({ questions }: Props) {
   const startRecording = useCallback(() => {
     if (!stream) return;
     chunksRef.current = [];
-    const recorder = new MediaRecorder(stream, {
-      mimeType: "audio/webm;codecs=opus",
-    });
+    // ISS-015: pick the best supported MIME type; fall back to the browser default.
+    const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+    const preferred =
+      typeof MediaRecorder !== "undefined" && typeof MediaRecorder.isTypeSupported === "function"
+        ? candidates.find((c) => MediaRecorder.isTypeSupported(c))
+        : undefined;
+    const options = preferred ? { mimeType: preferred } : undefined;
+    const recorder = new MediaRecorder(stream, options);
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
@@ -212,10 +232,18 @@ export function AssessmentRunner({ questions }: Props) {
     try {
       await persistResponse(response);
       setSyncError(null);
+      // ISS-016: durable audio upload (best-effort — the metadata row is already
+      // persisted, so a failed upload degrades to upload_status=pending, not a
+      // lost answer.)
+      try {
+        await uploadAudio(response);
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Audio upload pending");
+      }
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Could not save response");
     }
-  }, [active, elapsed, persistResponse]);
+  }, [active, elapsed, persistResponse, uploadAudio]);
 
   const handleNext = useCallback(async () => {
     setIsSyncing(true);

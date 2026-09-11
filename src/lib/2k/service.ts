@@ -166,6 +166,68 @@ export async function ingestResponse(
   return rowToResponse(data);
 }
 
+/** POST /api/2k/responses/{id}/audio — durable upload of raw audio (ISS-016). */
+export async function uploadResponseAudio(
+  supabase: UserScopedClient,
+  user: { id: string } | null,
+  responseId: string,
+  blob: Uint8Array,
+  meta: { content_type: string; duration_ms: number; size_bytes: number }
+): Promise<{ audio_id: string; storage_path: string; checksum: string }> {
+  userIdOf(user); // auth gate — RLS enforces ownership below
+
+  // RLS (0030) scopes assessment_responses to rows whose owning session has
+  // learner_id = auth.uid() — a direct select is therefore the ownership check.
+  const { data: owned, error: ownedError } = await supabase
+    .from("assessment_responses")
+    .select("response_id, assessment_id")
+    .eq("response_id", responseId)
+    .maybeSingle();
+  if (ownedError || !owned) {
+    throw new AssessmentServiceError("Response not found or not owned", 404);
+  }
+
+  const checksum = await sha256Hex(blob);
+  const storagePath = `${owned.assessment_id}/${responseId}.webm`;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const upload = await admin.storage
+    .from("2k-assessment-audio")
+    .upload(storagePath, blob, {
+      contentType: meta.content_type,
+      upsert: true,
+    });
+  if (upload.error) {
+    await supabase
+      .from("assessment_responses")
+      .update({ upload_status: "failed" })
+      .eq("response_id", responseId);
+    throw new AssessmentServiceError(`Audio upload failed: ${upload.error.message}`, 500);
+  }
+
+  const { error: updateError } = await supabase
+    .from("assessment_responses")
+    .update({ audio_id: storagePath, upload_status: "uploaded" })
+    .eq("response_id", responseId);
+  if (updateError) {
+    throw new AssessmentServiceError(`Audio registry failed: ${updateError.message}`, 500);
+  }
+
+  return { audio_id: storagePath, storage_path: storagePath, checksum };
+}
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  // Copy to a fresh ArrayBuffer so crypto.subtle accepts the digest input on
+  // any Uint8Array-backed buffer (SharedArrayBuffer or otherwise).
+  const copy = new Uint8Array(bytes.length);
+  copy.set(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", copy.buffer as ArrayBuffer);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 /** POST /api/2k/assessments/{id}/evaluate — request 2K evaluation once evidence minimums met. */
 export async function requestEvaluation(
   supabase: UserScopedClient,
