@@ -30,9 +30,9 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 
 ### Assessment journey
 - [x] **ISS-011**: Build 25Q assessment UI — `src/app/(app)/assessment/` (server page + client runner with intro, mic, 25Q recording, timer, stage progress, processing, result); question bank ✅ `src/lib/2k/question-bank.ts`
-- [ ] **ISS-012**: Wire assessment to persistent backend — ✅ `src/lib/2k/service.ts` + `/api/2k/assessments` (create), `/api/2k/assessments/{id}` (load), `/api/2k/assessments/{id}/responses` (idempotent ingest), `/api/2k/assessments/{id}/evaluate`; runner wired; state machine transitions enforced via assertTransition + processing-event ledger
-- [ ] **ISS-013**: Build dummy CanonicalAssessmentResult from existing thin-prompt scoring
-- [ ] **ISS-014**: Wire frontend → backend → persistent storage → result display
+- [x] **ISS-012**: Wire assessment to persistent backend — `src/lib/2k/service.ts` + `/api/2k/assessments` (create), `/api/2k/assessments/{id}` (load), `/api/2k/assessments/{id}/responses` (idempotent ingest), `/api/2k/assessments/{id}/evaluate`; runner wired; state machine transitions enforced via assertTransition + processing-event ledger
+- [x] **ISS-013**: Build dummy CanonicalAssessmentResult — deterministic learner-stable `src/lib/2k/dummy-result.ts` (C07-shaped: coverage, LP18 working/stable, capabilities, LP-1000, telemetry, diagnosis, A–J recommendation, evidence summary, lineage; engine versions `-dummy`)
+- [x] **ISS-014**: Wire full loop frontend → backend → storage → result display — runner fetches `/api/2k/assessments/{id}/result` on completion and renders LP-1000, band/confidence, recommendation, capability bars; route reads persisted responses via Supabase
 
 ## Phase 2 — Real Capture
 

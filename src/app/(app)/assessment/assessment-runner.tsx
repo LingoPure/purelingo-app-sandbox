@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { QuestionDefinition } from "@/lib/2k/question-bank";
+import type { CanonicalAssessmentResult } from "@/lib/2k/contracts";
+
+type CanonicalResult = CanonicalAssessmentResult;
 
 type Phase = "intro" | "recording" | "processing" | "result";
 
@@ -35,13 +38,13 @@ export function AssessmentRunner({ questions }: Props) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [activeIdx, setActiveIdx] = useState(0);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
-  const [responses, setResponses] = useState<Record<number, StoredResponse>>({});
   const [micPermission, setMicPermission] = useState<PermissionState>("prompt");
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [result, setResult] = useState<CanonicalResult | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -150,6 +153,15 @@ export function AssessmentRunner({ questions }: Props) {
     }
   }, [assessmentId]);
 
+  const fetchResult = useCallback(async () => {
+    if (!assessmentId) return null;
+    const res = await fetch(`/api/2k/assessments/${assessmentId}/result`);
+    if (!res.ok) throw new Error("Could not load result");
+    const body = (await res.json()) as { result: CanonicalResult };
+    setResult(body.result);
+    return body.result;
+  }, [assessmentId]);
+
   const startRecording = useCallback(() => {
     if (!stream) return;
     chunksRef.current = [];
@@ -197,14 +209,13 @@ export function AssessmentRunner({ questions }: Props) {
       },
       audioBlob: blob,
     };
-    setResponses((prev) => ({ ...prev, [activeIdx]: response }));
     try {
       await persistResponse(response);
       setSyncError(null);
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Could not save response");
     }
-  }, [active, activeIdx, elapsed, persistResponse]);
+  }, [active, elapsed, persistResponse]);
 
   const handleNext = useCallback(async () => {
     setIsSyncing(true);
@@ -213,17 +224,18 @@ export function AssessmentRunner({ questions }: Props) {
       setActiveIdx((i) => i + 1);
       setElapsed(0);
     } else {
-      try {
-        await evaluateAssessment();
-      } catch (err) {
-        setSyncError(err instanceof Error ? err.message : "Could not start evaluation");
-      }
       cleanupStream();
       setPhase("processing");
-      setTimeout(() => setPhase("result"), 3000);
+      try {
+        await evaluateAssessment();
+        await fetchResult();
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Could not finish assessment");
+      }
+      setTimeout(() => setPhase("result"), 400);
     }
     setIsSyncing(false);
-  }, [submitResponse, evaluateAssessment, activeIdx, questions.length, cleanupStream]);
+  }, [submitResponse, evaluateAssessment, fetchResult, activeIdx, questions.length, cleanupStream]);
 
   if (phase === "intro") {
     return (
@@ -330,20 +342,87 @@ export function AssessmentRunner({ questions }: Props) {
   }
 
   if (phase === "result") {
+    if (!result) {
+      return (
+        <div className="mx-auto max-w-2xl flex flex-col gap-6">
+          <div className="rounded-lg border border-coral/30 bg-coral/5 p-6">
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-coral">
+              Result unavailable
+            </p>
+            <p className="mt-2 text-sm text-mute">{syncError ?? "No result payload was returned."}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="self-start rounded-md bg-navy px-5 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
+          >
+            Back to dashboard
+          </button>
+        </div>
+      );
+    }
+
     return (
-      <div className="mx-auto max-w-2xl flex flex-col gap-6">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6">
         <div className="rounded-lg border border-teal/30 bg-teal/5 p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-teal">
             Assessment complete
           </p>
           <h2 className="mt-1 font-serif text-2xl text-navy">
-            {Object.keys(responses).length} of 25 responses recorded
+            {result.coverage.answered} of {result.coverage.total_questions} responses recorded
           </h2>
           <p className="mt-2 text-sm text-mute">
-            Your governed 2K result will appear here once the full pipeline
-            (transcription → communication analysis → evidence → adjudication
-            → state resolution → diagnosis → recommendation → freeze) completes.
+            Coverage {result.coverage.coverage_pct}% · frozen result {result.result_id.slice(0, 8)}
           </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="rounded-lg border border-cream bg-paper p-6">
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+              LP-1000 composite
+            </p>
+            <p className="mt-2 font-serif text-5xl text-navy">{result.lp1000.score}</p>
+            <p className="mt-1 font-mono text-sm text-mute">
+              band {result.lp1000.band} · conf {result.lp1000.confidence.toFixed(2)}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-cream bg-paper p-6">
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+              Recommendation
+            </p>
+            <p className="mt-2 text-sm text-ink">
+              Family {result.recommendation.family} · priority {result.recommendation.priority} · {result.recommendation.exposure}
+            </p>
+            {result.recommendation.next_probe && (
+              <p className="mt-2 text-sm text-mute">{result.recommendation.next_probe}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-cream bg-paper p-6">
+          <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+            Capability dimensions
+          </p>
+          <div className="space-y-3">
+            {result.telemetry.dimensions.map((d) => (
+              <div key={d.name} className="flex items-center gap-3">
+                <p className="w-40 shrink-0 text-sm text-ink capitalize">{d.name}</p>
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-cream">
+                  <div
+                    className="h-full rounded-full bg-navy"
+                    style={{ width: `${d.score / 10}%` }}
+                  />
+                </div>
+                <p className="w-12 text-right font-mono text-sm tabular-nums text-mute">
+                  {d.score}
+                </p>
+                <p className="w-16 text-right font-mono text-xs text-mute">
+                  conf {d.confidence.toFixed(2)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
         <button
