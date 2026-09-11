@@ -27,6 +27,10 @@ Tracker pattern: `docs/ISSUES_TRACKER.md`
 
 ## Phase 6 — Orchestrator + Delivery
 
+- [x] **BH-007**: Harness orchestrator script (`npm run bpo:harness`): generate baseline → analyze/ingest → generate trained → analyze/ingest (demotes baseline canonical) → print intelligence rollup; `npm run bpo:harness:purge` for idempotent re-runs
+
+## Phase 6 — Orchestrator + Delivery
+
 - [ ] **BH-007**: Harness orchestrator script (`npm run bpo:harness`): generate → analyse → ingest → re-measure → report; `bpo-harness-purge.ts` rollback script
 
 ## Phase 7 — Acceptance Gates

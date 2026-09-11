@@ -16,6 +16,8 @@
     "hr:seed": "tsx scripts/hr-seed-demo.ts",
     "hr:import-balances": "tsx scripts/hr-import-balances.ts",
     "hr:test-identities": "tsx scripts/hr-test-identities.ts",
+    "bpo:harness": "tsx scripts/bpo-harness.ts",
+    "bpo:harness:purge": "tsx scripts/bpo-harness.ts purge",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
