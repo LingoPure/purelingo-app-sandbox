@@ -107,6 +107,7 @@ Before execution, Minh/LingoPure should explicitly approve the following.
 | GitHub ownership | Mirror application repository to LingoPure GitHub organisation *(Note: Original retained in CAS)* |
 | Vercel ownership | Create/use LingoPure-owned Vercel team/account |
 | Supabase ownership | Create/use LingoPure-owned Supabase organisation/project |
+| Supabase data strategy | **Path A — clean greenfield rebuild** from `supabase/migrations/` (schema + seed only; existing production data is NOT carried over) |
 | Production domain | Move to LingoPure-controlled domain/DNS |
 | CI/CD | Move required secrets and variables to LingoPure-controlled GitHub/Vercel environments |
 | Application database | Migrate from CAS Supabase to LingoPure Supabase |
@@ -126,6 +127,7 @@ Before execution, Minh/LingoPure should explicitly approve the following.
 | Vercel URL | lingo-pure-ai.vercel.app |
 | Current Vercel team | Corporate AI Solutions |
 | Supabase project | nbvprbaumwmfczsfcyrv |
+| Supabase status | **INACTIVE (paused)** as of 2026-09-11 — hostname does not resolve; no live DB access |
 | Supabase region | Tokyo |
 | Shared packages | @caistech/* |
 | Shared package source | caistech/cais-shared-services |
@@ -426,46 +428,42 @@ Record:
 
 *These credentials must be stored securely.*
 
-### 12.2 Apply database schema
-The source repository contains the Supabase migration files.
-The preferred process is:
-- create target project
-- inspect current production schema
-- verify migration history
-- apply/replay required migrations
-- validate resulting schema
+### 12.2 Apply database schema — Path A (greenfield rebuild, APPROVED)
 
-*Do not assume the migration folder alone is sufficient.*
-*The current production database should be compared with the repository migrations before cutover.*
+The source repository contains 29 versioned migration files in `supabase/migrations/`.
 
-### 12.3 Database objects to validate
-Validate:
-- tables
-- columns
-- indexes
-- constraints
-- foreign keys
-- functions
-- triggers
-- RLS policies
-- extensions
-- database roles
-- scheduled jobs where applicable
+Approved approach: build the LingoPure database **from the migrations** on a fresh project — do NOT carry over the existing production data.
 
-### 12.4 Data migration
-Migrate the required production data from the existing project.
-The exact method should be selected after reviewing database size and current Supabase capabilities.
-Potential methods include:
-- Supabase database dump/restore
-- PostgreSQL dump/restore
-- controlled table migration
+```bash
+# From this repo, with the target project ref substituted:
+supabase link --project-ref <NEW_LINGOPURE_REF>   # prompted for the NEW project's DB password
+supabase db push                                    # applies all unapplied migrations in order
+```
 
-The selected method must preserve:
-- IDs
-- relationships
-- timestamps
-- application state
-- required metadata
+Verified properties of the migration set (2026-09-11):
+- all 29 migrations are idempotent (`on conflict do nothing`, `create or replace function`)
+- only 2 extensions required: `pgcrypto` and `vector` — both preavailable on any Supabase project (enabled inline in `0002`, `0020`)
+- grants reference only standard roles (`authenticated`, `service_role`) — present on every fresh project
+- fixed seed content is included: HR org + leave types (`0027`), battery prompts (`0017`), marketing content (`0024`/`0025`), dataroom bucket registration (`0020`)
+
+Live production data does NOT exist in these migrations and is NOT carried over. What is lost under Path A:
+- `auth.users` identities and passwords
+- students, discovery sessions, gap scores, classroom schedules
+- teacher/employer records, HR balances, leaves, calendar
+- dataroom chunks and tier contents (NDA-gated files)
+- storage objects (bucket is registered, files are not)
+
+### 12.3 Post-push drift check
+
+After `supabase db push`, spot-check the fresh schema against the migration set:
+- confirm the migration history table matches 29 rows
+- confirm RLS is enforced on the key tables (spot-check a few `0001`/`0006`/`0016` policies)
+- confirm the `dataroom` bucket exists in Storage
+
+### 12.4 Data migration — NOT APPLICABLE under Path A
+
+There is no production data migration. The existing CAS project's data is superseded.
+Any decision to re-bring data is a separate, explicitly approved task.
 
 ## 13. Phase 5 — Supabase Authentication migration
 
@@ -493,6 +491,8 @@ and currently references:
 - `lingo-pure-ai.vercel.app`
 
 *These settings must be reviewed and updated as part of the final domain migration.*
+
+**Path A note:** because the LingoPure DB is rebuilt greenfield from migrations (`supabase db push`), the target's Auth/email SMTP, confirmations and site URL are configured on the fresh LingoPure project directly — they are not inherited from the paused CAS project.
 
 **Authentication acceptance test**
 At minimum test:
@@ -643,7 +643,7 @@ Once the migration has been stable for the agreed period:
 - confirm LingoPure has administrator access everywhere
 - retain required backups
 
-*Do not delete the original Supabase project until the agreed retention/backup period has expired.*
+**Path A note:** the old CAS project (`nbvprbaumwmfczsfcyrv`) is currently **paused (INACTIVE)** and its data is superseded under Path A. Its DB password is never needed again; it can remain paused and be deleted once the agreed retention/backup period has expired.
 
 ## 22. @caistech/* shared package decision
 
@@ -700,6 +700,7 @@ LingoPure should control:
 | Private package installation fails | Validate CAISTECH_PACKAGES_TOKEN before Vercel cutover |
 | Vercel build fails | Preview deploy before DNS migration |
 | Supabase schema mismatch | Compare production schema against migrations |
+| Production data superseded (Path A) | Explicitly approved — greenfield rebuild; no carry-over |
 | Authentication breaks | Dedicated authentication migration/testing |
 | Storage objects missing | Separate bucket/object migration and validation |
 | Magic links fail | Update Supabase site/redirect URLs |
@@ -715,7 +716,7 @@ The migration is complete when:
 - **Ownership**: LingoPure owns the GitHub repository, Vercel team/project, Supabase organisation/project, and controls production domains/DNS and credentials.
 - **GitHub**: `LingoPure/LingoPureAI` exists; `main` is up to date; CI passes; private packages install; Dependabot works.
 - **Vercel**: LingoPure Vercel project connected to LingoPure GitHub; Development/Preview/Production environments verified; all required environment variables recreated; production deployment green.
-- **Supabase**: LingoPure project created; database schema migrated; production data migrated; RLS policies validated; authentication migrated/validated; storage migrated; functions/webhooks/jobs validated.
+- **Supabase**: LingoPure project created; schema rebuilt from migrations (Path A); RLS policies validated; extension availability confirmed; Auth/email SMTP and site URL configured on the fresh project.
 - **Domain**: LingoPure production domain configured; SSL verified; DNS cutover complete; Supabase redirects updated; magic links/password reset tested.
 - **Application**: sign-in, dashboard, classroom, investor, HR, voice, email, storage, external integrations all validated.
 - **Operational independence**: Minh can deploy, manage Vercel, manage Supabase, manage GitHub. LingoPure does not require Dennis for routine infrastructure administration. old CAS infrastructure retained only for agreed rollback period.
@@ -814,8 +815,8 @@ Once approved, the actual implementation sequence will be:
 4. GITHUB ACTIONS / SECRETS
 5. CREATE LINGOPURE VERCEL
 6. CREATE LINGOPURE SUPABASE
-7. MIGRATE DATABASE
-8. MIGRATE AUTH + STORAGE
+7. REBUILD SCHEMA FROM MIGRATIONS (Path A — `supabase db push`, no data carry-over)
+8. CONFIGURE AUTH + STORAGE ON FRESH PROJECT (no migration — greenfield)
 9. CONNECT VERCEL → NEW SUPABASE
 10. FULL APPLICATION TEST
 11. CONFIGURE LINGOPURE DOMAIN

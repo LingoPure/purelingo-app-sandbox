@@ -11,7 +11,7 @@ This document provides the step-by-step operational commands to execute the infr
 
 1. **GitHub** — Mirror copy the application repository to `LingoPure/LingoPureAI` (retaining the original as a rollback backup).
 2. **Vercel** — Reconnect the existing project `lingo-pure-ai` to the new repo.
-3. **Supabase** — Deferred to Phase 4 of the master plan (LingoPure creates their own project and migrates data).
+3. **Supabase** — **Path A (approved): greenfield rebuild.** LingoPure creates their own project and rebuilds the schema from the repo's 29 migrations via `supabase db push`. Existing CAS production data is NOT carried over (the old project `nbvprbaumwmfczsfcyrv` is currently paused/INACTIVE).
 
 ### Guidance
 
@@ -26,7 +26,7 @@ Unlike the MMC handover, **this repo keeps consuming `@caistech/*` packages from
 | D1 — Substrate | **Keep `@caistech/*` as-is** | MMC-style `@lingopure/*` carve-out (Appendix A) |
 | D2 — GitHub Strategy | **Mirror Copy** (Retain CAS repo) | Transfer (Destroys CAS repo) |
 | D3 — Vercel team | **Create New LingoPure Team** (per Master Plan) | Keep Corporate AI Solutions team |
-| D4 — Supabase | **Phase 4** (Full migration to LingoPure-owned) | Option A: Keep CAS Supabase |
+| D4 — Supabase | **Path A (approved)** — greenfield rebuild from `supabase/migrations/` via `db push`; no data carry-over | Path B: `pg_restore` the CAS backup into LingoPure project |
 
 ---
 
@@ -187,7 +187,7 @@ You are finished with this runbook when all of these are true:
 
 - **DNS cutover** — bringing a custom domain onto Vercel.
 - **`@lingopure/*` package carve-out** — covered in Appendix A, only on request.
-- **Supabase data migration** — scheduled as Phase 4 of the Master Plan.
+- **Supabase data migration** — **Path A approved: greenfield rebuild** from the repo's 29 migrations (`supabase db push`). No production data is carried over; the old CAS project stays paused and is decommissioned after the rollback period.
 
 ---
 
