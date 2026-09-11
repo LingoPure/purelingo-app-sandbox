@@ -123,12 +123,8 @@ Before execution, Minh/LingoPure should explicitly approve the following.
 |---|---|
 | GitHub repository | caistech/LingoPureAI |
 | Target GitHub repository | LingoPure/LingoPureAI |
-| Vercel project | lingo-pure-ai |
-| Vercel URL | lingo-pure-ai.vercel.app |
-| Current Vercel team | Corporate AI Solutions |
-| Supabase project | nbvprbaumwmfczsfcyrv |
-| Supabase status | **INACTIVE (paused)** as of 2026-09-11 — hostname does not resolve; no live DB access |
-| Supabase region | Tokyo |
+| Vercel team | New LingoPure-owned project — TBD (Phase 3) |
+| Supabase project | **TBD — new LingoPure-owned project** (Phase 4). Do NOT use `htycbbjbhokaztvtwvdo` (that project belongs to `LingoPure/purelingo-app`, an unreachable/phantom production repo — out of scope) |
 | Shared packages | @caistech/* |
 | Shared package source | caistech/cais-shared-services |
 | Package registry | GitHub Packages |
@@ -744,10 +740,12 @@ Unless separately approved, this project does not include:
 | Current repository | https://github.com/caistech/LingoPureAI |
 | Target repository | https://github.com/LingoPure/LingoPureAI |
 | LingoPure GitHub organisation | https://github.com/LingoPure |
-| Current Vercel project | lingo-pure-ai |
+| Current Vercel project | lingo-pure-ai (returned HTTP 402 on 2026-09-11 — disabled) |
 | Current Vercel URL | https://lingo-pure-ai.vercel.app/ |
-| Current Supabase project | nbvprbaumwmfczsfcyrv |
-| Supabase region | Tokyo |
+| Target Vercel project | **TBD — new LingoPure-owned project** (Phase 3) |
+| Supabase (source, paused) | nbvprbaumwmfczsfcyrv |
+| Target Supabase project | **TBD — new LingoPure-owned project** (Phase 4) |
+| Supabase region (target) | Recommend Tokyo (ap-northeast-1), matching source |
 | GitHub Packages | https://npm.pkg.github.com |
 | Shared CAS repository | caistech/cais-shared-services |
 | Supabase configuration | `supabase/config.toml` |

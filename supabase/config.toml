@@ -1,7 +1,9 @@
 # LingoPure — Supabase project config (pushed to managed project via `supabase config push`).
-# Linked project: nbvprbaumwmfczsfcyrv (Northeast Asia / Tokyo).
+# Target project: TBD — new LingoPure-owned project (Phase 4). NOT `htycbbjbhokaztvtwvdo`
+# (that project belongs to LingoPure/purelingo-app, an unreachable repo — out of scope).
+# Replace this project_id with the new LingoPure project ref once created.
 
-project_id = "nbvprbaumwmfczsfcyrv"
+project_id = "lingopure-tbd"
 
 [auth]
 # Production URL — used as the base for confirmation / magic-link / password-reset

@@ -209,7 +209,9 @@ You are finished with this runbook when all of these are true:
 | Vercel project | https://vercel.com/corporate-ai-solutions/lingo-pure-ai |
 | Live deployment | https://lingo-pure-ai.vercel.app/ |
 | GitHub Packages registry (npm) | https://npm.pkg.github.com |
-| Supabase (to be migrated in Phase 4) | https://supabase.com/dashboard/project/nbvprbaumwmfczsfcyrv |
+| Supabase (source — paused; not the target) | https://supabase.com/dashboard/project/nbvprbaumwmfczsfcyrv |
+| Supabase (target — TBD, Phase 4) | New LingoPure-owned project to be created |
+| Supabase to IGNORE | `htycbbjbhokaztvtwvdo` — belongs to unreachable `LingoPure/purelingo-app` phantom repo |
 | Auth config baked into deploys | `supabase/config.toml` (in this repo) |
 | CI workflows that need secrets | `.github/workflows/gate.yml`, `health-sensors.yml`, `hr-module.yml`, `claude-code.yml`, `dependabot.yml` |
 | Master Migration Plan | `docs/LINGOPURE_MIGRATION_PLAN.md` |
