@@ -34,11 +34,14 @@ export function AssessmentRunner({ questions }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [activeIdx, setActiveIdx] = useState(0);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [responses, setResponses] = useState<Record<number, StoredResponse>>({});
   const [micPermission, setMicPermission] = useState<PermissionState>("prompt");
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
@@ -78,6 +81,74 @@ export function AssessmentRunner({ questions }: Props) {
       setMicPermission("denied");
     }
   }, []);
+
+  const beginAssessment = useCallback(async () => {
+    setSyncError(null);
+    const res = await fetch("/api/2k/assessments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: crypto.randomUUID(),
+        language: "vi-VN",
+        question_bank_version: "2k-v1",
+        context: {},
+        consent: {
+          audio_recording: true,
+          data_processing: true,
+        },
+      }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error((body as { error?: string } | null)?.error ?? "Could not start assessment");
+    }
+    const body = (await res.json()) as { assessment: { assessment_id: string } };
+    setAssessmentId(body.assessment.assessment_id);
+  }, []);
+
+  const persistResponse = useCallback(
+    async (response: StoredResponse) => {
+      if (!assessmentId) return;
+      const res = await fetch(`/api/2k/assessments/${assessmentId}/responses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          response: {
+            response_id: response.response_id,
+            question_id: response.question_id,
+            stage: response.stage,
+            task: response.task,
+            client_transcript: response.client_transcript,
+            timing: response.timing,
+            device: {
+              browser: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+              os: "web",
+              is_mobile: typeof navigator !== "undefined" && /Mobi|Android/i.test(navigator.userAgent),
+            },
+            assistance_status: "none",
+          },
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error((body as { error?: string } | null)?.error ?? "Could not save response");
+      }
+    },
+    [assessmentId]
+  );
+
+  const evaluateAssessment = useCallback(async () => {
+    if (!assessmentId) return;
+    const res = await fetch(`/api/2k/assessments/${assessmentId}/evaluate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "complete" }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new Error((body as { error?: string } | null)?.error ?? "Could not start evaluation");
+    }
+  }, [assessmentId]);
 
   const startRecording = useCallback(() => {
     if (!stream) return;
@@ -127,19 +198,32 @@ export function AssessmentRunner({ questions }: Props) {
       audioBlob: blob,
     };
     setResponses((prev) => ({ ...prev, [activeIdx]: response }));
-  }, [active, activeIdx, elapsed]);
+    try {
+      await persistResponse(response);
+      setSyncError(null);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Could not save response");
+    }
+  }, [active, activeIdx, elapsed, persistResponse]);
 
   const handleNext = useCallback(async () => {
+    setIsSyncing(true);
     await submitResponse();
     if (activeIdx < questions.length - 1) {
       setActiveIdx((i) => i + 1);
       setElapsed(0);
     } else {
+      try {
+        await evaluateAssessment();
+      } catch (err) {
+        setSyncError(err instanceof Error ? err.message : "Could not start evaluation");
+      }
       cleanupStream();
       setPhase("processing");
       setTimeout(() => setPhase("result"), 3000);
     }
-  }, [submitResponse, activeIdx, questions.length, cleanupStream]);
+    setIsSyncing(false);
+  }, [submitResponse, evaluateAssessment, activeIdx, questions.length, cleanupStream]);
 
   if (phase === "intro") {
     return (
@@ -192,17 +276,29 @@ export function AssessmentRunner({ questions }: Props) {
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() => {
+            disabled={micPermission === "denied" || isSyncing}
+            onClick={async () => {
+              setIsSyncing(true);
+              setSyncError(null);
               if (micPermission !== "granted") {
-                requestMic().then(() => setPhase("recording"));
-              } else {
+                try {
+                  await requestMic();
+                } catch {
+                  setMicPermission("denied");
+                }
+              }
+              try {
+                await beginAssessment();
                 setPhase("recording");
+              } catch (err) {
+                setSyncError(err instanceof Error ? err.message : "Could not start assessment");
+              } finally {
+                setIsSyncing(false);
               }
             }}
-            disabled={micPermission === "denied"}
             className="rounded-md bg-navy px-6 py-3 text-sm font-medium text-paper hover:bg-navy-deep disabled:opacity-40"
           >
-            Start assessment
+            {isSyncing ? "Starting..." : "Start assessment"}
           </button>
           <button
             type="button"
@@ -212,6 +308,9 @@ export function AssessmentRunner({ questions }: Props) {
             Back to dashboard
           </button>
         </div>
+        {syncError && (
+          <p className="text-sm text-coral">{syncError}</p>
+        )}
       </div>
     );
   }
@@ -263,6 +362,11 @@ export function AssessmentRunner({ questions }: Props) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
+      {syncError && (
+        <div className="rounded-lg border border-coral/30 bg-coral/5 p-4">
+          <p className="text-sm text-coral">{syncError}</p>
+        </div>
+      )}
       {/* Progress header */}
       <div>
         <div className="mb-3 flex items-center justify-between">

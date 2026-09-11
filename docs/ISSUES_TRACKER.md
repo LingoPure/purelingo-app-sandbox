@@ -30,7 +30,7 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 
 ### Assessment journey
 - [x] **ISS-011**: Build 25Q assessment UI — `src/app/(app)/assessment/` (server page + client runner with intro, mic, 25Q recording, timer, stage progress, processing, result); question bank ✅ `src/lib/2k/question-bank.ts`
-- [ ] **ISS-012**: Wire assessment to persistent backend (create assessment, save responses)
+- [ ] **ISS-012**: Wire assessment to persistent backend — ✅ `src/lib/2k/service.ts` + `/api/2k/assessments` (create), `/api/2k/assessments/{id}` (load), `/api/2k/assessments/{id}/responses` (idempotent ingest), `/api/2k/assessments/{id}/evaluate`; runner wired; state machine transitions enforced via assertTransition + processing-event ledger
 - [ ] **ISS-013**: Build dummy CanonicalAssessmentResult from existing thin-prompt scoring
 - [ ] **ISS-014**: Wire frontend → backend → persistent storage → result display
 
