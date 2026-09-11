@@ -6,20 +6,20 @@ Tracker pattern: `docs/ISSUES_TRACKER.md`
 
 ## Phase 1 — Synthetic Data Layer
 
-- [ ] **BH-001**: Synthetic artifact generator (email + contact-centre call transcripts, 12 agents across 3 roles × 2 teams, deterministic/seeded/idempotent) + `workplace_artifacts` table migration (RLS, harness-scoped `@*.demo`)
+- [x] **BH-001**: Synthetic artifact generator (email + contact-centre call transcripts, 12 agents across 3 roles × 2 teams, deterministic/seeded/idempotent) + `workplace_artifacts` table migration (RLS, harness-scoped `@*.demo`) — `generator.ts` + migration 0034
 
 ## Phase 2 — Edge Analysis Package
 
-- [ ] **BH-002**: Edge package behind interface (`src/lib/bpo/edge.ts`): `analyzeWorkplaceArtifacts()` → structured packets; reuses C07 communication-analysis + C08 evidence-packet-builder + C13 lp1000-engine; export firewall (no raw content in packets)
+- [x] **BH-002**: Edge package behind interface (`src/lib/bpo/edge.ts`): `analyzeWorkplaceArtifact()` → structured packets; reuses C07 communication-analysis + C08 evidence-packet-builder; export firewall (no raw content in packets) — 4/4 tests passing (incl. export-firewall + determinism assertions)
+- [x] **BH-004**: `CAPABILITY_TO_SKILL` mapping contract (declared for BH-002 co-location)
 
 ## Phase 3 — Cloud Ingestion
 
-- [ ] **BH-003**: Structured ingestion route (`POST /api/bpo/edge/ingest`): writes `gap_scores` (source=`'workplace'`), `gap_score_history` (0019), 2K evidence pool; `workplace_observations` table migration; rejects raw-content payloads via schema validation
-- [ ] **BH-004**: `CAPABILITY_TO_SKILL` mapping contract + C07/C08/C13 realisation wiring: SPK→speaking_fluency, LIS→listening_comprehension, RDG→reading_intent, VOC→business_vocabulary, INT→presentation_delivery, GRM→writing_formal
+- [x] **BH-003**: Structured ingestion route (`POST /api/bpo/edge/ingest`): strict-zod export firewall (raw-content keys rejected, 400), writes `workplace_observations` (append-only, artifact-scoped), `gap_scores` (source=`'workplace'`), `gap_score_history` (0019); migration 0035 expands `gap_scores.source` check + adds `workplace_observations` table + RLS; 5/5 firewall tests passing
 
 ## Phase 4 — Re-measurement + Trend
 
-- [ ] **BH-005**: Re-measurement flow: generator batch 2 (post-training state) → `gap_scores` (source=`'workplace_trained'`) + history rows; delta report (baseline vs trained)
+- [x] **BH-005**: Re-measurement flow: generator batch param (`baseline`|`trained`), trained content banks (agent-authored, structurally improved); migration 0036 (`batch` column on workplace_artifacts); `computeDelta()` pure core + `loadDeltaReport()` DB-backed loader → per-agent/skill/role deltas + employer mean; 4/4 delta-report tests passing
 
 ## Phase 5 — Org Intelligence (§12)
 

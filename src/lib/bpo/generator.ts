@@ -42,6 +42,7 @@ export type HarnessSeedResult = {
   agentCount: number;
   artifactCount: number;
   agents: string[];
+  batch: ArtifactBatch;
 };
 
 // ─── Deterministic employers + agents ─────────────────────────────────────────
@@ -70,44 +71,84 @@ const AGENTS: AgentSeed[] = [
 ];
 
 // ─── Deterministic content bank ───────────────────────────────────────────────
-// Each role gets 2 emails + 2 call transcripts; the agent index modulo-4
+// Each role gets 2 emails + 2 call transcripts; the agent index modulo-2
 // selects which variant the agent receives, making the data reproducible
 // without needing a PRNG.
+//
+// Every artifact is the AGENT's own communication (their written reply, or
+// their handling of a call) so C07 measures the agent — not the customer.
+// The TRAINED_* banks hold the same scenarios executed post-training:
+// structured, apologetic-where-owed, concrete timeline, no repair markers.
 
-const EMAIL_VARIANTS: Record<string, { subject: string; body: string }[]> = {
+export type ArtifactBatch = "baseline" | "trained";
+
+const BASELINE_EMAILS: Record<string, { subject: string; body: string }[]> = {
   bpo_operator: [
     {
-      subject: "Customer complaint — incorrect order delivered",
-      body: `Hi, I received my order today and it's completely wrong. I ordered the blue XL jacket and got a red medium. This is the second time this month. I need this resolved today or I'm cancelling my account. — Sarah, Customer #4421`,
+      subject: "Re: Customer complaint — incorrect order delivered (#4421)",
+      body: `hi sarah sorry about that. i check on the order and we can fix it. call you back maybe today. thanks for telling us`,
     },
     {
-      subject: "Escalation: payment not processed",
-      body: `Hello, I tried to pay my invoice 3 times and it keeps failing. My card works fine on other sites. I'm a business customer and this is affecting my team. Please escalate immediately. — James, Account #9912`,
+      subject: "Re: Escalation: payment not processed (#9912)",
+      body: `hello james we see the payment thing. our system have issue sometimes sorry. try again later maybe. let us know if not ok`,
     },
   ],
   sales_rep: [
     {
       subject: "Re: Q3 pricing discussion",
-      body: `Thanks for the proposal. We've reviewed the numbers and the 12-month commitment price works for our Sydney office, but we'd need the per-seat rate to come down 8% to match budget. Can you confirm if that's possible before our call Thursday? — Mark, AusTrade Corp`,
+      body: `hi mark 8% is alot but maybe we can work something. i check with my manager and let you know before thursday i think. thanks`,
     },
     {
-      subject: "Partnership enquiry — Southeast Asia expansion",
-      body: `Hi, we're expanding into Vietnam and Thailand and are looking for a manufacturing partner with English-capable sales teams. Could you share your export capability case studies and pricing? — Wei, AsiaBridge Ltd`,
+      subject: "Re: Partnership enquiry — Southeast Asia expansion",
+      body: `hi wei we have case studies yes. i can share the files. pricing maybe we discuss on call. when you free?`,
     },
   ],
   tech_specialist: [
     {
-      subject: "API integration issue — webhook failing",
-      body: `Hi team, our webhook integration stopped receiving events at 09:42 UTC today. The endpoint returns 200 but the payload is empty. Logs show the event was emitted. Could you check the delivery pipeline? — DevOps, Ticket #ENG-2291`,
+      subject: "Re: API integration issue — webhook failing (#ENG-2291)",
+      body: `hi there is new version 2.4.3 that fix this. just update and should work. let me know if not ok thanks`,
     },
     {
-      subject: "Security audit — credential rotation reminder",
-      body: `Per our quarterly security policy, all API keys must be rotated before end of month. Please confirm your team's keys have been updated. Current rotation status: 4/6 rotated. — InfoSec Team`,
+      subject: "Re: Security audit — credential rotation reminder",
+      body: `hi we rotate 4 of 6. the other 2 we do later this week if possible. will confirm`,
     },
   ],
 };
 
-const CALL_VARIANTS: Record<string, { summary: string; transcript: string }[]> = {
+const TRAINED_EMAILS: Record<string, { subject: string; body: string }[]> = {
+  bpo_operator: [
+    {
+      subject: "Re: Customer complaint — incorrect order delivered (#4421)",
+      body: `Hello Sarah, thank you for reporting this — I'm sorry your order arrived incorrectly, that's not the standard we aim for. I've flagged order 4421 for a priority audit and will confirm the correct replacement despatch within 24 hours. I'll email you the moment tracking is live.`,
+    },
+    {
+      subject: "Re: Escalation: payment not processed (#9912)",
+      body: `Hello James, thank you for the details — I've reviewed your invoice and confirmed our payment gateway had an intermittent failure, not an issue on your side. I've reset the payment link and will monitor it until your invoice is settled this week. If it fails again, it's now on me to escalate directly.`,
+    },
+  ],
+  sales_rep: [
+    {
+      subject: "Re: Q3 pricing discussion",
+      body: `Hi Mark, thank you for confirming the volumes. On the 8% ask — that's more than I can approve directly, but a longer commitment term could bring the rate close to your target. I'll send revised terms tomorrow afternoon for your review ahead of our Thursday call.`,
+    },
+    {
+      subject: "Re: Partnership enquiry — Southeast Asia expansion",
+      body: `Hi Wei, excellent timing — we have two export-case studies that fit exactly that scenario. I'll share them this afternoon, and I'd suggest a 30-minute discovery call to talk through pricing and fit. I've copied some time options below.`,
+    },
+  ],
+  tech_specialist: [
+    {
+      subject: "Re: API integration issue — webhook failing (#ENG-2291)",
+      body: `Hi team, thanks for the repro details — this is a known defect in SDK 2.4.1, fixed in 2.4.3 which is fully backward-compatible. Please bump the version and redeploy; if the empty payload persists, escalate the ticket to me and I'll route it to the delivery team.`,
+    },
+    {
+      subject: "Re: Security audit — credential rotation reminder",
+      body: `Hi InfoSec, we've rotated 4 of 6 keys. The remaining two belong to staging and require a coordinated downtime window. We can complete them Thursday 10pm–midnight SGT — I'll confirm the checklist runs first so nothing breaks.`,
+    },
+  ],
+};
+
+const BASELINE_CALLS: Record<string, { summary: string; transcript: string }[]> = {
   bpo_operator: [
     {
       summary: "Customer billing dispute — 15 min call",
@@ -140,6 +181,39 @@ const CALL_VARIANTS: Record<string, { summary: string; transcript: string }[]> =
   ],
 };
 
+const TRAINED_CALLS: Record<string, { summary: string; transcript: string }[]> = {
+  bpo_operator: [
+    {
+      summary: "Customer billing dispute — 15 min call (trained)",
+      transcript: `Agent: Thank you for calling Acme Pacific support, my name is [Agent]. How can I help you today?\nCustomer: Hi, I've been charged twice for my last order.\nAgent: I'm sorry you're experiencing that — let me look into it right away. Can I have your account number, please?\nCustomer: It's 4421... actually yes, 4421.\nAgent: Thank you. I can see two identical charges; the second was a system error. I'm processing a full refund now — it'll appear in your account within 2–3 business days. I've also added a note to your account so our finance team monitors it going forward.\nCustomer: That's good. It's the second error this quarter.\nAgent: I understand, and I'm sorry for the repeated disruption. I'm flagging this for a manual audit this week so we can prevent recurrence. You'll receive an email confirmation once it's complete.`,
+    },
+    {
+      summary: "Delivery status query — 10 min call (trained)",
+      transcript: `Agent: Acme Pacific support, my name is [Agent]. How may I help?\nCustomer: Hi, my order shows delivered but I never received it.\nAgent: I'm sorry about that — let me trace it. May I have your order number?\nCustomer: It's ORD-78432.\nAgent: Thank you. I can confirm it was marked delivered at 2:14pm. I'm raising an urgent trace with our logistics partner right now, and I'll update you within 24 hours. If the parcel doesn't surface, we'll dispatch a replacement immediately.\nCustomer: I need it for a client meeting tomorrow.\nAgent: Understood — I've escalated this as urgent and will prioritise your update.`,
+    },
+  ],
+  sales_rep: [
+    {
+      summary: "Follow-up call — contract renewal (trained)",
+      transcript: `Rep: Hi Mark, thanks for the time. Following up on the Q3 pricing email.\nCustomer: Sure. The numbers are close, but 8% would help us get CFO sign-off.\nCustomer: I hear that. On a longer term — 18 months — I can move the per-seat rate much closer to your target. Would that structure work for your budget cycle?\nCustomer: That's interesting. Can you send revised terms before Wednesday?\nRep: Absolutely — I'll have the proposal on your desk by 3pm tomorrow. I'll also include the training module, which is included at the 18-month tier.\nCustomer: That's exactly what we need.`,
+    },
+    {
+      summary: "Partnership enquiry — discovery call (trained)",
+      transcript: `Rep: Wei, thanks for reaching out. Tell me about your requirements in Vietnam.\nCustomer: We need a sales team that can handle English-language clients. Communication quality is our main concern.\nRep: That's a very common challenge for teams expanding regionally. Could you share which interactions you're focused on — emails, calls, or video?\nCustomer: Mostly email and Teams calls with Australian and UK clients.\nRep: We have a communication training programme built exactly for that — B2B English with written and spoken business communication modules. I'd love to walk you through a case study. Are you free this week?\nCustomer: Let's do next Tuesday.\nRep: Perfect — I'll send a calendar link now.`,
+    },
+  ],
+  tech_specialist: [
+    {
+      summary: "Incident response — webhook failure (trained)",
+      transcript: `Engineer: Hi, thanks for the ticket. I've reviewed the logs — can you confirm which SDK version you're on?\nCustomer: We're on 2.4.1.\nEngineer: Thanks — this is a known issue in 2.4.1 where malformed retry headers cause empty payloads. It's resolved in 2.4.3, which is backward-compatible with your current setup. Please bump the version and redeploy. After that, if the issue persists, escalate directly to me and I'll route it to our delivery engineering team.\nCustomer: That's clear — we'll do it today.\nEngineer: I'll monitor your webhook endpoint after the deploy to confirm payloads are flowing. You'll have a confirmation from me within an hour.`,
+    },
+    {
+      summary: "Security audit coordination (trained)",
+      transcript: `Engineer: Hi, I'm following up on the credential rotation reminder. How is your team tracking?\nCustomer: We've completed 4 of 6 keys. The remaining two are staging keys — we need a coordinated downtime window.\nEngineer: Understood. What's available this week?\nCustomer: Thursday night, 10pm to midnight SGT.\nEngineer: That works well. I'll send a pre-rotation checklist beforehand so there are no surprises. During the window, I'll be available on call. If anything unexpected happens, I'll escalate immediately. After rotation, I'll confirm all endpoints are healthy before signing off.\nCustomer: Appreciated — Thursday night it is.`,
+    },
+  ],
+};
+
 // ─── Utilities ────────────────────────────────────────────────────────────────
 
 function daysAgo(days: number): string {
@@ -161,6 +235,11 @@ function pseudonymousId(idx: number): string {
   return `bpo-acme-${String(idx + 1).padStart(3, "0")}`;
 }
 
+/** The demo email a pseudonymous agent maps to in the students table. */
+export function pseudonymousEmail(pseudonymous_id: string): string {
+  return `bpo-${pseudonymous_id}@acme-pacific.demo`;
+}
+
 // ─── Main generator ───────────────────────────────────────────────────────────
 
 /**
@@ -170,8 +249,14 @@ function pseudonymousId(idx: number): string {
  * Existing rows for the same employer/agent/source/subject are not duplicated.
  */
 export async function generateSyntheticArtifacts(
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  options?: { batch?: ArtifactBatch }
 ): Promise<HarnessSeedResult> {
+  const batch: ArtifactBatch = options?.batch ?? "baseline";
+  const emails = batch === "trained" ? TRAINED_EMAILS : BASELINE_EMAILS;
+  const calls = batch === "trained" ? TRAINED_CALLS : BASELINE_CALLS;
+  // Baseline: 7/5 days ago (gives a time trail). Trained: 1 day ago.
+  const [emailDays, callDays] = batch === "trained" ? [1, 1] : [7, 5];
   // 1. Upsert employer
   const { data: existingEmp, error: empErr } = await supabase
     .from("employers")
@@ -228,7 +313,7 @@ export async function generateSyntheticArtifacts(
     }
 
     // 2a. Upsert into students (auth + students table)
-    const email = `bpo-${pid}@acme-pacific.demo`;
+    const email = pseudonymousEmail(pid);
     const { data: existingUser } = await supabase.auth.admin.listUsers({
       perPage: 200,
     });
@@ -265,8 +350,8 @@ export async function generateSyntheticArtifacts(
     agentIds.push(userId!);
 
     // 2b. Insert synthetic artifacts (idempotent on content hash)
-    const emailVariant = EMAIL_VARIANTS[agent.roleKey][idx % 2];
-    const callVariant = CALL_VARIANTS[agent.roleKey][idx % 2];
+    const emailVariant = emails[agent.roleKey][idx % 2];
+    const callVariant = calls[agent.roleKey][idx % 2];
 
     const insertArtifact = async (
       sourceType: SourceKind,
@@ -280,6 +365,7 @@ export async function generateSyntheticArtifacts(
           employer_id: employerId,
           pseudonymous_id: pid,
           source_type: sourceType,
+          batch,
           content,
           metadata: {
             ...metadata,
@@ -298,9 +384,8 @@ export async function generateSyntheticArtifacts(
       }
     };
 
-    // Day offsets: emails 7 days ago, calls 5 days ago — leaves a trail for trend
-    await insertArtifact("EMAIL", emailVariant.body, { subject: emailVariant.subject }, 7);
-    await insertArtifact("CALL_TRANSCRIPT", callVariant.transcript, { summary: callVariant.summary }, 5);
+    await insertArtifact("EMAIL", emailVariant.body, { subject: emailVariant.subject }, emailDays);
+    await insertArtifact("CALL_TRANSCRIPT", callVariant.transcript, { summary: callVariant.summary }, callDays);
   }
 
   return {
@@ -308,6 +393,7 @@ export async function generateSyntheticArtifacts(
     agentCount: AGENTS.length,
     artifactCount: AGENTS.length * 2,
     agents: agentIds,
+    batch,
   };
 }
 
