@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTION_BANK_V1 } from "@/lib/2k/question-bank";
+import { findResumableAssessment } from "@/lib/2k/service";
 import { AssessmentRunner } from "./assessment-runner";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ export default async function AssessmentPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirectTo=/assessment");
 
+  const resumable = await findResumableAssessment(supabase, user);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -23,7 +26,7 @@ export default async function AssessmentPage() {
           25-question intelligence journey
         </h1>
       </div>
-      <AssessmentRunner questions={QUESTION_BANK_V1} />
+      <AssessmentRunner questions={QUESTION_BANK_V1} resumable={resumable} />
     </div>
   );
 }

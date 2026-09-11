@@ -31,9 +31,10 @@ const STAGE_ORDER = ["LOCATE", "BOUND", "RESOLVE", "PERTURB", "CONFIRM"];
 
 type Props = {
   questions: readonly QuestionDefinition[];
+  resumable?: { assessment_id: string; answered: string[]; total: number } | null;
 };
 
-export function AssessmentRunner({ questions }: Props) {
+export function AssessmentRunner({ questions, resumable }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -108,6 +109,19 @@ export function AssessmentRunner({ questions }: Props) {
     const body = (await res.json()) as { assessment: { assessment_id: string } };
     setAssessmentId(body.assessment.assessment_id);
   }, []);
+
+  const resumeAssessment = useCallback(async () => {
+    if (!resumable) return;
+    setSyncError(null);
+    setAssessmentId(resumable.assessment_id);
+    // Jump to the first unanswered question (answered ids are contiguous).
+    const firstUnanswered = questions.findIndex(
+      (q) => !resumable.answered.includes(q.question_id)
+    );
+    setActiveIdx(firstUnanswered === -1 ? questions.length - 1 : firstUnanswered);
+    setElapsed(0);
+    setPhase("recording");
+  }, [resumable, questions]);
 
   const persistResponse = useCallback(
     async (response: StoredResponse) => {
@@ -268,6 +282,26 @@ export function AssessmentRunner({ questions }: Props) {
   if (phase === "intro") {
     return (
       <div className="mx-auto max-w-2xl flex flex-col gap-6">
+        {resumable && (
+          <div className="rounded-lg border border-gold/40 bg-gold/5 p-6">
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+              Resume your assessment
+            </p>
+            <h2 className="mt-2 font-serif text-xl text-navy">
+              {resumable.answered.length} of {resumable.total} questions answered
+            </h2>
+            <p className="mt-2 text-sm text-mute">
+              Pick up where you left off. Your saved responses stay intact.
+            </p>
+            <button
+              type="button"
+              onClick={resumeAssessment}
+              className="mt-4 rounded-md bg-navy px-6 py-3 text-sm font-medium text-paper hover:bg-navy-deep"
+            >
+              Resume assessment
+            </button>
+          </div>
+        )}
         <div className="rounded-lg border border-cream bg-paper p-6">
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
             How it works

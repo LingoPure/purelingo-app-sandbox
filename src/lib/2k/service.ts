@@ -228,6 +228,36 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
     .join("");
 }
 
+/** GET /api/2k/assessments/{id}/resume — ISS-018: most recent incomplete assessment for the learner. */
+export async function findResumableAssessment(
+  supabase: UserScopedClient,
+  user: { id: string } | null
+): Promise<{ assessment_id: string; answered: string[]; total: number } | null> {
+  const learnerId = userIdOf(user);
+
+  // Most recent non-terminal assessment (CREATED or IN_PROGRESS), newest first.
+  const { data: session, error: sessionError } = await supabase
+    .from("assessment_sessions")
+    .select("assessment_id, status, created_at")
+    .eq("learner_id", learnerId)
+    .in("status", ["CREATED", "IN_PROGRESS"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sessionError || !session) return null;
+
+  const { data: responses } = await supabase
+    .from("assessment_responses")
+    .select("question_id")
+    .eq("assessment_id", session.assessment_id);
+
+  return {
+    assessment_id: String(session.assessment_id),
+    answered: (responses ?? []).map((r) => String(r.question_id)),
+    total: TOTAL_QUESTIONS,
+  };
+}
+
 /** POST /api/2k/responses/{id}/transcribe — wire existing whisper into the 2K flow (ISS-017). */
 export async function transcribeResponse(
   supabase: UserScopedClient,
