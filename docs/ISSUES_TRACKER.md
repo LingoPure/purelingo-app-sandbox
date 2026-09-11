@@ -39,7 +39,7 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 ### Audio
 - [x] **ISS-015**: Audio capture (MediaRecorder API) with device fallback — runner picks the best supported MIME type (`audio/webm;codecs=opus` → `webm` → `mp4` → `ogg`) and falls back to the recorder default
 - [x] **ISS-016**: Durable audio upload to Supabase Storage with checksum — `POST /api/2k/responses/{id}/audio` (canonical #4); multipart upload to private `2k-assessment-audio` bucket (migration 0031), SHA-256 checksum, service-role write + registration of `audio_id`/`upload_status` via learner-scoped RLS; runner uploads blob after each ingest (best-effort, degrades to pending not lost)
-- [ ] **ISS-017**: Wire existing whisper.ts into assessment transcription flow
+- [x] **ISS-017**: Wire existing whisper.ts into assessment transcription flow — `POST /api/2k/responses/{id}/transcribe` pulls stored audio via service-role signed URL, calls `transcribeFromUrl`, persists `client_transcript` + `processing_status='complete'`, appends TRANSCRIPTION processing event
 - [ ] **ISS-018**: Session resume/recovery (browser-close → resume same assessment)
 
 ## Phase 3 — Real 2K Runtime (largest phase)

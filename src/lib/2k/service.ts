@@ -228,6 +228,77 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
     .join("");
 }
 
+/** POST /api/2k/responses/{id}/transcribe — wire existing whisper into the 2K flow (ISS-017). */
+export async function transcribeResponse(
+  supabase: UserScopedClient,
+  user: { id: string } | null,
+  responseId: string,
+  language: string = "en"
+): Promise<{ transcript: string; asr_provider: string; asr_version: string; asr_confidence: number }> {
+  userIdOf(user); // auth gate — RLS enforces ownership below
+
+  const { data: response, error: responseError } = await supabase
+    .from("assessment_responses")
+    .select("response_id, assessment_id, audio_id, upload_status, client_transcript, processing_status")
+    .eq("response_id", responseId)
+    .maybeSingle();
+  if (responseError || !response) {
+    throw new AssessmentServiceError("Response not found or not owned", 404);
+  }
+  if (!response.audio_id) {
+    throw new AssessmentServiceError("No audio registered for this response", 409);
+  }
+  if (response.upload_status !== "uploaded") {
+    throw new AssessmentServiceError(`Audio not uploaded (upload_status=${response.upload_status})`, 409);
+  }
+
+  // Signed URL to the private object — service role only, time-limited.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data: urlData, error: urlError } = await admin.storage
+    .from("2k-assessment-audio")
+    .createSignedUrl(String(response.audio_id), 60);
+  if (urlError || !urlData?.signedUrl) {
+    throw new AssessmentServiceError(`Signed URL failed: ${urlError?.message ?? "unknown"}`, 500);
+  }
+
+  const { transcribeFromUrl } = await import("@/lib/transcription/whisper");
+  const transcript = await transcribeFromUrl(urlData.signedUrl, language);
+
+  if (!transcript || !transcript.trim()) {
+    throw new AssessmentServiceError("Transcription returned empty text", 502);
+  }
+
+  const { error: updateError } = await supabase
+    .from("assessment_responses")
+    .update({
+      client_transcript: transcript,
+      processing_status: "complete",
+    })
+    .eq("response_id", responseId);
+  if (updateError) {
+    throw new AssessmentServiceError(`Transcript persist failed: ${updateError.message}`, 500);
+  }
+
+  await recordProcessingEvent(supabase, {
+    assessment_id: String(response.assessment_id),
+    from_status: "IN_PROGRESS",
+    to_status: "IN_PROGRESS",
+    from_stage: "INGESTION",
+    to_stage: "TRANSCRIPTION",
+    action: "transcription_completed",
+    detail: { response_id: responseId, transcript_length: transcript.length },
+    terminal: false,
+  });
+
+  return {
+    transcript,
+    asr_provider: "openai-whisper",
+    asr_version: "gpt-4o-transcribe",
+    asr_confidence: 0,
+  };
+}
+
 /** POST /api/2k/assessments/{id}/evaluate — request 2K evaluation once evidence minimums met. */
 export async function requestEvaluation(
   supabase: UserScopedClient,
