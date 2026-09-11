@@ -8,6 +8,10 @@
     {
       "path": "/api/hr/cron/holiday-notice",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/2k-retention",
+      "schedule": "0 3 * * *"
     }
   ]
 }

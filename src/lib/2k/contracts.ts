@@ -31,7 +31,19 @@ export type Modality = "speaking" | "writing" | "listening" | "reading" | "inter
 
 export type EvidenceStatus = "OBSERVED" | "NOT_OBSERVED" | "NOT_APPLICABLE" | "INSUFFICIENT" | "CONFLICTED" | "ZERO";
 
-export type EvidenceAuthority = "DIRECT" | "DERIVED" | "INFERRED" | "ABSTAINED";
+/**
+ * Grade of evidential directness (§6.1 taxonomy — amended from §5 draft
+ * which omitted PARTIAL, TRIANGULATED and UNOBSERVED and conflated
+ * abstention into the authority grade).
+ *
+ *   DIRECT       — directly observed (acoustic/writing-process + transcript)
+ *   PARTIAL      — direct but partial (e.g. audio without usable transcript)
+ *   DERIVED      — derived from canonical telemetry + current model rules
+ *   INFERRED     — indirect inference from surrounding evidence
+ *   TRIANGULATED — at least two independent sources agree
+ *   UNOBSERVED   — not present in the evidentiary pool (no observation)
+ */
+export type EvidenceAuthority = "DIRECT" | "PARTIAL" | "DERIVED" | "INFERRED" | "TRIANGULATED" | "UNOBSERVED";
 
 export type ConfoundLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -49,6 +61,37 @@ export type ProcessingStage =
   | "RECOMMENDATION"
   | "FREEZE"
   | "COMPLETE";
+
+// ─── Closed domain unions (Phase 0 freeze — close open strings) ─────────────
+
+/** Canonical six CEFR macro bands (score_bands.json LP1000 bands). */
+export type CefrMacroBand = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
+/** Recommendation action families — A through J (J = progression control). */
+export type RecommendationFamily =
+  | "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J";
+
+/** Canonical diagnostic archetype taxonomy (seeded 10 — lp_rec_db.json arch field). */
+export type DiagnosticArchetype =
+  | "CAPABILITY"
+  | "AUTOMATICITY"
+  | "TRANSFER"
+  | "CONTRADICTION_CONFLICT"
+  | "COGNITIVE_OVERLOAD"
+  | "HIERARCHY_PRESSURE"
+  | "SEMANTIC_DRIFT"
+  | "CONTEXT"
+  | "PROGRESSION_READY"
+  | "DO_NOT_TRAIN";
+
+/** LP-1000 score band names (from score_bands.json LP1000_BAND field). */
+export type Lp1000Band =
+  | "Survival"
+  | "Functional"
+  | "Professional"
+  | "Stable Professional"
+  | "Executive Stability"
+  | "Strategic Mastery";
 
 // ─── C01/ISS-001: AssessmentSession ────────────────────────────────────────
 
@@ -131,13 +174,17 @@ export interface AtomicAudioSignal {
   signal_id: string;               // UUID — immutable
   response_id: string;
   signal_type: string;             // "latency" | "pause_count" | "pitch_energy" | "repair_timing" | "intelligibility" | etc.
-  value: number | null;            // null = NOT_OBSERVED
+  value: number | null;            // null = NOT_OBSERVED (single source of truth)
   unit: string;                    // "ms" | "count" | "dB" | "ratio" | "score"
   confidence: number;              // 0–1
   measurement_method: string;      // "browser-api" | "whisper-derived" | "manual"
   measurement_version: string;
-  observed: boolean;               // false = NOT_OBSERVED, null value
   created_at: string;
+}
+
+/** Explicit guard — replaces the dropped `.observed` boolean. */
+export function isObservedSignal(signal: AtomicAudioSignal): boolean {
+  return signal.value !== null;
 }
 
 // ─── C05/ISS-005: CommunicationAnalysisObject ──────────────────────────────
@@ -298,13 +345,13 @@ export interface CanonicalAssessmentResult {
 
   capabilities: Array<{
     address: string;
-    level: string;
+    level: CefrMacroBand;
     confidence: number;
   }>;
 
   lp1000: {
     score: number;
-    band: string;
+    band: Lp1000Band;
     confidence: number;
     components: Record<string, number>;
   };
@@ -327,13 +374,13 @@ export interface CanonicalAssessmentResult {
   }>;
 
   diagnosis: {
-    archetype: string;
+    archetype: DiagnosticArchetype;
     gap_origin: string;
     confidence: number;
   };
 
   recommendation: {
-    family: string;                 // A through J
+    family: RecommendationFamily;
     intervention_id?: string;
     priority: number;
     exposure: string;
@@ -393,7 +440,7 @@ export interface LP18StableState {
     certified_at: string;
     transition_count: number;
   }>;
-  cefr_macro: string;             // "A1", "A2", "B1", "B2", "C1", "C2"
+  cefr_macro: CefrMacroBand;
   hysteresis_qualified: boolean;
 }
 

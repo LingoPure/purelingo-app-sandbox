@@ -90,3 +90,6 @@ tmp/
 # These live ONLY in the private Supabase 'dataroom' bucket behind the NDA/tier gate — never in git.
 /docs/LingoPure main documents/
 /docs/LP Deep Dive Documents/
+data-banks/
+docs/LingoPure_Technology_Dan_Docs/
+docs/LingoPure_Technology_Dan_Docs

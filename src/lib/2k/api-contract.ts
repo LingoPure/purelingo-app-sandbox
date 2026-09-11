@@ -5,10 +5,10 @@
  * Web v6 canonical API contract (§14). These types are the frozen boundary between
  * HTTP and the 2K pipeline. Internal implementation may change; this contract must not.
  *
- * DEPENDENCY: imports the eight frozen data contracts from ./contracts.ts. It never
- * re-declares them — where this file needs a closed union the contracts leave open
- * (capabilities level, recommendation family), it exports a derived union here rather
- * than mutating the frozen file.
+ * DEPENDENCY: imports the frozen data contracts from ./contracts.ts. It never
+ * re-declares them — the closed unions (CEFR band, recommendation family,
+ * diagnostic archetype, LP-1000 band) now live in contracts.ts and are
+ * re-exported here for API consumers (Phase 0 freeze: open strings closed).
  *
  * Source: LingoPure_Technology_Dan_Docs — Web v6 master framework §14 (canonical API)
  *         + CEFR Commercial Implementation Master §6 (12-endpoint minimum)
@@ -25,14 +25,18 @@ import type {
   ProcessingStage,
   QuestionStage,
   ResponseObject,
+  CefrMacroBand,
+  RecommendationFamily,
+  ConfoundLevel,
 } from "./contracts";
 
-// ─── Derived closed unions (contract deltas; do not edit contracts.ts) ──────
+// ─── Derived closed unions (now sourced from the frozen contracts.ts) ────────
 
-export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+/** Re-exported as the API's CEFR level alias (same closed union). */
+export type CefrLevel = CefrMacroBand;
 
-/** A–I canonical families + J (probe/hold control when unsafe or uncertain). */
-export type RecommendationFamily = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J";
+/** Re-exported A–J recommendation family (single source: contracts.ts). */
+export type { RecommendationFamily };
 
 export type HttpMethod = "GET" | "POST";
 
@@ -147,7 +151,7 @@ export interface GetReportRequest {
 /** #11 POST /interventions */
 export interface CreateInterventionRequest {
   result_id: string;
-  family: string;                 // RecommendationFamily
+  family: RecommendationFamily;
   learner_id: string;
   priority: number;
   exposure: string;
@@ -156,6 +160,7 @@ export interface CreateInterventionRequest {
 
 /** #12 POST /interventions/{id}/outcome */
 export interface CaptureOutcomeRequest {
+  assessment_id?: string;
   result_id: string;
   intervention_id?: string;
   teacher_action: string;
@@ -163,6 +168,8 @@ export interface CaptureOutcomeRequest {
   learner_response: string;
   teacher_observation: string;
   artifacts: string[];
+  confounds?: ConfoundLevel;
+  confound_notes?: string[];
   outcome_status: "positive" | "neutral" | "negative" | "inconclusive";
   next_action?: string;
 }

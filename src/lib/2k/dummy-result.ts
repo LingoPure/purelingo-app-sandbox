@@ -13,6 +13,8 @@
 
 import type {
   CanonicalAssessmentResult,
+  CefrMacroBand,
+  Lp1000Band,
   LP18StableState,
   LP18WorkingState,
 } from "@/lib/2k/contracts";
@@ -50,7 +52,7 @@ const DIMENSIONS = [
   { name: "receiver_fit", address: "interaction.receiver_fit" },
 ] as const;
 
-type CefrMacro = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+type CefrMacro = CefrMacroBand;
 
 const FAMILIES = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"] as const;
 
@@ -78,6 +80,16 @@ function bandFor(score: number): CefrMacro {
   if (score >= 560) return "B1";
   if (score >= 440) return "A2";
   return "A1";
+}
+
+/** LP-1000 score → canonical Lp1000Band (score_bands.json boundaries). */
+function lp1000BandFor(score: number): Lp1000Band {
+  if (score >= 950) return "Strategic Mastery";
+  if (score >= 800) return "Executive Stability";
+  if (score >= 600) return "Stable Professional";
+  if (score >= 350) return "Professional";
+  if (score >= 150) return "Functional";
+  return "Survival";
 }
 
 function confidenceFor(seed: number): number {
@@ -178,7 +190,7 @@ export function buildDummyResult(
 
     lp1000: {
       score: lp1000Score,
-      band: cefrMacro,
+      band: lp1000BandFor(lp1000Score),
       confidence: confidenceFor(seedBase),
       components: telemetry.reduce<Record<string, number>>((acc, d) => {
         acc[d.name] = d.score;
@@ -209,7 +221,7 @@ export function buildDummyResult(
         : [],
 
     diagnosis: {
-      archetype: "working_level",
+      archetype: "CAPABILITY",
       gap_origin: `${weakest.address} is the binding constraint (dummy derivation)`,
       confidence: confidenceFor(hash01(weakest.name)),
     },

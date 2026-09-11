@@ -1,14 +1,12 @@
 /**
- * GET /api/2k/assessments/{assessmentId}/result — canonical endpoint #7.
+ * GET /api/2k/assessments/{assessmentId}/result — canonical endpoint #7 (ISS-036).
  *
- * Returns the frozen CanonicalAssessmentResult. ISS-013 wires a deterministic
- * dummy result sourced from the persisted responses; the full 2K pipeline
- * replaces this behind the same contract in Phase 3.
+ * Returns the frozen CanonicalAssessmentResult computed by the real 2K engine
+ * chain (C07–C18) via the shared pipeline loader.
  */
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { AssessmentServiceError } from "@/lib/2k/service";
-import { buildDummyResult } from "@/lib/2k/dummy-result";
+import { loadPipelineResult } from "@/lib/2k/pipeline-loader";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ assessmentId: string }> }) {
   const supabase = await createClient();
@@ -19,54 +17,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ assessmentId: 
 
   const { assessmentId } = await ctx.params;
 
-  const { data: session, error: sessionError } = await supabase
-    .from("assessment_sessions")
-    .select("*")
-    .eq("assessment_id", assessmentId)
-    .eq("learner_id", user.id)
-    .single();
-  if (sessionError || !session) {
-    return NextResponse.json({ error: "Assessment not found" }, { status: 404 });
-  }
-
-  const { data: responses } = await supabase
-    .from("assessment_responses")
-    .select(
-      "response_id, question_id, stage, task, client_transcript, timing, upload_status, processing_status"
-    )
-    .eq("assessment_id", assessmentId)
-    .order("question_id");
-
   try {
-    const result = buildDummyResult(
-      {
-        assessment_id: String(session.assessment_id),
-        learner_id: String(session.learner_id),
-        session_id: String(session.session_id),
-        question_bank_version: String(session.question_bank_version),
-        language: String(session.language),
-        status: String(session.status),
-        created_at: String(session.created_at),
-      },
-      (responses ?? []).map((r) => ({
-        response_id: String(r.response_id),
-        question_id: String(r.question_id),
-        stage: String(r.stage),
-        task: String(r.task),
-        client_transcript: r.client_transcript ? String(r.client_transcript) : null,
-        duration_ms:
-          typeof r.timing === "object" && r.timing !== null && "duration_ms" in r.timing
-            ? Number((r.timing as { duration_ms: number }).duration_ms)
-            : null,
-        upload_status: String(r.upload_status),
-        processing_status: String(r.processing_status),
-      }))
-    );
-    return NextResponse.json({ result });
-  } catch (err) {
-    if (err instanceof AssessmentServiceError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
+    const loaded = await loadPipelineResult(supabase, assessmentId);
+    if (loaded.session.learner_id !== user.id) {
+      return NextResponse.json({ error: "Assessment not found" }, { status: 404 });
     }
-    return NextResponse.json({ error: "Unexpected error" }, { status: 500 });
+    return NextResponse.json({ result: loaded.result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unexpected error";
+    return NextResponse.json({ error: message }, { status: message === "Assessment not found" ? 404 : 500 });
   }
 }

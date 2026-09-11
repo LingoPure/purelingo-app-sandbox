@@ -368,6 +368,49 @@ export async function requestEvaluation(
   return rowToSession(updated.data);
 }
 
+/** POST /api/2k/assessments/{id}/retry — re-drive a FAILED assessment (ISS-039 / G11). */
+export async function retryAssessment(
+  supabase: UserScopedClient,
+  admin: AdminClient,
+  user: { id: string } | null,
+  assessmentId: string
+): Promise<AssessmentSession> {
+  const learnerId = userIdOf(user);
+
+  const { data: session, error: sessionError } = await supabase
+    .from("assessment_sessions")
+    .select("*")
+    .eq("assessment_id", assessmentId)
+    .eq("learner_id", learnerId)
+    .single();
+  if (sessionError || !session) {
+    throw new AssessmentServiceError("Assessment not found", 404);
+  }
+  if (session.status !== "FAILED") {
+    throw new AssessmentServiceError(`Cannot retry from status ${session.status}`, 409);
+  }
+
+  await advanceSessionStatus(supabase, user, assessmentId, "RETRYING", {
+    action: "retry_requested",
+    detail: { reason: "operator_retry" },
+  });
+
+  const retries = Number(session.processing_retries ?? 0) + 1;
+  const updated = await admin
+    .from("assessment_sessions")
+    .update({
+      status: "RETRYING",
+      processing_stage: "INGESTION",
+      processing_retries: retries,
+      processing_error: null,
+    })
+    .eq("assessment_id", assessmentId)
+    .select()
+    .single();
+  if (updated.error) throw new AssessmentServiceError(`Retry failed: ${updated.error.message}`, 500);
+  return rowToSession(updated.data);
+}
+
 /**
  * Advance a session's coarse status after validating the transition. Records an
  * append-only process event. Falls back to the service-role client for pipeline
