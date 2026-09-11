@@ -5,18 +5,23 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 
 ## Phase 0 — Contract Freeze
 
-### Data contracts (freeze before any pipeline code)
-- [ ] **ISS-001**: Define `AssessmentSession` TypeScript type + Supabase migration
-- [ ] **ISS-002**: Define `ResponseObject` TypeScript type + Supabase migration
-- [ ] **ISS-003**: Define `TranscriptObject` TypeScript type + Supabase migration
-- [ ] **ISS-004**: Define `AtomicAudioSignals` TypeScript type + Supabase migration
-- [ ] **ISS-005**: Define `CommunicationAnalysisObject` TypeScript type + Supabase migration
-- [ ] **ISS-006**: Define `EvidenceObject` TypeScript type + Supabase migration
-- [ ] **ISS-007**: Define `CanonicalAssessmentResult` TypeScript type + Supabase migration
-- [ ] **ISS-008**: Define `LessonOutcome` TypeScript type + Supabase migration
+### Data contracts (types frozen 2026-09-11 in `src/lib/2k/contracts.ts`, commit 83eacb7)
+- [x] **ISS-001**: Define `AssessmentSession` TypeScript type — migration ✅ `0030`
+- [x] **ISS-002**: Define `ResponseObject` TypeScript type — migration ✅ `0030`
+- [x] **ISS-003**: Define `TranscriptObject` TypeScript type — migration pending (Phase 3)
+- [x] **ISS-004**: Define `AtomicAudioSignals` TypeScript type — migration pending (Phase 3)
+- [x] **ISS-005**: Define `CommunicationAnalysisObject` TypeScript type — migration pending (Phase 3)
+- [x] **ISS-006**: Define `EvidenceObject` TypeScript type — migration pending (Phase 3)
+- [x] **ISS-007**: Define `CanonicalAssessmentResult` TypeScript type — migration pending (Phase 4)
+- [x] **ISS-008**: Define `LessonOutcome` TypeScript type — migration pending (Phase 5)
 
 ### API contract
-- [ ] **ISS-009**: Define minimum API contract types (12 endpoints, processing state machine)
+- [x] **ISS-009**: Define minimum API contract types — `src/lib/2k/api-contract.ts` (12 endpoints, endpoint registry, processing state machine + pure transitions/stage helpers, `ProcessingEventObject`); events ledger ✅ `0030`
+
+### Open contract deltas (from Phase 0 review, 2026-09-11)
+- [ ] `EvidenceAuthority` union (§5) does not match the framework doc §6.1 taxonomy (`TRIANGULATED` used in worked examples) — decide mapping vs amendment
+- [ ] `AtomicAudioSignal` encodes NOT_OBSERVED twice (`value: null` + `observed: false`) — collapse to one
+- [ ] `capabilities[].level`, `recommendation.family`, `diagnosis.archetype` are open strings — close with derived unions (family + CEFR levels already exported from api-contract.ts)
 
 ### Acceptance gates
 - [ ] **ISS-010**: Define G1–G14 acceptance gate test specs as TypeScript constants
