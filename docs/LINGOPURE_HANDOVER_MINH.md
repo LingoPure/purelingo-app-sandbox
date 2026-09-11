@@ -1,61 +1,32 @@
-# LingoPure Handover — Minh
+# LingoPure Handover — Minh (Operational Runbook)
 
-Date: 2026-09-11
+Date: 11 September 2026
 Prepared by: Dennis McMahon
 Audience: Minh (LingoPure developer)
-Estimated total time: 60–90 minutes once you start
+**Status:** Updated to reflect Master Migration Plan (`LINGOPURE_MIGRATION_PLAN.md`)
 
 ## At a glance
 
-One GitHub repo is being transferred from Dennis's account to the LingoPure org:
+This document provides the step-by-step operational commands to execute the infrastructure migration. It works in tandem with the comprehensive **[LingoPure Technical Migration & Infrastructure Ownership Plan](LINGOPURE_MIGRATION_PLAN.md)**.
 
-1. **caistech/LingoPureAI → LingoPure/lingopure** — the LingoPure web application itself, with full git history (201 commits, all branches, issues and PRs move with it).
-2. **Vercel** — the existing project `lingo-pure-ai` is reconnected to the new repo. All environment variables are already in place; this is a verify, not a rebuild.
-3. **Supabase** — project `nbvprbaumwmfczsfcyrv` (Tokyo) **stays as-is today** (Option A). The heavier "move into a LingoPure-owned project" migration is documented in Step 5, Option B, and is a deliberate deferral — exactly the same choice the MMC handover made.
+1. **GitHub** — Mirror copy the application repository to `LingoPure/LingoPureAI` (retaining the original as a rollback backup).
+2. **Vercel** — Reconnect the existing project `lingo-pure-ai` to the new repo.
+3. **Supabase** — Deferred to Phase 4 of the master plan (LingoPure creates their own project and migrates data).
 
 ### Guidance
 
-Unlike the MMC handover, **this repo keeps consuming `@caistech/*` packages from Dennis's GitHub Packages registry.** The MMC carve-out (rename `@caistech/*` → `@mmcbuild/*` + a trimmed shared monorepo) existed because a third party took over the substrate. LingoPure stays on the shared substrate (`cais-shared-services` is the portfolio moat — see `BUSINESS_MODEL.md`), so there is **no rename and no code change** in this handover. The work is: transfer the repo, move the CI secrets, reconnect Vercel, verify. Appendix A covers the optional MMC-style carve-out if the LingoPure org ever needs it.
+Unlike the MMC handover, **this repo keeps consuming `@caistech/*` packages from Dennis's GitHub Packages registry.** The MMC carve-out (rename `@caistech/*` → `@mmcbuild/*` + a trimmed shared monorepo) existed because a third party took over the substrate. LingoPure stays on the shared substrate (`cais-shared-services` is the portfolio moat — see `BUSINESS_MODEL.md`), so there is **no rename and no code change** in this handover.
 
 ---
 
 ## Decisions baked into this plan
 
-| Decision | This plan (default) | Alternative |
+| Decision | This plan | Alternative |
 |---|---|---|
-| D1 — Substrate | **Keep `@caistech/*` as-is** — no package rename, no source edits | MMC-style `@lingopure/*` carve-out (Appendix A) |
-| D2 — Vercel team | **Keep the `Corporate AI Solutions` team** and just reconnect the repo | New LingoPure Vercel team (needs a paid plan) |
-| D3 — Supabase | **Option A: keep project `nbvprbaumwmfczsfcyrv`** — zero data motion | Option B: migrate to a LingoPure-owned Supabase project (Step 5) |
-
----
-
-## Architecture before and after
-
-```
-BEFORE (today)                          AFTER (post-handover)
-==============                          =====================
-
-lingo-pure-ai.vercel.app                lingo-pure-ai.vercel.app
-        |                                       |
-        v                                       v
-  caistech/LingoPureAI                    LingoPure/lingopure
-  (Dennis's repo)                         (your repo — full history)
-        |                                       |
-        | imports                               | imports (unchanged)
-        v                                       v
-  @caistech/* packages                    @caistech/* packages
-  (Dennis's GitHub                         (Dennis's GitHub
-   Packages registry)                       Packages registry)
-        ^                                       ^
-        |                                       |
-        | published from                        | published from
-        |                                       |
-  caistech/cais-shared-services           caistech/cais-shared-services
-  (Dennis's source)                       (Dennis's source — unchanged)
-
-  Supabase nbvprbaumwmfczsfcyrv           Supabase nbvprbaumwmfczsfcyrv
-  (CAS-owned, Tokyo)                      (unchanged — Option A)
-```
+| D1 — Substrate | **Keep `@caistech/*` as-is** | MMC-style `@lingopure/*` carve-out (Appendix A) |
+| D2 — GitHub Strategy | **Mirror Copy** (Retain CAS repo) | Transfer (Destroys CAS repo) |
+| D3 — Vercel team | **Create New LingoPure Team** (per Master Plan) | Keep Corporate AI Solutions team |
+| D4 — Supabase | **Phase 4** (Full migration to LingoPure-owned) | Option A: Keep CAS Supabase |
 
 ---
 
@@ -63,53 +34,48 @@ lingo-pure-ai.vercel.app                lingo-pure-ai.vercel.app
 
 Tick each box before running any of the steps below.
 
-- [ ] You can create repos under the **LingoPure GitHub org** and (for Step 3) add repo/org **secrets and variables**. Note: `dennissolver` is a member, not owner, of the org — the transfer acceptance in Step 1 needs an **org owner** (see 1.2).
-- [ ] You can access the Vercel project at **vercel.com/corporate-ai-solutions/lingo-pure-ai** with permission to change the Git connection and trigger redeploys.
-- [ ] You have **git**, **node (v20+; project and Vercel run 24.x)**, **npm** (this repo uses `package-lock.json` — not pnpm), and the **GitHub CLI (`gh`)** installed locally.
-- [ ] You have been invited to the LingoPure GitHub org, or Dennis has run the transfer for you (Step 1).
-- [ ] For Step 5 Option B only: a `SUPABASE_ACCESS_TOKEN` from https://supabase.com/dashboard/account/tokens and admin on the target Supabase org.
-- [ ] You have read this entire document once before starting.
+- [ ] You can create repos under the **LingoPure GitHub org** and have admin permissions for Actions secrets.
+- [ ] You have **git**, **node (v20+)**, **npm** (this repo uses `package-lock.json` — not pnpm), and the **GitHub CLI (`gh`)** installed locally.
+- [ ] You have been added as an admin to the LingoPure GitHub org.
+- [ ] You have read the Master Migration Plan (`LINGOPURE_MIGRATION_PLAN.md`).
+- [ ] **LingoPure Org Owner** is standing by to approve repository creation.
 
-Also confirm: this app's build installs six private `@caistech/*` packages from `https://npm.pkg.github.com` (corporate-components, dataroom-core, elevenlabs-convai, sayfix-embed, webmcp-kit, and dev portfolio-gate). Any install — locally, in GitHub Actions, or on Vercel — must present a token for that registry. That is covered by Steps 2–4; it is not an outage, it's just a prerequisite to understand.
+Also confirm: this app's build installs six private `@caistech/*` packages from `https://npm.pkg.github.com`. Any install must present a token for that registry. That is covered by Steps 2–4; it is not an outage, it's just a prerequisite to understand.
 
 ---
 
-## Step 1 — Take ownership of the repo (10 min)
+## Step 1 — Mirror Repository to LingoPure (10 min)
 
-### 1.1 — Dennis runs the transfer
+*Note: We are using a mirror copy instead of a transfer to ensure Dennis retains the original environment for rollback until LingoPure is fully validated.*
 
-From Dennis's machine (source repo, `caistech` side):
+### 1.1 — Create the empty target repo
+You (or the LingoPure org owner) must create the empty repo first.
 
-```
-gh repo transfer caistech/LingoPureAI LingoPure --new-name lingopure
-```
-
-This moves the repo with **full history**: 201 commits, every branch (17), issues, PRs, and `dependabot.yml` config all come with it.
-
-### 1.2 — The LingoPure org owner accepts
-
-GitHub emails the org owners an approval notice. A member **cannot** accept an org transfer — an **owner** must:
-1. Open the notification/email and click **Approve transfer**, or
-2. If the transfer is blocked, promote `dennissolver` to owner temporarily (Settings → Members) and Dennis re-runs 1.1.
-
-### 1.3 — Invite Dennis back as a collaborator
-
-For the new repo: **Settings → Collaborators → Add people → `dennissolver` → Write**. Without this, Dennis can't push fixes if anything goes wrong in later steps.
-
-### 1.4 — Verify
-
-```
-gh repo view LingoPure/lingopure
+```bash
+gh repo create LingoPure/LingoPureAI --private
 ```
 
-Should print metadata without errors.
+### 1.2 — Dennis executes the mirror push
+From Dennis's local machine (where the repo is currently cloned):
 
-### 1.5 — Branch note (do this first, don't skip)
+```bash
+# 1. Add LingoPure repo as a remote 
+git remote add lingopure https://github.com/LingoPure/LingoPureAI.git
 
-`main` is the deployment source of truth. There is committed but **unmerged** work on this machine: branch `fix/data-residency-disclosure` is **1 commit ahead of `origin/main`** (`f573ebb fix(privacy): disclose overseas storage`), and the working tree holds uncommitted changes plus 6 untracked files. Before the first deploy from the new repo:
+# 2. Push ALL branches, tags, and historical refs
+git push lingopure --all
+git push lingopure --tags
 
-- merge `f573ebb` into `main` (or PR it) so the new repo's default branch carries the privacy fix, and
-- commit/stash the working-tree changes.
+# 3. Remove the remote once complete
+git remote remove lingopure
+```
+
+### 1.3 — Verify
+```bash
+gh repo view LingoPure/LingoPureAI
+```
+
+Should print metadata without errors and contain the full branch history.
 
 ---
 
@@ -128,27 +94,25 @@ https://github.com/settings/tokens/new?scopes=repo,read:packages,write:packages&
 
 Verify it works against GitHub Packages:
 
-```
+```bash
 npm whoami --registry=https://npm.pkg.github.com
 ```
 
 This prints your GitHub username. If it errors, the token lacks `read:packages` or was mistyped.
 
-> The repo-level `.npmrc` references `${NODE_AUTH_TOKEN}` — it contains **no token**, so it is safe to commit. Whenever you run `npm ci` locally, either `export NODE_AUTH_TOKEN=ghp_...` first, or add `//npm.pkg.github.com/:_authToken=ghp_...` to your **user-level** `~/.npmrc` (that file is outside any repo and must never be committed).
+> The repo-level `.npmrc` references `${NODE_AUTH_TOKEN}` — it contains **no token**, so it is safe to commit. Whenever you run `npm ci` locally, either `export NODE_AUTH_TOKEN=ghp_...` first, or add `//npm.pkg.github.com/:_authToken=ghp_...` to your **user-level** `~/.npmrc`.
 
 ---
 
 ## Step 3 — Move the CI secrets and variables to the LingoPure org (10 min)
 
-The repo's workflows were wired to secrets set **org-wide on the `caistech` org**. Org secrets don't survive a transfer — they must be recreated **on the `LingoPure` org** (then they apply to the transferred repo automatically) or **on the repo itself**.
-
-When Dennis runs the transfer he'll hand you the current values. Recreate on the LingoPure org:
+The repo's workflows were wired to secrets set **org-wide on the `caistech` org**. Org secrets don't survive a copy — they must be recreated **on the `LingoPure` org** or **on the `LingoPure/LingoPureAI` repository itself**.
 
 **Secrets (Settings → Secrets and variables → Actions → New secret):**
 
 | Name | Used by | Note |
 |---|---|---|
-| `CAISTECH_PACKAGES_TOKEN` | `gate.yml`, `health-sensors.yml`, `dependabot.yml` | Registry read for the `@caistech/*` install — needs `read:packages`. Use this for the Actions side (Step 2's PAT works) |
+| `CAISTECH_PACKAGES_TOKEN` | `gate.yml`, `health-sensors.yml`, `dependabot.yml` | Registry read for the `@caistech/*` install — needs `read:packages`. Use this for the Actions side |
 | `GITHUB_PACKAGES_TOKEN` | `hr-module.yml` | Falls back to `GITHUB_TOKEN` if missing — set it to the same value |
 | `NEXT_PUBLIC_SUPABASE_URL` | `gate.yml` | Same value as Vercel env |
 | `SUPABASE_SERVICE_ROLE_KEY` | `gate.yml` | Same value as Vercel env — server-only |
@@ -164,7 +128,7 @@ When Dennis runs the transfer he'll hand you the current values. Recreate on the
 |---|---|---|
 | `PORTFOLIO_GATE_PREVIEW_URL` | `gate.yml`, `health-sensors.yml` | The Vercel preview URL the gate smoke-tests — `lingo-pure-ai.vercel.app` in prod |
 
-**Dependabot** reads `CAISTECH_PACKAGES_TOKEN` as a *Dependabot secret*, not an Actions secret (Settings → Secrets and variables → Dependabot) — same value. This repo's `dependabot.yml` is scoped narrowly to `@caistech/*`, so it keeps working unchanged.
+**Dependabot** reads `CAISTECH_PACKAGES_TOKEN` as a *Dependabot secret*, not an Actions secret (Settings → Secrets and variables → Dependabot) — same value.
 
 ### Verify after Step 1–3
 
@@ -174,30 +138,27 @@ Open a trivial PR (or re-run the gate on an existing PR) and confirm the workflo
 
 ## Step 4 — Wire Vercel and deploy (10 min)
 
-### 4.1 — Confirm the env vars are present (they already are)
+### 4.1 — Confirm the env vars are present
 
-Checked 2026-09-11 — the project already has across Development, Preview and Production:
-
+The current project already has across Development, Preview and Production:
 `GITHUB_PACKAGES_TOKEN`, `NODE_AUTH_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `ELEVENLABS_AGENT_ID`, `ELEVENLABS_WEBHOOK_SECRET`, `RESEND_API_KEY`, `EMPLOYER_DEMO_PASSWORD`, `HEYGEN_API_KEY`, `NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID`, `NEXT_PUBLIC_CANVAS_MODE`, `ADMIN_EMAILS`.
-
-If any are missing: **Settings → Environment Variables**, add with all three environments ticked. `GITHUB_PACKAGES_TOKEN` / `NODE_AUTH_TOKEN` take your PAT from Step 2.
 
 ### 4.2 — Switch the connected GitHub repo
 
 Vercel currently auto-deploys from `caistech/LingoPureAI`.
 
 1. **Settings → Git → Disconnect** the current repo.
-2. **Connect Git Repository →** choose **`LingoPure/lingopure`**.
+2. **Connect Git Repository →** choose **`LingoPure/LingoPureAI`**.
 3. Confirm the **Production branch = `main`**.
 
 ### 4.3 — Do NOT rename the project or domain
 
-`lingo-pure-ai.vercel.app` is baked into `supabase/config.toml` (`site_url` + `additional_redirect_urls`) and into every confirmation/password-reset email already sent. Renaming the project creates a new URL and silently breaks signup links. Keep the name.
+`lingo-pure-ai.vercel.app` is baked into `supabase/config.toml` and into every confirmation/password-reset email already sent. Renaming the project creates a new URL and silently breaks signup links. Keep the name.
 
 ### 4.4 — Trigger a redeploy
 
 1. **Deployments → most recent → ⋯ → Redeploy →** "Use existing Build Cache" **off**.
-2. Watch the log — the `npm ci` step must resolve the six `@caistech/*` packages from `npm.pkg.github.com` (this is the moment the token matters).
+2. Watch the log — the `npm ci` step must resolve the six `@caistech/*` packages.
 
 ### Verify
 
@@ -207,69 +168,34 @@ Vercel currently auto-deploys from `caistech/LingoPureAI`.
 
 ---
 
-## Step 5 — Supabase
+## Definition of Done (Phase 1 & 2)
 
-### Option A (default — recommended today)
+You are finished with this runbook when all of these are true:
 
-**Nothing to migrate.** The app keeps using project `nbvprbaumwmfczsfcyrv` (Tokyo). `supabase/config.toml` stays pointing at it. No `pg_dump`, no storage copy, no env swap, no downtime. The MMC handover deferred the same step and ran on the shared project for months. A later maintenance window can move it (Option B) once the LingoPure org owns a Supabase org — decide that on a date, not during a handover.
-
-### Option B (only if the LingoPure org owns a Supabase project)
-
-Treated as a scheduled migration, 1-hour maintenance window — schedule it and add it to the DoD:
-
-1. **Create the target org + project** at supabase.com (choose Northeast Asia / Tokyo to match the current region).
-2. **Dump and restore** (from the existing project):
-   ```
-   supabase db dump --project-ref nbvprbaumwmfczsfcyrv --password ... > dump.sql
-   supabase db push   # or psql the dump against the new project
-   ```
-   Schema comes from `supabase/migrations/` in this repo — replay them idempotently against the new project, then copy **storage buckets** (objects + policies) separately.
-3. **Swap env** on Vercel (all three environments) and the GitHub Actions secret:
-   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-4. **Update `supabase/config.toml`**: `project_id`, and confirm `site_url` / redirects still list `lingo-pure-ai.vercel.app`.
-5. **Smoke test end-to-end**: sign in, dashboard, investor dataroom Q&A, voice agent, HR module — the same checklist as the original deploy.
-
----
-
-## Definition of Done
-
-You are finished when all of these are true:
-
-- [ ] `LingoPure/lingopure` exists in the org, default branch = `main`, carrying `f573ebb` (the privacy fix) or later
-- [ ] `dennissolver` has been re-added as a collaborator (Write) on the repo
-- [ ] The Step 3 secrets + `PORTFOLIO_GATE_PREVIEW_URL` variable are set on the LingoPure org (or repo); a CI run passes `npm ci` and the gate is green
-- [ ] Vercel project `lingo-pure-ai` is connected to `LingoPure/lingopure`
+- [ ] `LingoPure/LingoPureAI` exists in the org, default branch = `main`
+- [ ] The Step 3 secrets + `PORTFOLIO_GATE_PREVIEW_URL` variable are set on the LingoPure org; a CI run passes `npm ci` and the gate is green
+- [ ] Vercel project `lingo-pure-ai` is connected to `LingoPure/LingoPureAI`
 - [ ] `GITHUB_PACKAGES_TOKEN` / `NODE_AUTH_TOKEN` are set on Vercel (Development, Preview, Production)
 - [ ] Latest Vercel deployment is green and `https://lingo-pure-ai.vercel.app/` responds 200
-- [ ] Sign-in + dashboard smoke test passes (and the remaining routes: classroom, investor, HR)
-- [ ] Supabase Option A documented as the decision (or Option B complete)
-- [ ] Minh has a working local clone: `git clone`, `npm ci`, `npm run dev`
+- [ ] Sign-in + dashboard smoke test passes
+
+**Next:** Proceed to Phase 3 and 4 of the Master Plan (LingoPure Vercel team creation and Supabase migration).
 
 ---
 
 ## Not in scope today
 
-- **DNS cutover** — bringing a custom domain (e.g. `app.lingopure.com`) onto Vercel and updating `supabase/config.toml` redirects. The existing `lingo-pure-ai.vercel.app` URL stays.
+- **DNS cutover** — bringing a custom domain onto Vercel.
 - **`@lingopure/*` package carve-out** — covered in Appendix A, only on request.
-- **Vercel team transfer** — moving the project out of `Corporate AI Solutions` needs a separate paid plan.
-- **Supabase project transfer** — Option B above, scheduled separately.
+- **Supabase data migration** — scheduled as Phase 4 of the Master Plan.
 
 ---
 
 ## When to ping me
 
-Direct me to any blocker not covered by the tables above. Most likely friction points:
-
-1. **GitHub org approval for the transfer** — only an org owner can accept. If it's not you, I'll coordinate.
+1. **GitHub org approval for the transfer** — if permissions fail.
 2. **Secrets values** — I hold the current values for every secret in Step 3.
-3. **A 422 on `gh repo transfer`** — the destination org rejected the move; confirm the org slug and (if needed) promote a member to owner for the accept step.
-4. **401/403 during install after reconnect** — almost always the token, on whichever runner is failing (Vercel env vs GitHub Actions secret vs your local `~/.npmrc`).
-
-Workflow when something goes wrong:
-
-1. You hit an error → screenshot or paste the exact text.
-2. I fix locally and push to `LingoPure/lingopure`.
-3. You `git pull` and re-run the failed step.
+3. **401/403 during install after reconnect** — almost always the token, on whichever runner is failing.
 
 ---
 
@@ -277,15 +203,16 @@ Workflow when something goes wrong:
 
 | Resource | URL |
 |---|---|
-| Current repo (will transfer) | https://github.com/caistech/LingoPureAI |
-| Target repo | https://github.com/LingoPure/lingopure |
+| Current repo (retained for rollback) | https://github.com/caistech/LingoPureAI |
+| Target repo | https://github.com/LingoPure/LingoPureAI |
 | Target org | https://github.com/LingoPure |
 | Vercel project | https://vercel.com/corporate-ai-solutions/lingo-pure-ai |
 | Live deployment | https://lingo-pure-ai.vercel.app/ |
 | GitHub Packages registry (npm) | https://npm.pkg.github.com |
-| Supabase (in use, unchanged) | https://supabase.com/dashboard/project/nbvprbaumwmfczsfcyrv |
+| Supabase (to be migrated in Phase 4) | https://supabase.com/dashboard/project/nbvprbaumwmfczsfcyrv |
 | Auth config baked into deploys | `supabase/config.toml` (in this repo) |
 | CI workflows that need secrets | `.github/workflows/gate.yml`, `health-sensors.yml`, `hr-module.yml`, `claude-code.yml`, `dependabot.yml` |
+| Master Migration Plan | `docs/LINGOPURE_MIGRATION_PLAN.md` |
 
 ---
 
