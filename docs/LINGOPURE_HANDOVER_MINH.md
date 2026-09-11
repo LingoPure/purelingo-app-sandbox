@@ -186,7 +186,7 @@ You are finished with this runbook when all of these are true:
 ## Not in scope today
 
 - **DNS cutover** — bringing a custom domain onto Vercel.
-- **`@lingopure/*` package carve-out** — covered in Appendix A, only on request.
+- **`@lingopure/*` package carve-out** — **NOT APPLICABLE.** Path A locked in: LingoPure keeps consuming `@caistech/*` via GitHub Packages. Appendix A below is for reference only, not for execution.
 - **Supabase data migration** — **Path A approved: greenfield rebuild** from the repo's 29 migrations (`supabase db push`). No production data is carried over; the old CAS project stays paused and is decommissioned after the rollback period.
 
 ---
@@ -218,7 +218,7 @@ You are finished with this runbook when all of these are true:
 
 ---
 
-## Appendix A — (optional) MMC-style `@lingopure/*` carve-out
+## Appendix A — (reference only, NOT for execution) MMC-style `@lingopure/*` carve-out
 
 Not needed for this handover. If the LingoPure org later needs to own the *substrate*, the mechanics are identical to the MMC Build handover (which was done for exactly this reason when a third party took over the substrate):
 

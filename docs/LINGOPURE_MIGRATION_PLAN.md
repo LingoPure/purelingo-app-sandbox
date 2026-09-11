@@ -114,7 +114,7 @@ Before execution, Minh/LingoPure should explicitly approve the following.
 | Authentication | Migrate/validate as part of Supabase migration |
 | Storage | Migrate buckets, objects and policies |
 | CAS shared packages | Remain CAS-owned initially |
-| @lingopure/* package carve-out | Not part of this migration unless separately approved |
+| @lingopure/* package carve-out | **LOCKED OUT** — Path A confirmed: keep consuming `@caistech/*` from Dennis's `cais-shared-services` via GitHub Packages. LingoPure needs only a `read:packages` token. Revisit only if LingoPure org operates fully independently. |
 | Old CAS infrastructure | Retain temporarily for rollback, then decommission after agreed stability period |
 
 ## 5. Current-state inventory
@@ -645,7 +645,7 @@ Once the migration has been stable for the agreed period:
 
 The current application consumes private CAS packages.
 
-**Recommended initial position**
+**Recommended initial position — LOCKED IN**
 Continue using:
 - `@caistech/*`
 from:
@@ -654,7 +654,7 @@ from:
 This avoids unnecessarily combining two major migrations.
 The LingoPure application can therefore be independently hosted while continuing to consume the shared CAS technology layer.
 
-**Future option**
+**Future option — not approved, not in scope**
 If LingoPure eventually needs complete technical independence:
 - `@caistech/*` → `@lingopure/*`
 
@@ -724,7 +724,7 @@ Unless separately approved, this project does not include:
 - changing the application architecture
 - rewriting the shared CAS substrate
 - renaming @caistech/*
-- creating @lingopure/*
+- creating @lingopure/* (Path A locked — keeping @caistech/* as-is)
 - changing application functionality
 - changing business logic
 - changing the LingoPure product roadmap
@@ -798,7 +798,7 @@ The migration should not begin until the following has been agreed:
 - Vercel migration approved: ☐ Yes ☐ No
 - Supabase migration approved: ☐ Yes ☐ No
 - Production domain migration approved: ☐ Yes ☐ No
-- Continue using CAS @caistech/* packages initially: ☐ Yes ☐ No ☐ Separate decision required
+- Continue using CAS @caistech/* packages initially: ✅ YES — Path A locked in (2026-09-11). LingoPure needs `read:packages` token only.
 
 Approved by: ______________________________
 Date: ______________________________
