@@ -258,13 +258,22 @@ export default async function DashboardPage() {
           <h1 className="font-serif text-3xl text-navy">Your gap profile</h1>
         </div>
         {hasScores && (
-          <Link
-            href="/onboarding"
-            title="See where you are now versus before. Starts a fresh check-in with Aria and re-measures your level — use it when your role changes or your English moves on. Past scores are kept so you and your employer can track progress."
-            className="rounded-md border border-navy bg-navy px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition hover:bg-navy-deep"
-          >
-            Progress check-in
-          </Link>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Link
+              href="/dashboard/journey"
+              title="Journey view — how your communication state develops across 2K assessments, with evidence, focus behaviours and drift alerts."
+              className="rounded-md border border-gold/50 bg-gold/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-navy transition hover:bg-gold/20"
+            >
+              Journey view
+            </Link>
+            <Link
+              href="/onboarding"
+              title="See where you are now versus before. Starts a fresh check-in with Aria and re-measures your level — use it when your role changes or your English moves on. Past scores are kept so you and your employer can track progress."
+              className="rounded-md border border-navy bg-navy px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-paper transition hover:bg-navy-deep"
+            >
+              Progress check-in
+            </Link>
+          </div>
         )}
       </div>
 

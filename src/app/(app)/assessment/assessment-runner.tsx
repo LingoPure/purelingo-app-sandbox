@@ -487,13 +487,22 @@ export function AssessmentRunner({ questions, resumable }: Props) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard")}
-          className="self-start rounded-md bg-navy px-5 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
-        >
-          Back to dashboard
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/assessment/results/${result.assessment_id}`)}
+            className="rounded-md bg-navy px-5 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
+          >
+            View full result →
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="rounded-md border border-navy/20 px-5 py-2 text-sm font-medium text-navy hover:bg-mist"
+          >
+            Back to dashboard
+          </button>
+        </div>
       </div>
     );
   }

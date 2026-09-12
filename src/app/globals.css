@@ -24,6 +24,26 @@
   --color-background: #ffffff;
   --color-foreground: #0d1117;
 
+  /* telemetry dark surface (Dan's A1/A2/A3 designs) — generated utilities:
+     text-t-*, bg-t-*, border-t-* for use inside .telemetry pages only */
+  --color-t-bg: #071019;
+  --color-t-bg-2: #09141f;
+  --color-t-bg-3: #060d14;
+  --color-t-panel: #0d1924;
+  --color-t-panel2: #112231;
+  --color-t-line: #20384a;
+  --color-t-text: #eef7fb;
+  --color-t-mute: #91a8b8;
+  --color-t-soft-mute: #b7c8d5;
+  --color-t-orange: #ff9f1c;
+  --color-t-cyan: #35c9ef;
+  --color-t-green: #80d84d;
+  --color-t-purple: #a879ff;
+  --color-t-yellow: #f6c344;
+  --color-t-red: #ff6575;
+  --color-t-soft: #e9f6fb;
+  --color-t-ink: #133142;
+
   --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
   --font-serif: var(--font-dm-serif), Georgia, serif;
   --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
