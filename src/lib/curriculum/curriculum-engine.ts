@@ -118,6 +118,9 @@ export interface CurriculumInputsSnapshot {
     observation: string;
     created_at: string;
   }>;
+  /** Baseline capability scores captured at generation — lets reset decisions
+   *  reason about the REAL per-skill baseline instead of assuming a flat 500. */
+  capabilities?: BaselineSnapshot["capabilities"];
   version: number;
   generated_at: string;
 }
@@ -156,7 +159,8 @@ export function computeSkillGaps(
   baseline: BaselineSnapshot,
   cefr_target: string,
   completions: CurriculumInputsSnapshot["completions"],
-  feedback: CurriculumInputsSnapshot["feedback"]
+  feedback: CurriculumInputsSnapshot["feedback"],
+  observations: CurriculumInputsSnapshot["observations"] = []
 ): SkillGap[] {
   const cefr_score_map: Record<string, number> = {
     "A1": 200, "A2": 350, "B1": 500, "B2": 650, "C1": 800, "C2": 950,
@@ -180,6 +184,11 @@ export function computeSkillGaps(
     }
   }
 
+  const observation_counts: Record<string, number> = {};
+  for (const o of observations) {
+    observation_counts[o.skill] = (observation_counts[o.skill] ?? 0) + 1;
+  }
+
   const all_skills: SkillKey[] = [
     "speaking_fluency", "listening_comprehension", "writing_formal",
     "reading_intent", "business_vocabulary", "presentation_delivery",
@@ -189,7 +198,16 @@ export function computeSkillGaps(
     const baseline_score = skill_scores[skill] ?? 500;
     const completion_boost = Math.min(50, (completion_counts[skill] ?? 0) * 15);
     const feedback_penalty = (neg_feedback[skill] ?? 0) * 20;
-    const current = Math.max(0, Math.min(1000, baseline_score + completion_boost - feedback_penalty));
+    // Workplace observations carry more weight than tutor feedback: a work
+    // artifact demonstrates the gap directly, so each one widens it.
+    const observation_penalty = (observation_counts[skill] ?? 0) * 40;
+    const current = Math.max(
+      0,
+      Math.min(
+        1000,
+        baseline_score + completion_boost - feedback_penalty - observation_penalty,
+      ),
+    );
     const gap = Math.max(0, target_score - current);
 
     return {
@@ -211,6 +229,7 @@ export function generatePlan(input: GeneratePlanInput): CurriculumPlan {
     input.cefr_target,
     input.completions,
     input.feedback,
+    input.observations,
   );
 
   const gap_skills = gaps
@@ -268,6 +287,7 @@ export function generatePlan(input: GeneratePlanInput): CurriculumPlan {
       completions: input.completions,
       feedback: input.feedback,
       observations: input.observations,
+      capabilities: input.baseline.capabilities,
       version: 1,
       generated_at: now,
     },
@@ -317,18 +337,23 @@ export function evaluateReset(input: ResetInput): ResetResult {
     capabilities,
   });
 
+  const settledCapabilities =
+    input.existing_plan.last_inputs_snapshot.capabilities ?? [];
+
   const new_gaps = computeSkillGaps(
-    planBaseline([]),
+    planBaseline(settledCapabilities),
     input.existing_plan.cefr_target,
     all_completions,
     all_feedback,
+    all_observations,
   );
 
   const prev_gaps = computeSkillGaps(
-    planBaseline([]),
+    planBaseline(settledCapabilities),
     input.existing_plan.cefr_target,
     input.existing_plan.last_inputs_snapshot.completions,
     input.existing_plan.last_inputs_snapshot.feedback,
+    input.existing_plan.last_inputs_snapshot.observations,
   );
 
   const worst_prev = prev_gaps
@@ -368,7 +393,7 @@ export function evaluateReset(input: ResetInput): ResetResult {
         components: {},
       },
       cefr_macro: input.existing_plan.cefr_baseline,
-      capabilities: [],
+      capabilities: settledCapabilities,
     },
     cefr_target: input.existing_plan.cefr_target,
     existing_lessons: [],
