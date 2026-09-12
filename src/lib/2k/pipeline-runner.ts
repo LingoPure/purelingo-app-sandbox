@@ -11,6 +11,7 @@ import type {
   TranscriptObject,
   AtomicAudioSignal,
   CanonicalAssessmentResult,
+  CommunicationAnalysisObject,
   CefrMacroBand,
 } from "@/lib/2k/contracts";
 import { QUESTION_BANK_V1 } from "@/lib/2k/question-bank";
@@ -26,12 +27,17 @@ import { resolveRecommendation } from "@/lib/2k/engines/recommendation-control";
 import { freezeResult } from "@/lib/2k/result-freeze";
 import { currentArchitectureBlock, ENGINE_VERSIONS } from "@/lib/2k/version-registry";
 
+export interface PipelineRunOutput {
+  result: CanonicalAssessmentResult;
+  analyses: CommunicationAnalysisObject[];
+}
+
 export async function runPipeline(
   session: AssessmentSession,
   responses: ResponseObject[],
   transcripts: TranscriptObject[],
   signals: AtomicAudioSignal[]
-): Promise<CanonicalAssessmentResult> {
+): Promise<PipelineRunOutput> {
   const analyses = [];
   const allEvidence = [];
 
@@ -110,5 +116,5 @@ export async function runPipeline(
     },
   };
 
-  return freezeResult(result, analyses, allEvidence);
+  return { result: freezeResult(result, analyses, allEvidence), analyses };
 }

@@ -51,7 +51,9 @@ FILES=(
   "tests/org/supabase-shim.sql"
   "supabase/migrations/0001_initial_schema.sql"
   "supabase/migrations/0014_teachers_departments.sql"
+  "supabase/migrations/0030_2k_assessment_pipeline.sql"
   "supabase/migrations/0038_org_model_additive.sql"
+  "supabase/migrations/0040_teacher_report_context.sql"
   "tests/org/org-rls-verify.sql"
 )
 for f in "${FILES[@]}"; do
@@ -62,7 +64,7 @@ echo "==> applying Supabase shim (auth.users, auth.uid, auth.jwt, role grants)"
 psql_run -q -f /tmp/supabase-shim.sql
 
 echo "==> applying prerequisite + org migrations"
-for f in "${FILES[@]:1:3}"; do
+for f in "${FILES[@]:1:5}"; do
   echo "    $(basename "$f")"
   psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
 done
@@ -70,6 +72,14 @@ done
 echo "==> re-applying 0038 to prove idempotency"
 $DOCKER cp "supabase/migrations/0038_org_model_additive.sql" "$CONTAINER:/tmp/0038_rerun.sql" >/dev/null
 psql_run -q -f /tmp/0038_rerun.sql >/dev/null 2>&1
+echo "    idempotent re-run: ok"
+
+echo "==> applying 0040 (assessment org-view RLS policies)"
+psql_run -q -f /tmp/0040_teacher_report_context.sql 2>&1 | grep -v "NOTICE" || true
+
+echo "==> re-applying 0040 to prove idempotency"
+$DOCKER cp "supabase/migrations/0040_teacher_report_context.sql" "$CONTAINER:/tmp/0040_rerun.sql" >/dev/null
+psql_run -q -f /tmp/0040_rerun.sql >/dev/null 2>&1
 echo "    idempotent re-run: ok"
 
 echo "==> verifying RLS budget + visibility functions"

@@ -4,6 +4,11 @@
  * Reads the assessment session + responses from Supabase and computes the
  * frozen CanonicalAssessmentResult via the real engine chain.  Both the
  * `/result` and `/report` endpoints consume this so they cannot drift.
+ *
+ * RLS gate: when `requireView` is set, the `org_can_view_student` gate is
+ * resolved BEFORE any assessment row is read. Denial throws, so a caller can
+ * never fall through to the engine on rows the viewer may not see — the
+ * database policies (0040) remain the backstop, this is the app-side gate.
  */
 import { runPipeline } from "@/lib/2k/pipeline-runner";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -12,6 +17,7 @@ import type {
   TranscriptObject,
   AssessmentSession,
   CanonicalAssessmentResult,
+  CommunicationAnalysisObject,
 } from "@/lib/2k/contracts";
 
 export interface LoadedPipeline {
@@ -19,11 +25,48 @@ export interface LoadedPipeline {
   responseObjects: ResponseObject[];
   transcriptObjects: TranscriptObject[];
   result: CanonicalAssessmentResult;
+  /** The raw per-response analyses the frozen result was built from. */
+  analyses: CommunicationAnalysisObject[];
+}
+
+/** Caller-provided gate. When absent, loaders resolve it via the database. */
+export type StudentViewGate = {
+  canView?: boolean;
+};
+
+/**
+ * Can the current caller read this learner's assessment data?
+ *
+ * Resolves `org_can_view_student` through the USER-scoped client so RLS and
+ * the SECURITY DEFINER permission model decide, not TypeScript. Fail closed:
+ * an RPC error is a denial.
+ */
+export async function canViewStudent(
+  supabase: SupabaseClient,
+  learnerId: string
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("org_can_view_student", {
+    target_student_id: learnerId,
+  });
+  if (error) return false;
+  return data === true;
+}
+
+/** Resolve the gate for a learner, honouring an explicit caller result. */
+export async function resolveStudentViewGate(
+  supabase: SupabaseClient,
+  learnerId: string,
+  overrides?: StudentViewGate
+): Promise<boolean> {
+  if (overrides?.canView !== undefined) return overrides.canView === true;
+  return canViewStudent(supabase, learnerId);
 }
 
 export async function loadPipelineResult(
   supabase: SupabaseClient,
-  assessmentId: string
+  assessmentId: string,
+  requireView = false,
+  overrides?: StudentViewGate
 ): Promise<LoadedPipeline> {
   const { data: session, error: sessionError } = await supabase
     .from("assessment_sessions")
@@ -32,6 +75,10 @@ export async function loadPipelineResult(
     .single();
 
   if (sessionError || !session) throw new Error("Assessment not found");
+
+  if (requireView && !(await resolveStudentViewGate(supabase, String(session.learner_id), overrides))) {
+    throw new Error("Not permitted to view this assessment");
+  }
   const s = session as Record<string, unknown>;
 
   const { data: responses, error: responsesError } = await supabase
@@ -104,11 +151,11 @@ export async function loadPipelineResult(
       created_at: row.created_at ? String(row.created_at) : new Date().toISOString(),
     }));
 
-  const result = await runPipeline(sessionObj, responseObjects, transcriptObjects, []);
+  const { result, analyses } = await runPipeline(sessionObj, responseObjects, transcriptObjects, []);
 
   await recordStageEvent(supabase, sessionObj, result);
 
-  return { session: sessionObj, responseObjects, transcriptObjects, result };
+  return { session: sessionObj, responseObjects, transcriptObjects, result, analyses };
 }
 
 /** Append a COMPLETE processing event once the frozen result is produced. */

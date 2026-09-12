@@ -73,6 +73,8 @@ insert into auth.users (id, email) values
   ('a0000000-0000-4000-8000-000000000004', 'staff@example.test'),
   ('a0000000-0000-4000-8000-000000000005', 'student@example.test'),
   ('a0000000-0000-4000-8000-000000000006', 'outsider@example.test'),
+  ('a0000000-0000-4000-8000-000000000007', 'teacherb@example.test'),
+  ('3a000000-0000-4000-8000-000000000002', 'student-other@example.test'),
   ('d0000000-0000-4000-8000-000000000001', 'phuong@example.test')
 on conflict (id) do nothing;
 
@@ -98,16 +100,23 @@ insert into public.employers (id, name, organisation_id) values
 on conflict (id) do nothing;
 
 insert into public.students (id, employer_id, name, email) values
-  ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'Phuong', 'phuong@example.test')
+  ('d0000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'Phuong', 'phuong@example.test'),
+  ('3c000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000002', 'OtherCo Student', 'student-other@example.test')
 on conflict (id) do update set employer_id = excluded.employer_id;
 
 insert into public.teachers (id, auth_user_id, full_name, email) values
-  ('e0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', 'Coach Linh', 'coach@example.test')
+  ('e0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000003', 'Coach Linh', 'coach@example.test'),
+  ('e0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000007', 'Coach Binh', 'coach-b@example.test')
 on conflict (id) do nothing;
 
-insert into public.student_teacher_assignments (student_id, teacher_id)
-values ('d0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001')
-on conflict do nothing;
+insert into public.student_teacher_assignments (id, student_id, teacher_id, assignment_role) values
+  ('c0000000-0000-4000-8000-000000000011', 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', 'primary')
+on conflict (id) do nothing;
+
+-- TeacherB is in Celadon but assigned to the OtherCo student — the org gate
+-- grants visibility (teacher → student via assignment_id), NOT org membership
+-- of the teacher.  This fixture proves that teacher membership + assignment
+-- is the correct boundary, not employer co-location.
 
 -- ── current_org_role + org_is_owner_or_hr ────────────────────────────────────
 
@@ -248,6 +257,149 @@ select pg_temp.assert_eq(
   1, 'outsider sees only their own membership');
 commit;
 
+-- ── RLS: assessment_sessions / assessment_responses (2K, 0030 + 0040 org view) ─
+-- Phuong owns two cells: one COMPLETE (with a response row) and one FAILED.
+-- otherco2 owns one COMPLETE cell (different org, never visible to Celadon).
+-- Each role is impersonated through auth.uid() and queried DIRECTLY, proving
+-- the org_can_view_student policies (0040) are enforced by the database.
+
+insert into public.assessment_sessions
+  (assessment_id, learner_id, session_id, language, question_bank_version,
+   context, consent, status, processing_stage, completed_at, created_at, updated_at)
+values
+  ('f0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'sess-1', 'vi-VN', 'v1', '{}', '{}', 'COMPLETE', 'COMPLETE', now(), now(), now()),
+  ('f0000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001', 'sess-2', 'vi-VN', 'v1', '{}', '{}', 'FAILED',   'FAILED',   null, now(), now()),
+  ('f0000000-0000-4000-8000-000000000003', '3c000000-0000-4000-8000-000000000001', 'sess-3', 'vi-VN', 'v1', '{}', '{}', 'COMPLETE', 'COMPLETE', now(), now(), now())
+on conflict (assessment_id) do nothing;
+
+insert into public.assessment_responses
+  (response_id, assessment_id, question_id, stage, task, receiver, context,
+   client_transcript, timing, device, assistance_status, upload_status,
+   processing_status, created_at)
+values
+  ('f0000000-0000-4000-8000-000000000011', 'f0000000-0000-4000-8000-000000000001', 'q-locate-1', 'LOCATE', 'Locate the goal', 'managed-hr', 'time-pressured', 'I need a status update by end of day.', '{}', '{}', 'none', 'uploaded', 'complete', now()),
+  ('f0000000-0000-4000-8000-000000000012', 'f0000000-0000-4000-8000-000000000003', 'q-locate-1', 'LOCATE', 'Locate the goal', 'managed-hr', 'time-pressured', 'Please resend the brief.',                 '{}', '{}', 'none', 'uploaded', 'complete', now())
+on conflict (response_id) do nothing;
+
+-- ── RLS: assessment_sessions / assessment_responses — per-role visibility ────
+-- The COMPLETE-gating loaders (src/lib/2k/journey-data.ts) resolve
+-- org_can_view_student BEFORE querying. These assertions impersonate each
+-- role through auth.uid() and query the tables DIRECTLY, proving the database
+-- itself returns no rows the gate denies — whatever the UI loaders do.
+
+-- Count the sessions a user can SEE through RLS.
+create or replace function pg_temp.visible_session_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.assessment_sessions;
+  reset role;
+  return n;
+end;
+$$;
+
+-- Count the responses a user can SEE through RLS.
+create or replace function pg_temp.visible_response_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.assessment_responses;
+  reset role;
+  return n;
+end;
+$$;
+
+-- org_can_view_student gate matrix: assigned teacher sees Phuong, an
+-- unassigned Celadon teacher does not, and cross-org views never resolve.
+do $$
+declare is_ok boolean;
+begin
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000003', true);
+  is_ok := public.org_can_view_student('d0000000-0000-4000-8000-000000000001');
+  if is_ok is not true then raise exception 'FAIL: assigned teacher must see Phuong'; end if;
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000007', true);
+  is_ok := public.org_can_view_student('d0000000-0000-4000-8000-000000000001');
+  if is_ok is not false then raise exception 'FAIL: unassigned Celadon teacher must NOT see Phuong'; end if;
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000001', true);
+  is_ok := public.org_can_view_student('3c000000-0000-4000-8000-000000000001');
+  if is_ok is not false then raise exception 'FAIL: Celadon owner must NOT see OtherCo student'; end if;
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000007', true);
+  is_ok := public.org_can_view_student('3c000000-0000-4000-8000-000000000001');
+  if is_ok is not true then raise exception 'FAIL: OtherCo teacher must see their assigned student'; end if;
+  raise notice 'ok: org_can_view_student gate matrix (assigned / unassigned / cross-org)';
+end;
+$$;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'),
+  1, 'owner sees only Phuong''s COMPLETE session (not FAILED, not other org)');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000002'),
+  1, 'hr sees only Phuong''s COMPLETE session');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000003'),
+  1, 'assigned teacher sees only Phuong''s COMPLETE session');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000005'),
+  1, 'learner sees their own COMPLETE session');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000007'),
+  1, 'teacher sees only their OTHER-ORG assigned student''s session');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000004'),
+  0, 'staff sees ZERO assessment sessions');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000006'),
+  0, 'cross-org outsider sees ZERO assessment sessions');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000001'),
+  1, 'owner sees only Phuong''s response');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000003'),
+  1, 'assigned teacher sees only Phuong''s response');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000004'),
+  0, 'staff sees ZERO assessment responses');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000006'),
+  0, 'cross-org outsider sees ZERO assessment responses');
+commit;
+
 -- ── Append-only guard: no UPDATE/DELETE policies exist on memberships ────────
 -- Absence of a policy is a denial; confirm no update/delete policies exist.
 do $$
@@ -263,5 +415,15 @@ begin
     raise exception 'FAIL: update/delete policies must not exist on org tables, found %', n;
   end if;
   raise notice 'ok: no update/delete policies on org tables (writes are service-role)';
+
+  select count(*) into n
+  from pg_policies
+  where schemaname = 'public'
+    and tablename in ('assessment_sessions','assessment_responses','assessment_processing_events')
+    and cmd in ('UPDATE','DELETE');
+  if n <> 0 then
+    raise exception 'FAIL: update/delete policies must not exist on 2K assessment tables, found %', n;
+  end if;
+  raise notice 'ok: no update/delete policies on 2K assessment tables (writes are service-role)';
 end;
 $$;

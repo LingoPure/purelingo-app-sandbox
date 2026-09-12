@@ -2,8 +2,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { listCompletedAssessments, loadAssessmentPipeline } from "@/lib/2k/journey-data";
+import { listCompletedAssessments, loadAssessmentPipeline, canViewStudent } from "@/lib/2k/journey-data";
 import { buildTeacherIntelligenceView } from "@/lib/2k/teacher-intelligence";
+import { buildEvidencePackets } from "@/lib/2k/engines/evidence-packet-builder";
 import { ScoreRing } from "@/components/telemetry/score-ring";
 import "@/components/telemetry/telemetry.css";
 
@@ -30,7 +31,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 async function resolveStudentView(supabase: Supabase, studentId: string) {
   // Student row — self-read via RLS is unconditional; org/teacher visibility is
-  // resolved by the org_can_view_student gate (§7 wiring drops in here).
+  // resolved by the org_can_view_student gate (0038) via the gated loader.
   const { data: student } = await supabase
     .from("students")
     .select("id, name, target_level, native_language, xp, streak_days")
@@ -38,22 +39,13 @@ async function resolveStudentView(supabase: Supabase, studentId: string) {
     .maybeSingle();
   if (!student) return null;
 
-  let viewerCanRead = false;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user) {
-    if (user.id === studentId) {
-      viewerCanRead = true;
-    } else {
-      const { data: allowed } = await supabase.rpc("org_can_view_student", {
-        target_student_id: studentId,
-      });
-      viewerCanRead = allowed === true;
-    }
-  }
+  const viewerCanRead = await canViewStudent(supabase, studentId);
 
-  const completed = await listCompletedAssessments(supabase, studentId, 40);
+  // Strict RLS gate: listCompletedAssessments short-circuits to [] when the
+  // viewer cannot read this learner, so no assessment row is even queried.
+  const completed = await listCompletedAssessments(supabase, studentId, 40, {
+    canView: viewerCanRead,
+  });
   return { student, viewerCanRead, completed };
 }
 
@@ -73,12 +65,27 @@ export default async function TeacherReportPage({
   const results = [];
   if (viewerCanRead) {
     for (const summary of completed) {
-      const pipeline = await loadAssessmentPipeline(supabase, summary.assessment_id);
+      const pipeline = await loadAssessmentPipeline(supabase, summary.assessment_id, {
+        canView: viewerCanRead,
+      });
       if (pipeline) results.push(pipeline);
     }
   }
   const latest = results[0] ?? null;
   const report = latest ? buildTeacherIntelligenceView(latest.result) : null;
+
+  // Rebuild the governed evidence packets from the raw analyses the frozen
+  // result was built from (C08 is deterministic per-analysis; ids are fresh
+  // but the construct/status/authority/confidence surface matches the run).
+  const evidencePackets =
+    latest && latest.analyses.length
+      ? (await Promise.all(latest.analyses.map((analysis) => buildEvidencePackets(analysis)))).flat()
+      : [];
+
+  const packetStatusCounts = evidencePackets.reduce<Record<string, number>>((counts, packet) => {
+    counts[packet.status] = (counts[packet.status] ?? 0) + 1;
+    return counts;
+  }, {});
 
   return (
     <div className="telemetry min-h-screen p-4 pb-12 sm:p-6 lg:p-8">
@@ -343,6 +350,59 @@ export default async function TeacherReportPage({
                 </ul>
               </div>
             </article>
+          </section>
+
+          {/* 6 · EVIDENCE PACKETS */}
+          <section className="mx-auto mt-8 max-w-6xl">
+            <p className="t-eyebrow t-eyebrow-green">6 · Evidence packets</p>
+            <h2 className="t-h2 mt-1">Every governed signal the engine adjudicated</h2>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="t-pill">Total {evidencePackets.length}</span>
+              {Object.entries(packetStatusCounts).map(([status, count]) => (
+                <span
+                  key={status}
+                  className={`t-pill ${
+                    status === "OBSERVED" ? "t-pill-good" : status === "NOT_OBSERVED" || status === "ZERO" ? "t-pill-warn" : ""
+                  }`}
+                >
+                  {status.replace(/_/g, " ")} {count}
+                </span>
+              ))}
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {evidencePackets.map((packet) => (
+                <article key={packet.evidence_id} className="t-card p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] tracking-wide text-t-cyan">
+                      {packet.construct}
+                    </span>
+                    <span className={`t-pill ${packet.status === "OBSERVED" ? "t-pill-good" : ""}`}>
+                      {packet.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-t-soft-mute">{packet.observation}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-t-mute">
+                    <span>authority {packet.authority}</span>
+                    <span>confidence {(packet.confidence * 100).toFixed(0)}%</span>
+                    <span>task relevance {(packet.task_relevance * 100).toFixed(0)}%</span>
+                    <span>quality {(packet.quality * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-t-line pt-2 font-mono text-[10px] text-t-mute">
+                    <span>{packet.source.modality}</span>
+                    <span className="truncate" title={packet.source.response_id}>
+                      {packet.source.response_id}
+                    </span>
+                    <span>{packet.provenance.engine_version}</span>
+                  </div>
+                  {packet.context_receiver.receiver && (
+                    <p className="mt-1 font-mono text-[10px] text-t-mute">
+                      → {packet.context_receiver.receiver}
+                      {packet.context_receiver.context ? ` · ${packet.context_receiver.context}` : ""}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
           </section>
         </>
       )}
