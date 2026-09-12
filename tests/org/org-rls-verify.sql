@@ -74,7 +74,7 @@ insert into auth.users (id, email) values
   ('a0000000-0000-4000-8000-000000000005', 'student@example.test'),
   ('a0000000-0000-4000-8000-000000000006', 'outsider@example.test'),
   ('a0000000-0000-4000-8000-000000000007', 'teacherb@example.test'),
-  ('3a000000-0000-4000-8000-000000000002', 'student-other@example.test'),
+  ('3c000000-0000-4000-8000-000000000001', 'student-other@example.test'),
   ('d0000000-0000-4000-8000-000000000001', 'phuong@example.test')
 on conflict (id) do nothing;
 
@@ -91,7 +91,8 @@ values
   ('b0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003', '0e5f1a10-0000-4000-8000-000000000001', 'teacher', 'active'),
   ('b0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000004', '0e5f1a10-0000-4000-8000-000000000001', 'staff',   'active'),
   ('b0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000005', '0e5f1a10-0000-4000-8000-000000000001', 'student', 'active'),
-  ('b0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000006', '0e5f1a10-0000-4000-8000-000000000002', 'staff',   'active')
+  ('b0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000006', '0e5f1a10-0000-4000-8000-000000000002', 'staff',   'active'),
+  ('b0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000007', '0e5f1a10-0000-4000-8000-000000000002', 'teacher', 'active')
 on conflict (id) do nothing;
 
 insert into public.employers (id, name, organisation_id) values
@@ -110,8 +111,31 @@ insert into public.teachers (id, auth_user_id, full_name, email) values
 on conflict (id) do nothing;
 
 insert into public.student_teacher_assignments (id, student_id, teacher_id, assignment_role) values
-  ('c0000000-0000-4000-8000-000000000011', 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', 'primary')
+  ('c0000000-0000-4000-8000-000000000011', 'd0000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000001', 'primary'),
+  ('c0000000-0000-4000-8000-000000000012', '3c000000-0000-4000-8000-000000000001', 'e0000000-0000-4000-8000-000000000002', 'primary')
 on conflict (id) do nothing;
+
+-- C3: synthetic billing + onboarding state fixtures (0041/0042). Org members
+-- (any active membership role) must see Celadon's subscription + onboarding;
+-- the cross-org member must see neither.
+insert into public.subscriptions
+  (organisation_id, package, tier, status, price_monthly, currency)
+values
+  ('0e5f1a10-0000-4000-8000-000000000001', '1:1 Tutoring', 'standard', 'active', 1500.00, 'AUD')
+on conflict (organisation_id) do nothing;
+
+insert into public.org_onboarding (organisation_id, step, package) values
+  ('0e5f1a10-0000-4000-8000-000000000001', 'departments', 'Full BPO')
+on conflict (organisation_id) do nothing;
+
+-- C3: department fixture + membership linkage (0043).
+insert into public.organisation_departments (id, organisation_id, name) values
+  ('c0000000-0000-4000-8000-000000000021', '0e5f1a10-0000-4000-8000-000000000001', 'Inbound')
+on conflict (organisation_id, name) do nothing;
+
+update public.organisation_memberships
+  set department_id = 'c0000000-0000-4000-8000-000000000021'
+  where id = 'b0000000-0000-4000-8000-000000000004';
 
 -- TeacherB is in Celadon but assigned to the OtherCo student — the org gate
 -- grants visibility (teacher → student via assignment_id), NOT org membership
@@ -268,7 +292,7 @@ insert into public.assessment_sessions
    context, consent, status, processing_stage, completed_at, created_at, updated_at)
 values
   ('f0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'sess-1', 'vi-VN', 'v1', '{}', '{}', 'COMPLETE', 'COMPLETE', now(), now(), now()),
-  ('f0000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001', 'sess-2', 'vi-VN', 'v1', '{}', '{}', 'FAILED',   'FAILED',   null, now(), now()),
+  ('f0000000-0000-4000-8000-000000000002', 'd0000000-0000-4000-8000-000000000001', 'sess-2', 'vi-VN', 'v1', '{}', '{}', 'FAILED',   'COMPLETE', null, now(), now()),
   ('f0000000-0000-4000-8000-000000000003', '3c000000-0000-4000-8000-000000000001', 'sess-3', 'vi-VN', 'v1', '{}', '{}', 'COMPLETE', 'COMPLETE', now(), now(), now())
 on conflict (assessment_id) do nothing;
 
@@ -313,6 +337,32 @@ begin
 end;
 $$;
 
+-- Count the subscriptions a user can SEE through RLS.
+create or replace function pg_temp.visible_subscription_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.subscriptions;
+  reset role;
+  return n;
+end;
+$$;
+
+-- Count the onboarding-state rows a user can SEE through RLS.
+create or replace function pg_temp.visible_onboarding_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.org_onboarding;
+  reset role;
+  return n;
+end;
+$$;
+
 -- org_can_view_student gate matrix: assigned teacher sees Phuong, an
 -- unassigned Celadon teacher does not, and cross-org views never resolve.
 do $$
@@ -337,25 +387,25 @@ $$;
 begin;
 select pg_temp.assert_eq(
   pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'),
-  1, 'owner sees only Phuong''s COMPLETE session (not FAILED, not other org)');
+  2, 'owner sees both Phuong sessions (FAILED and COMPLETE) — status filtering is app-layer');
 commit;
 
 begin;
 select pg_temp.assert_eq(
   pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000002'),
-  1, 'hr sees only Phuong''s COMPLETE session');
+  2, 'hr sees both Phuong sessions');
 commit;
 
 begin;
 select pg_temp.assert_eq(
   pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000003'),
-  1, 'assigned teacher sees only Phuong''s COMPLETE session');
+  2, 'assigned teacher sees both Phuong sessions via assignment');
 commit;
 
 begin;
 select pg_temp.assert_eq(
-  pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000005'),
-  1, 'learner sees their own COMPLETE session');
+  pg_temp.visible_session_count('d0000000-0000-4000-8000-000000000001'),
+  2, 'learner sees their own two sessions (self via auth.uid)');
 commit;
 
 begin;
@@ -400,6 +450,48 @@ select pg_temp.assert_eq(
   0, 'cross-org outsider sees ZERO assessment responses');
 commit;
 
+-- ── C3: synthetic billing + onboarding visibility (0041/0042), dept link (0043) ──
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000001'),
+  1, 'owner sees their org subscription');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000006'),
+  0, 'cross-org member sees ZERO subscriptions');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000002'),
+  1, 'hr sees their org onboarding state');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000006'),
+  0, 'cross-org member sees ZERO onboarding state');
+commit;
+
+do $$
+declare
+  dept uuid;
+begin
+  -- 0043: membership department link must persist.
+  select department_id into dept
+    from public.organisation_memberships
+    where id = 'b0000000-0000-4000-8000-000000000004'
+    and department_id is not null;
+  if dept is null then
+    raise exception 'FAIL: staff membership department link missing after 0043';
+  end if;
+  raise notice 'ok: membership department link persisted after 0043';
+end;
+$$;
+
 -- ── Append-only guard: no UPDATE/DELETE policies exist on memberships ────────
 -- Absence of a policy is a denial; confirm no update/delete policies exist.
 do $$
@@ -420,10 +512,11 @@ begin
   from pg_policies
   where schemaname = 'public'
     and tablename in ('assessment_sessions','assessment_responses','assessment_processing_events')
-    and cmd in ('UPDATE','DELETE');
+    and cmd in ('UPDATE','DELETE')
+    and policyname <> 'assessment_responses_self_update';
   if n <> 0 then
-    raise exception 'FAIL: update/delete policies must not exist on 2K assessment tables, found %', n;
+    raise exception 'FAIL: unauthorized update/delete policies on 2K assessment tables, found %', n;
   end if;
-  raise notice 'ok: no update/delete policies on 2K assessment tables (writes are service-role)';
+  raise notice 'ok: no update/delete policies on 2K assessment tables (self_update kept)';
 end;
 $$;

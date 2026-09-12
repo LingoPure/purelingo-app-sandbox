@@ -50,10 +50,14 @@ cd "$REPO_ROOT"
 FILES=(
   "tests/org/supabase-shim.sql"
   "supabase/migrations/0001_initial_schema.sql"
+  "supabase/migrations/0007_students_native_language.sql"
   "supabase/migrations/0014_teachers_departments.sql"
   "supabase/migrations/0030_2k_assessment_pipeline.sql"
   "supabase/migrations/0038_org_model_additive.sql"
   "supabase/migrations/0040_teacher_report_context.sql"
+  "supabase/migrations/0041_subscriptions_synthetic.sql"
+  "supabase/migrations/0042_org_onboarding_state.sql"
+  "supabase/migrations/0043_staff_department_allocation.sql"
   "tests/org/org-rls-verify.sql"
 )
 for f in "${FILES[@]}"; do
@@ -74,13 +78,14 @@ $DOCKER cp "supabase/migrations/0038_org_model_additive.sql" "$CONTAINER:/tmp/00
 psql_run -q -f /tmp/0038_rerun.sql >/dev/null 2>&1
 echo "    idempotent re-run: ok"
 
-echo "==> applying 0040 (assessment org-view RLS policies)"
-psql_run -q -f /tmp/0040_teacher_report_context.sql 2>&1 | grep -v "NOTICE" || true
-
-echo "==> re-applying 0040 to prove idempotency"
-$DOCKER cp "supabase/migrations/0040_teacher_report_context.sql" "$CONTAINER:/tmp/0040_rerun.sql" >/dev/null
-psql_run -q -f /tmp/0040_rerun.sql >/dev/null 2>&1
-echo "    idempotent re-run: ok"
+echo "==> applying 0040-#43 migrations (assessment org-view + billing + onboarding)"
+for f in "${FILES[@]:6:4}"; do
+  echo "    $(basename "$f")"
+  psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
+  $DOCKER cp "$f" "$CONTAINER:/tmp/rerun-$(basename "$f")" >/dev/null
+  psql_run -q -f "/tmp/rerun-$(basename "$f")" >/dev/null 2>&1
+  echo "    idempotent re-run: ok"
+done
 
 echo "==> verifying RLS budget + visibility functions"
 psql_run -f /tmp/org-rls-verify.sql 2>&1 | grep -E "ok:|FAIL|ERROR|PASSED" || {

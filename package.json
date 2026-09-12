@@ -22,6 +22,7 @@
     "bpo:harness:purge": "tsx scripts/bpo-harness.ts purge",
     "bpo:gate-fixtures": "tsx scripts/bpo-gate-fixtures.ts",
     "admin:seed-platform": "tsx scripts/seed-platform-admins.ts",
+    "billing:seed-subscriptions": "tsx scripts/seed-subscriptions.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

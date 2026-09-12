@@ -47,7 +47,7 @@ export function relationshipFor(ctx: ReportContext, studentId: string): {
   label: string;
   description: string;
 } {
-  if (isSelf(ctx)) {
+  if (isSelf(ctx, studentId)) {
     return {
       kind: "self",
       label: "Learner's own view",
