@@ -20,6 +20,7 @@
     "hr:test-identities": "tsx scripts/hr-test-identities.ts",
     "bpo:harness": "tsx scripts/bpo-harness.ts",
     "bpo:harness:purge": "tsx scripts/bpo-harness.ts purge",
+    "bpo:gate-fixtures": "tsx scripts/bpo-gate-fixtures.ts",
     "admin:seed-platform": "tsx scripts/seed-platform-admins.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
