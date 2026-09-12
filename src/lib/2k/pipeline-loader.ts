@@ -20,6 +20,10 @@ import type {
   CommunicationAnalysisObject,
 } from "@/lib/2k/contracts";
 
+import {
+  generateCurriculumIfNecessary,
+} from "./curriculum-integration";
+
 export interface LoadedPipeline {
   session: AssessmentSession;
   responseObjects: ResponseObject[];
@@ -154,6 +158,9 @@ export async function loadPipelineResult(
   const { result, analyses } = await runPipeline(sessionObj, responseObjects, transcriptObjects, []);
 
   await recordStageEvent(supabase, sessionObj, result);
+
+  // Lazy trigger: generate curriculum if this is a first-time baseline
+  await generateCurriculumIfNecessary(supabase, sessionObj, result);
 
   return { session: sessionObj, responseObjects, transcriptObjects, result, analyses };
 }

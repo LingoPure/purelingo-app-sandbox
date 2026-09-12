@@ -290,6 +290,10 @@ export async function markBaselineQueued(
       completed_at: new Date().toISOString(),
     })
     .eq("organisation_id", organisationId);
+
+  // Trigger curriculum generation for all org students with completed baselines
+  const { generateCurriculumForOrgStudents } = await import("@/lib/curriculum/curriculum-service");
+  await generateCurriculumForOrgStudents(admin, organisationId);
 }
 
 export type OnboardingBundle = {

@@ -557,6 +557,18 @@ begin
     raise exception 'FAIL: unauthorized update/delete policies on 2K assessment tables, found %', n;
   end if;
   raise notice 'ok: no update/delete policies on 2K assessment tables (self_update kept)';
+
+  -- C0 curriculum tables are append-only + service-role write (0037 trigger guards
+  -- already block UPDATE/DELETE on completions/feedback/resets at the DB level).
+  select count(*) into n
+  from pg_policies
+  where schemaname = 'public'
+    and tablename in ('curricula','curriculum_lessons','lesson_completions','tutor_feedback','curriculum_resets')
+    and cmd in ('UPDATE','DELETE');
+  if n <> 0 then
+    raise exception 'FAIL: unauthorized update/delete policies on C0 curriculum tables, found %', n;
+  end if;
+  raise notice 'ok: no update/delete policies on C0 curriculum tables (writes are service-role)';
 end;
 $$;
 
