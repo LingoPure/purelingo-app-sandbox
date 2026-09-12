@@ -23,7 +23,6 @@ export default async function TeacherLayout({
   const { lang } = await getDict();
   const navItems: MobileNavItem[] = [
     { href: "/teacher", label: "My Students", exact: true },
-    { href: "/teacher/schedule", label: "Schedule" },
     { href: "/teacher/notes", label: "Notes" },
   ];
 

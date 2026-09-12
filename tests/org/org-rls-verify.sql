@@ -310,6 +310,14 @@ values
   ('f0000000-0000-4000-8000-000000000012', 'f0000000-0000-4000-8000-000000000003', 'q-locate-1', 'LOCATE', 'Locate the goal', 'managed-hr', 'time-pressured', 'Please resend the brief.',                 '{}', '{}', 'none', 'uploaded', 'complete', now())
 on conflict (response_id) do nothing;
 
+-- teacher_notes fixtures (0045): one note by the Celadon assigned teacher on
+-- Phuong, one by the OtherCo teacherB on the OtherCo student.
+insert into public.teacher_notes (id, teacher_id, student_id, body, created_at)
+values
+  ('f0000000-0000-4000-8000-000000000101', 'e0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000001', 'Celadon teacher note on Phuong.', now()),
+  ('f0000000-0000-4000-8000-000000000102', 'e0000000-0000-4000-8000-000000000002', '3c000000-0000-4000-8000-000000000001', 'OtherCo teacher note.', now())
+on conflict (id) do nothing;
+
 -- ── RLS: assessment_sessions / assessment_responses — per-role visibility ────
 -- The COMPLETE-gating loaders (src/lib/2k/journey-data.ts) resolve
 -- org_can_view_student BEFORE querying. These assertions impersonate each
@@ -337,6 +345,19 @@ begin
   perform set_config('request.jwt.claim.sub', p_sub, true);
   set local role authenticated;
   select count(*) into n from public.assessment_responses;
+  reset role;
+  return n;
+end;
+$$;
+
+-- Count the teacher_notes a user can SEE through RLS (0045 org_can_view gate).
+create or replace function pg_temp.visible_note_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.teacher_notes;
   reset role;
   return n;
 end;
@@ -586,6 +607,7 @@ select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-
 select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner onboarding');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'), 2, 'grid owner sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner notes');
 commit;
 
 -- hr
@@ -605,6 +627,7 @@ select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-80
 select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher subs');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000003'), 2, 'grid teacher sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher notes');
 commit;
 
 -- staff
@@ -614,6 +637,7 @@ select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-80
 select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000004'), 1, 'grid staff subs');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff notes');
 commit;
 
 -- student (a...05 in Celadon)
@@ -622,6 +646,7 @@ select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-0000
 select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000005','student@example.test'), 1, 'grid student memberships');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student notes');
 commit;
 
 -- cross-org outsider (OtherCo staff)
@@ -637,6 +662,7 @@ commit;
 begin;
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB notes');
 commit;
 
 -- platform admin (a...08, member of no org)
