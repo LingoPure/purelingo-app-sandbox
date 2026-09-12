@@ -111,13 +111,6 @@ export default async function DiscoverySessionPage() {
   return (
     <DiscoverySession
       userId={user.id}
-      studentName={studentName}
-      nativeLanguage={ariaLangName}
-      firstMessageLocalized={firstMessageLocalized}
-      roleName={roleName}
-      roleDescription={roleDescription}
-      targetLevel={studentRow?.target_level ?? null}
-      employerName={employerName}
     />
   );
 }
