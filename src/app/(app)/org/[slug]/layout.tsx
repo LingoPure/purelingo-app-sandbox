@@ -68,10 +68,10 @@ export default async function OrgAdminLayout({
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.25em] text-gold sm:inline">
+            <span className="hidden font-mono text-[12px] uppercase tracking-[0.25em] text-gold sm:inline">
               {identity.orgName}
             </span>
-            <span className="hidden rounded-full border border-paper/20 px-2 py-0.5 text-[10px] font-medium text-paper/70 sm:inline">
+            <span className="hidden rounded-full border border-paper/20 px-2 py-0.5 text-[12px] font-medium text-paper/70 sm:inline">
               {identity.role}
             </span>
             <LanguagePill current={lang} tone="light" />
@@ -99,7 +99,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className="font-mono text-[11px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper"
+      className="font-mono text-[12px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper"
     >
       {children}
     </Link>

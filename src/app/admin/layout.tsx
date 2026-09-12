@@ -49,7 +49,7 @@ export default async function AdminLayout({
           <div className="flex min-w-0 items-center gap-6">
             <Link href="/admin" className="font-serif text-xl text-paper">
               LingoPure<span className="text-gold">.</span>
-              <span className="ml-2 hidden font-mono text-[10px] uppercase tracking-[0.25em] text-gold lg:inline">
+              <span className="ml-2 hidden font-mono text-[12px] uppercase tracking-[0.25em] text-gold lg:inline">
                 Platform console
               </span>
             </Link>
@@ -78,6 +78,7 @@ export default async function AdminLayout({
 }
 
 function NavLink({
+  href,
   children,
 }: {
   href: string;
@@ -87,7 +88,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className="font-mono text-[11px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper"
+      className="font-mono text-[12px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper"
     >
       {children}
     </Link>

@@ -198,7 +198,7 @@ export default async function AssessmentResultsPage({
               <div className="mt-6 border-t border-t-line pt-4">
                 <p className="t-eyebrow t-eyebrow-red mb-2">Contradictions</p>
                 {result.contradictions.map((c, i) => (
-                  <p key={i} className="t-muted text-[11px]">
+                  <p key={i} className="t-muted text-[12px]">
                     {c.description}
                   </p>
                 ))}
@@ -221,7 +221,7 @@ export default async function AssessmentResultsPage({
               {learner.recommendation.focus}
             </p>
             {result.recommendation.next_probe && (
-              <p className="t-muted mt-3 text-[11px]">
+              <p className="t-muted mt-3 text-[12px]">
                 Next probe: {result.recommendation.next_probe}
               </p>
             )}

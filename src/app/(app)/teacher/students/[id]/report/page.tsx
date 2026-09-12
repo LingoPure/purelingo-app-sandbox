@@ -115,7 +115,7 @@ export default async function TeacherReportPage({
 
       {!viewerCanRead && (
         <div className="mx-auto mt-8 max-w-6xl rounded-lg border border-t-red/40 bg-[rgba(255,101,117,0.07)] p-6">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-t-red">
+          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-t-red">
             Access restricted
           </p>
           <p className="t-muted mt-2">
@@ -145,7 +145,7 @@ export default async function TeacherReportPage({
                 </div>
                 <div>
                   <strong className="text-2xl font-extrabold">{latest.result.lp1000.score}</strong>
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-t-mute">LP-1000</p>
+                  <p className="text-[12px] uppercase tracking-[0.12em] text-t-mute">LP-1000</p>
                   <span className="t-pill t-pill-good mt-2">{latest.result.lp1000.band}</span>
                 </div>
               </article>
@@ -168,7 +168,7 @@ export default async function TeacherReportPage({
                   <span className="text-t-mute">↧ {report.evidence_summary.downweighted} downweighted</span>
                   <span className="text-t-text">{report.evidence_summary.total_evidence} total</span>
                 </div>
-                <p className="mt-3 text-[11px] text-t-mute">
+                <p className="mt-3 text-[12px] text-t-mute">
                   frozen {latest.result.frozen_at}
                 </p>
               </article>
@@ -181,7 +181,7 @@ export default async function TeacherReportPage({
                 <div className="t-progress mt-3">
                   <i style={{ width: `${Math.round(latest.result.confidence * 100)}%` }} />
                 </div>
-                <p className="mt-3 text-[11px] text-t-mute">convergence {(latest.result.telemetry.convergence * 100).toFixed(0)}%</p>
+                <p className="mt-3 text-[12px] text-t-mute">convergence {(latest.result.telemetry.convergence * 100).toFixed(0)}%</p>
               </article>
             </div>
           </section>
@@ -221,7 +221,7 @@ export default async function TeacherReportPage({
                     {Object.entries(latest.result.lp1000.components).map(([key, value]) => (
                       <div key={key}>
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-t-mute">{key.replace(/_/g, " ")}</span>
+                          <span className="text-[12px] text-t-mute">{key.replace(/_/g, " ")}</span>
                           <span className="text-xs font-bold">{Math.round(value)}</span>
                         </div>
                         <div className="t-progress mt-1">
@@ -277,7 +277,7 @@ export default async function TeacherReportPage({
                   Priority {(report.recommendation.priority * 100).toFixed(0)}/100
                 </p>
                 {report.recommendation.next_probe && (
-                  <p className="t-muted mt-2 text-[11px]">Next probe: {report.recommendation.next_probe}</p>
+                  <p className="t-muted mt-2 text-[12px]">Next probe: {report.recommendation.next_probe}</p>
                 )}
                 <div className="t-progress mt-4">
                   <i style={{ width: `${Math.round(report.recommendation.priority * 100)}%` }} />
@@ -294,14 +294,14 @@ export default async function TeacherReportPage({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-t-line bg-[#0b1a27] p-4">
                   <span className="t-pill t-pill-good">Architecture frozen</span>
-                  <p className="mt-2 text-[11px] leading-relaxed text-t-mute">
+                  <p className="mt-2 text-[12px] leading-relaxed text-t-mute">
                     {latest.result.architecture.brain_version} · bank {latest.result.architecture.bank_version} ·
                     rules {latest.result.architecture.rules_version} · report {latest.result.architecture.report_version}
                   </p>
                 </div>
                 <div className="rounded-lg border border-t-line bg-[#0b1a27] p-4">
                   <span className="t-pill t-pill-warn">Lineage</span>
-                  <p className="mt-2 text-[11px] leading-relaxed text-t-mute">
+                  <p className="mt-2 text-[12px] leading-relaxed text-t-mute">
                     assessment {latest.result.lineage.assessment_id} · session {latest.result.lineage.session_id}
                   </p>
                 </div>
@@ -310,7 +310,7 @@ export default async function TeacherReportPage({
                 <div className="mt-4 border-t border-t-line pt-4">
                   <p className="t-eyebrow t-eyebrow-red mb-2">Contradictions in evidence</p>
                   {latest.result.contradictions.map((c, i) => (
-                    <p key={i} className="t-muted text-[11px]">
+                    <p key={i} className="t-muted text-[12px]">
                       [{c.severity}] {c.description}
                     </p>
                   ))}
@@ -331,15 +331,15 @@ export default async function TeacherReportPage({
                   ["Learner", latest.result.learner_id],
                 ].map(([k, v]) => (
                   <div key={k} className="min-w-0">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-t-mute">{k}</p>
-                    <p className="mt-1 truncate font-mono text-[11px] text-t-soft-mute" title={v}>
+                    <p className="text-[12px] uppercase tracking-[0.12em] text-t-mute">{k}</p>
+                    <p className="mt-1 truncate font-mono text-[12px] text-t-soft-mute" title={v}>
                       {v}
                     </p>
                   </div>
                 ))}
               </div>
               <div className="mt-4 border-t border-t-line pt-4">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-t-mute">Stable certified bands</p>
+                <p className="text-[12px] uppercase tracking-[0.12em] text-t-mute">Stable certified bands</p>
                 <ul className="mt-2 grid grid-cols-1 gap-1 text-xs text-t-soft-mute sm:grid-cols-2">
                   {latest.result.lp18.stable.micro_levels.map((m) => (
                     <li key={m.capability} className="flex justify-between">
@@ -373,7 +373,7 @@ export default async function TeacherReportPage({
               {evidencePackets.map((packet) => (
                 <article key={packet.evidence_id} className="t-card p-5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-[11px] tracking-wide text-t-cyan">
+                    <span className="font-mono text-[12px] tracking-wide text-t-cyan">
                       {packet.construct}
                     </span>
                     <span className={`t-pill ${packet.status === "OBSERVED" ? "t-pill-good" : ""}`}>
@@ -381,13 +381,13 @@ export default async function TeacherReportPage({
                     </span>
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-t-soft-mute">{packet.observation}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-t-mute">
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] text-t-mute">
                     <span>authority {packet.authority}</span>
                     <span>confidence {(packet.confidence * 100).toFixed(0)}%</span>
                     <span>task relevance {(packet.task_relevance * 100).toFixed(0)}%</span>
                     <span>quality {(packet.quality * 100).toFixed(0)}%</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-t-line pt-2 font-mono text-[10px] text-t-mute">
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-t-line pt-2 font-mono text-[12px] text-t-mute">
                     <span>{packet.source.modality}</span>
                     <span className="truncate" title={packet.source.response_id}>
                       {packet.source.response_id}
@@ -395,7 +395,7 @@ export default async function TeacherReportPage({
                     <span>{packet.provenance.engine_version}</span>
                   </div>
                   {packet.context_receiver.receiver && (
-                    <p className="mt-1 font-mono text-[10px] text-t-mute">
+                    <p className="mt-1 font-mono text-[12px] text-t-mute">
                       → {packet.context_receiver.receiver}
                       {packet.context_receiver.context ? ` · ${packet.context_receiver.context}` : ""}
                     </p>

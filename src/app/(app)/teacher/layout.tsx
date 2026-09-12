@@ -44,7 +44,7 @@ export default async function TeacherLayout({
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.25em] text-gold sm:inline">
+            <span className="hidden font-mono text-[12px] uppercase tracking-[0.25em] text-gold sm:inline">
               {identity.fullName}
             </span>
             <LanguagePill current={lang} tone="light" />
@@ -64,7 +64,7 @@ export default async function TeacherLayout({
 
 function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="font-mono text-[11px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper">
+    <Link href={href} className="font-mono text-[12px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper">
       {children}
     </Link>
   );

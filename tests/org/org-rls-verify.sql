@@ -497,7 +497,7 @@ begin
 end;
 $$;
 
--- ── C4: platform-admin read-all (0044) ────────────────────────────────────────
+-- C4: platform-admin read-all (0044) ────────────────────────────────────────
 -- platform-admin@example.test (a...08) is NOT a member of any org, yet the
 -- 0044 policies grant read-all on the org-model tables to platform_admins.
 
@@ -557,5 +557,112 @@ begin
     raise exception 'FAIL: unauthorized update/delete policies on 2K assessment tables, found %', n;
   end if;
   raise notice 'ok: no update/delete policies on 2K assessment tables (self_update kept)';
+end;
+$$;
+
+-- ── C7: role × table visibility grid (RLS DB-verify) ────────────────────────
+-- Exhaustive per-role matrix: each block proves exactly how many rows of each
+-- core portal table a given role can see through RLS. The expectations encode
+-- the C7 role-matrix spec (docs/ROLE_MATRIX.md); a drift in any count fails
+-- the harness.
+
+-- owner
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000001','owner@example.test'), 1, 'grid owner orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000001','owner@example.test'), 5, 'grid owner memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner subs');
+select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner onboarding');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'), 2, 'grid owner sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner responses');
+commit;
+
+-- hr
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000002','hr@example.test'), 1, 'grid hr orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000002','hr@example.test'), 5, 'grid hr memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr subs');
+select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr onboarding');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000002'), 2, 'grid hr sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr responses');
+commit;
+
+-- assigned teacher
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000003','teacher@example.test'), 1, 'grid teacher orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000003','teacher@example.test'), 1, 'grid teacher memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher subs');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000003'), 2, 'grid teacher sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher responses');
+commit;
+
+-- staff
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000004','staff@example.test'), 1, 'grid staff orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000004','staff@example.test'), 1, 'grid staff memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000004'), 1, 'grid staff subs');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff responses');
+commit;
+
+-- student (a...05 in Celadon)
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000005','student@example.test'), 1, 'grid student orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000005','student@example.test'), 1, 'grid student memberships');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student responses');
+commit;
+
+-- cross-org outsider (OtherCo staff)
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000006','outsider@example.test'), 1, 'grid outsider orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000006','outsider@example.test'), 1, 'grid outsider memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider subs');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider responses');
+commit;
+
+-- teacherB — assigned to the OtherCo student (cross-org teacher gate via assignment)
+begin;
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB sessions');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB responses');
+commit;
+
+-- platform admin (a...08, member of no org)
+begin;
+select pg_temp.assert_eq(pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000008','platform-admin@example.test'), 2, 'grid platform-admin orgs');
+select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000008','platform-admin@example.test'), 7, 'grid platform-admin memberships');
+select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000008'), 1, 'grid platform-admin subs');
+select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000008'), 1, 'grid platform-admin onboarding');
+select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000008'), 0, 'grid platform-admin sessions (org-view only, no membership)');
+select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000008'), 0, 'grid platform-admin responses');
+commit;
+
+-- ── dept_can_view_student gate (current behaviour == org gate) ───────────────
+-- 0038's dept_can_view_student carries the dept-scoped branch as a forward
+-- hook (staff allocation lands, then students become dept-linked). Until then
+-- the function must MATCH org_can_view_student for every fixture role.
+
+do $$
+declare
+  v_org  boolean;
+  v_dept boolean;
+begin
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000001', true);
+  perform set_config('request.jwt.claim.email', 'owner@example.test', true);
+  set local role authenticated;
+  v_org  := public.org_can_view_student('d0000000-0000-4000-8000-000000000001');
+  v_dept := public.dept_can_view_student('d0000000-0000-4000-8000-000000000001');
+  reset role;
+  if v_org is distinct from v_dept then raise exception 'FAIL: owner dept gate diverges'; end if;
+
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000004', true);
+  perform set_config('request.jwt.claim.email', 'staff@example.test', true);
+  set local role authenticated;
+  v_org  := public.org_can_view_student('d0000000-0000-4000-8000-000000000001');
+  v_dept := public.dept_can_view_student('d0000000-0000-4000-8000-000000000001');
+  reset role;
+  if v_org is distinct from v_dept then raise exception 'FAIL: staff dept gate diverges'; end if;
+
+  raise notice 'ok: dept_can_view_student mirrors org_can_view_student (forward hook, pre-dept-linking)';
 end;
 $$;

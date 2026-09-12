@@ -194,11 +194,11 @@ export default async function LearnerJourneyPage() {
                 "One improvement at a time — the engine tells you which."}
             </p>
             <div className="mt-5 flex items-center justify-between gap-4">
-              <span className="text-[11px] text-t-mute">Towards {targetLevel}</span>
+              <span className="text-[12px] text-t-mute">Towards {targetLevel}</span>
               <div className="min-w-0 flex-1">
                 <TProgress value={result ? Math.round((result.lp1000.score / 1000) * 100) : 0} />
               </div>
-              <span className="text-[11px] font-bold">
+              <span className="text-[12px] font-bold">
                 {result ? `${Math.round((result.lp1000.score / 1000) * 100)}%` : "0%"}
               </span>
             </div>
@@ -353,11 +353,11 @@ export default async function LearnerJourneyPage() {
                   : "Awaiting first assessment"}
               </h3>
               <div className="mt-3 flex items-center justify-between">
-                <span className="text-[11px] text-t-mute">Priority</span>
+                <span className="text-[12px] text-t-mute">Priority</span>
                 <div className="w-40">
                   <TProgress value={(result?.recommendation.priority ?? 0) * 100} />
                 </div>
-                <span className="text-[11px] font-bold">
+                <span className="text-[12px] font-bold">
                   {result ? `${Math.round(result.recommendation.priority * 100)}` : "—"}
                 </span>
               </div>
@@ -371,11 +371,11 @@ export default async function LearnerJourneyPage() {
               <div className="mt-3 flex items-center gap-6">
                 <div>
                   <strong className="text-2xl font-extrabold text-t-orange">{xp}</strong>
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-t-mute">XP</p>
+                  <p className="text-[12px] uppercase tracking-[0.12em] text-t-mute">XP</p>
                 </div>
                 <div>
                   <strong className="text-2xl font-extrabold text-t-green">{streak}</strong>
-                  <p className="text-[10px] uppercase tracking-[0.12em] text-t-mute">Day streak</p>
+                  <p className="text-[12px] uppercase tracking-[0.12em] text-t-mute">Day streak</p>
                 </div>
               </div>
             </article>
