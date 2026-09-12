@@ -12,6 +12,7 @@
     "test:hr": "tsx --test tests/hr/*.test.ts",
     "test:curriculum": "tsx --test tests/curriculum/*.test.ts",
     "test:hr:db": "bash scripts/hr-db-verify.sh",
+    "test:org:db": "bash scripts/org-db-verify.sh",
     "test:hr:integration": "bash scripts/hr-integration-test.sh",
     "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",
     "hr:seed": "tsx scripts/hr-seed-demo.ts",
@@ -19,6 +20,7 @@
     "hr:test-identities": "tsx scripts/hr-test-identities.ts",
     "bpo:harness": "tsx scripts/bpo-harness.ts",
     "bpo:harness:purge": "tsx scripts/bpo-harness.ts purge",
+    "admin:seed-platform": "tsx scripts/seed-platform-admins.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

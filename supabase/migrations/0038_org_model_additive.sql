@@ -179,7 +179,10 @@ as $$
     and exists (
       select 1 from public.student_teacher_assignments sta
       where sta.student_id = target_student_id
-        and sta.teacher_id = auth.uid()
+        and sta.teacher_id in (
+          select id from public.teachers t
+          where t.auth_user_id = auth.uid()
+        )
     )
     then true
     else false
@@ -188,7 +191,9 @@ $$;
 
 -- Dept-scoped student visibility. owner/hr see all org students regardless;
 -- teacher/staff see only students in their department.
--- dept_id is resolved from the student's employer → organisation_departments.
+-- The department-scoped branch is a forward hook: staff/department allocation
+-- lands in C3/C5; until a student's department membership is populated, teacher
+-- visibility mirrors assignment-based org visibility and staff resolve to self.
 create or replace function public.dept_can_view_student(target_student_id uuid)
 returns boolean
 language sql
@@ -202,6 +207,19 @@ as $$
       (select e.organisation_id from public.employers e
        where e.id = (select s.employer_id from public.students s where s.id = target_student_id))
     ) in ('owner', 'hr')
+    then true
+    when public.current_org_role(
+      (select e.organisation_id from public.employers e
+       where e.id = (select s.employer_id from public.students s where s.id = target_student_id))
+    ) = 'teacher'
+    and exists (
+      select 1 from public.student_teacher_assignments sta
+      where sta.student_id = target_student_id
+        and sta.teacher_id in (
+          select id from public.teachers t
+          where t.auth_user_id = auth.uid()
+        )
+    )
     then true
     else false
   end
@@ -221,7 +239,7 @@ create policy "organisations_self_select"
   using (
     exists (
       select 1 from public.organisation_memberships m
-      where m.organisation_id = id
+      where m.organisation_id = organisations.id
         and m.user_id = auth.uid()
         and m.status = 'active'
     )
