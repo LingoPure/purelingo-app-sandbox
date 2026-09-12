@@ -41,6 +41,19 @@ export type OrgIdentity = {
   isOwnerOrHr: boolean;
 };
 
+/** Resolve an org slug to its UUID. Returns null if not found. */
+export async function getOrgIdBySlug(
+  supabase: SupabaseClient,
+  slug: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("organisations")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
 /**
  * The signed-in user's membership in one organisation, or null.
  * Resolves via `current_org_role(org_id)`.
@@ -82,10 +95,6 @@ export async function getOrgIdentity(
  * NextResponse (401 / 403) the caller should return immediately. When
  * `roles` is provided the caller must hold one of them, otherwise any active
  * membership role passes.
- *
- *   const auth = await requireOrgRole(supabase, user, orgId);
- *   if (auth instanceof NextResponse) return auth;
- *   const { identity } = auth;
  */
 export async function requireOrgRole(
   supabase: SupabaseClient,
