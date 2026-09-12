@@ -74,6 +74,7 @@ insert into auth.users (id, email) values
   ('a0000000-0000-4000-8000-000000000005', 'student@example.test'),
   ('a0000000-0000-4000-8000-000000000006', 'outsider@example.test'),
   ('a0000000-0000-4000-8000-000000000007', 'teacherb@example.test'),
+  ('a0000000-0000-4000-8000-000000000008', 'platform-admin@example.test'),
   ('3c000000-0000-4000-8000-000000000001', 'student-other@example.test'),
   ('d0000000-0000-4000-8000-000000000001', 'phuong@example.test')
 on conflict (id) do nothing;
@@ -127,6 +128,10 @@ on conflict (organisation_id) do nothing;
 insert into public.org_onboarding (organisation_id, step, package) values
   ('0e5f1a10-0000-4000-8000-000000000001', 'departments', 'Full BPO')
 on conflict (organisation_id) do nothing;
+
+insert into public.platform_admins (user_id) values
+  ('a0000000-0000-4000-8000-000000000008')
+on conflict (user_id) do nothing;
 
 -- C3: department fixture + membership linkage (0043).
 insert into public.organisation_departments (id, organisation_id, name) values
@@ -491,6 +496,40 @@ begin
   raise notice 'ok: membership department link persisted after 0043';
 end;
 $$;
+
+-- ── C4: platform-admin read-all (0044) ────────────────────────────────────────
+-- platform-admin@example.test (a...08) is NOT a member of any org, yet the
+-- 0044 policies grant read-all on the org-model tables to platform_admins.
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000008', 'platform-admin@example.test'),
+  2, 'platform admin sees ALL organisations');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_membership_count('a0000000-0000-4000-8000-000000000008', 'platform-admin@example.test'),
+  7, 'platform admin sees ALL memberships');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000008'),
+  1, 'platform admin sees ALL subscriptions');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000008'),
+  1, 'platform admin sees ALL onboarding state');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_org_count('a0000000-0000-4000-8000-000000000006', 'outsider@example.test'),
+  1, 'non-admin outsider still sees only their own org');
+commit;
 
 -- ── Append-only guard: no UPDATE/DELETE policies exist on memberships ────────
 -- Absence of a policy is a denial; confirm no update/delete policies exist.

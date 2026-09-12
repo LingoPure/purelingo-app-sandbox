@@ -58,6 +58,7 @@ FILES=(
   "supabase/migrations/0041_subscriptions_synthetic.sql"
   "supabase/migrations/0042_org_onboarding_state.sql"
   "supabase/migrations/0043_staff_department_allocation.sql"
+  "supabase/migrations/0044_platform_admin_readall.sql"
   "tests/org/org-rls-verify.sql"
 )
 for f in "${FILES[@]}"; do
@@ -79,7 +80,7 @@ psql_run -q -f /tmp/0038_rerun.sql >/dev/null 2>&1
 echo "    idempotent re-run: ok"
 
 echo "==> applying 0040-#43 migrations (assessment org-view + billing + onboarding)"
-for f in "${FILES[@]:6:4}"; do
+for f in "${FILES[@]:6:5}"; do
   echo "    $(basename "$f")"
   psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
   $DOCKER cp "$f" "$CONTAINER:/tmp/rerun-$(basename "$f")" >/dev/null

@@ -1,67 +1,83 @@
-import { home } from "@/content/home";
-import { EDITABLE_BLOCKS, getByPath } from "@/content/editable";
-import { getContentEditor, canEdit } from "@/lib/content/auth";
+// @explanatory-header-exempt — portal surface; the page heading is the explanatory header
 import { createClient } from "@/lib/supabase/server";
-import { ContentEditorClient, type EditorBlock } from "./content-editor-client";
+import { loadContentDirectory } from "@/lib/platform/directory";
+import { PageHeading } from "../page-heading";
+import { SERVICE_PACKAGES, PACKAGE_DEPARTMENTS } from "@/lib/org/onboarding";
 
-type Row = {
-  section: string;
-  block_key: string;
-  en: string | null;
-  vi: string | null;
-  draft_en: string | null;
-  draft_vi: string | null;
-  status: "ready" | "confirm" | "pending";
-};
-
-/**
- * Content editor. Edit the homepage copy block by block (English + Vietnamese),
- * set each block's status, preview drafts, then publish. Row-backed — no deploy.
- */
 export default async function AdminContentPage() {
-  const editor = await getContentEditor();
-  const editable = editor ? canEdit(editor.role) : false;
-
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("marketing_content")
-    .select("section, block_key, en, vi, draft_en, draft_vi, status")
-    .eq("page", "home");
-  const map = new Map(
-    ((data as Row[] | null) ?? []).map((r) => [`${r.section}::${r.block_key}`, r])
-  );
-
-  const blocks: EditorBlock[] = EDITABLE_BLOCKS.map((b) => {
-    const row = map.get(`${b.section}::${b.key}`);
-    const source = getByPath((home as unknown as Record<string, unknown>)[b.section], b.key) ?? "";
-    return {
-      section: b.section,
-      key: b.key,
-      label: b.label,
-      group: b.group,
-      multiline: Boolean(b.multiline),
-      en: row?.draft_en ?? row?.en ?? source,
-      vi: row?.draft_vi ?? row?.vi ?? "",
-      status: row?.status ?? "ready",
-    };
-  });
+  const banks = await loadContentDirectory(supabase);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <p className="font-mono text-xs uppercase tracking-[0.22em] text-gold">Content</p>
-      <h1 className="mt-2 font-serif text-3xl text-navy">Marketing homepage</h1>
-      <p className="mt-3 max-w-prose text-mute">
-        Edit the homepage copy block by block. Changes are saved as a <em>draft</em>;
-        preview them, then <strong>publish</strong> to make them live. English is what
-        the site shows today; Vietnamese is stored for when the site goes bilingual.
-      </p>
-      <div className="mt-4 rounded-md border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-navy">
-        A <strong>pending</strong> block is <em>intentionally empty</em> — its copy must
-        come from customer research. Filling it with invented copy defeats its purpose;
-        move it to <strong>confirm</strong> only when real copy exists.
+    <div>
+      <PageHeading
+        title="Content"
+        lead="The assessment content in play and the service packages every organisation can subscribe to. Question bank versions are read live from assessment sessions."
+      />
+
+      <h2 className="mb-3 font-serif text-xl text-navy">Question banks in use</h2>
+      <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-line bg-mist/50">
+              <Th>Version</Th>
+              <Th>Assessments run</Th>
+              <Th>Languages</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {banks.map((b) => (
+              <tr key={b.question_bank_version} className="hover:bg-mist/40">
+                <td className="px-4 py-3 font-mono text-xs text-ink">
+                  {b.question_bank_version}
+                </td>
+                <td className="px-4 py-3">{b.assessments_run}</td>
+                <td className="px-4 py-3 font-mono text-xs text-mute">
+                  {b.languages.join(", ") || <span className="text-mute">—</span>}
+                </td>
+              </tr>
+            ))}
+            {banks.length === 0 && (
+              <tr>
+                <td className="py-8 text-center text-mute">
+                  No assessment sessions recorded yet — question banks appear here once the
+                  2K pipeline runs.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <ContentEditorClient blocks={blocks} canEdit={editable} />
+      <h2 className="mb-3 mt-10 font-serif text-xl text-navy">Service packages</h2>
+      <div className="grid gap-4 md:grid-cols-3">
+        {SERVICE_PACKAGES.map((pkg) => (
+          <div key={pkg} className="rounded-xl border border-line bg-white p-5">
+            <p className="font-serif text-lg text-navy">{pkg}</p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-mute">
+              Departments
+            </p>
+            <ul className="mt-1 flex flex-wrap gap-1.5">
+              {PACKAGE_DEPARTMENTS[pkg].map((d) => (
+                <li
+                  key={d}
+                  className="rounded-full bg-mist px-2.5 py-1 text-xs text-ink"
+                >
+                  {d}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
+  );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-mute">
+      {children}
+    </th>
   );
 }

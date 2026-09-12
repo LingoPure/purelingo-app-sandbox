@@ -1,59 +1,95 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getContentEditor } from "@/lib/content/auth";
-import { AdminSignOut } from "./admin-sign-out";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/platform/auth";
+import { MobileNav, type MobileNavItem } from "@/components/nav/mobile-nav";
+import { LanguagePill } from "@/components/i18n/language-pill";
+import { getDict } from "@/lib/i18n";
+import { AdminSignOut } from "./sign-out-button";
 
-export const metadata = { title: "Content admin · LingoPure" };
+export const metadata = {
+  title: "Platform admin — LingoPure",
+};
 
-/**
- * Content-admin chrome. Gated on a content-editor role (global, from
- * public.content_editors) — a normal user or student who reaches /admin is
- * bounced to login. Persistent nav + Sign Out on every /admin route.
- */
+const NAV: { href: string; label: string; exact?: boolean }[] = [
+  { href: "/admin", label: "Overview", exact: true },
+  { href: "/admin/billing", label: "Billing" },
+  { href: "/admin/onboarding", label: "Onboarding" },
+  { href: "/admin/content", label: "Content" },
+];
+
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const editor = await getContentEditor();
-  if (!editor) redirect("/login?next=/admin");
-  const isAdmin = editor.role === "admin";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login?redirectTo=/admin");
+  }
+  const admin = await isPlatformAdmin(supabase, user.id);
+  if (!admin) {
+    redirect("/dashboard?error=not_admin");
+  }
 
-  const links = [
-    { href: "/admin/content", label: "Content" },
-    { href: "/admin/testimonials", label: "Testimonials" },
-    { href: "/admin/logos", label: "Logos" },
-    { href: "/admin/audit", label: "History" },
-    ...(isAdmin ? [{ href: "/admin/editors", label: "Editors" }] : []),
-  ];
+  const { lang } = await getDict();
+  const navItems: MobileNavItem[] = NAV.map((n) => ({
+    href: n.href,
+    label: n.label,
+    exact: n.exact,
+  }));
 
   return (
-    <div className="flex min-h-screen flex-col bg-mist md:flex-row">
-      <aside className="flex shrink-0 flex-col border-b border-cream bg-paper px-4 py-4 md:w-60 md:border-b-0 md:border-r md:py-6">
-        <div className="mb-6 flex items-center justify-between md:block">
-          <Link href="/admin" className="font-serif text-xl text-navy">
-            LingoPure<span className="text-gold">.</span>
-          </Link>
-          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute md:mt-1">
-            Content admin · {editor.role}
-          </p>
-        </div>
-        <nav className="flex gap-1 md:flex-1 md:flex-col">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="inline-flex min-h-[44px] items-center rounded-md px-3 py-2 text-sm font-medium text-mute transition hover:bg-mist hover:text-navy"
-            >
-              {l.label}
+    <div className="flex min-h-screen flex-col bg-mist">
+      <header className="sticky top-0 z-20 border-b border-cream bg-navy text-paper">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-6">
+            <Link href="/admin" className="font-serif text-xl text-paper">
+              LingoPure<span className="text-gold">.</span>
+              <span className="ml-2 hidden font-mono text-[10px] uppercase tracking-[0.25em] text-gold lg:inline">
+                Platform console
+              </span>
             </Link>
-          ))}
-        </nav>
-        <div className="mt-2 border-t border-cream pt-2 md:mt-0">
-          <AdminSignOut />
+            <nav className="hidden items-center gap-5 sm:flex">
+              {NAV.map((item) => (
+                <NavLink key={item.href} href={item.href} exact={item.exact}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <LanguagePill current={lang} tone="light" />
+            <div className="hidden sm:block">
+              <AdminSignOut />
+            </div>
+            <MobileNav items={navItems} tone="light" signOut={<AdminSignOut />} />
+          </div>
         </div>
-      </aside>
-      <main className="flex-1 px-6 py-8">{children}</main>
+      </header>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-10">
+        {children}
+      </main>
     </div>
+  );
+}
+
+function NavLink({
+  children,
+}: {
+  href: string;
+  exact?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="font-mono text-[11px] uppercase tracking-[0.22em] text-paper/70 hover:text-paper"
+    >
+      {children}
+    </Link>
   );
 }
