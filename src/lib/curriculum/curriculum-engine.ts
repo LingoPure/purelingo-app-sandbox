@@ -304,25 +304,28 @@ export function evaluateReset(input: ResetInput): ResetResult {
     ...input.new_observations,
   ];
 
-  const new_gaps = computeSkillGaps(
-    {
-      ...input.existing_plan,
-      capabilities: input.existing_plan.lessons.length === 0
-        ? []
-        : [],
+  const planBaseline = (capabilities: BaselineSnapshot["capabilities"]): BaselineSnapshot => ({
+    assessment_id: input.existing_plan.baseline_assessment_id,
+    learner_id: input.existing_plan.student_id,
+    generated_at: input.existing_plan.baseline_generated_at,
+    lp1000: {
+      score: input.existing_plan.lp1000_baseline,
+      band: "",
+      components: {},
     },
+    cefr_macro: input.existing_plan.cefr_baseline,
+    capabilities,
+  });
+
+  const new_gaps = computeSkillGaps(
+    planBaseline([]),
     input.existing_plan.cefr_target,
     all_completions,
     all_feedback,
   );
 
   const prev_gaps = computeSkillGaps(
-    {
-      ...input.existing_plan,
-      capabilities: input.existing_plan.lessons.length === 0
-        ? []
-        : [],
-    },
+    planBaseline([]),
     input.existing_plan.cefr_target,
     input.existing_plan.last_inputs_snapshot.completions,
     input.existing_plan.last_inputs_snapshot.feedback,
