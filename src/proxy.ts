@@ -6,7 +6,7 @@ import {
   validateReturnTo,
 } from "@/lib/cross-app/return-validate";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = await updateSession(request);
 
   // Cross-app deep-link: a partner (currently AIFTIS-Demo) sends the
