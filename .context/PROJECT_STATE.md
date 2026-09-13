@@ -1,7 +1,14 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-12
+**Updated:** 2026-09-13
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-13 (landing palette, LP-18 dashboard telemetry, discovery-agent split)
+- **Landing palette synced to live lingopure.com brand tokens** (`src/app/(marketing)/marketing.css`, commit `d6fe9e1`). Extracted the real palette from the live site's compiled CSS: warm cream bg `#f8f5ec` / card `#fffdf7` / ink `#151617` / muted `#6e777d` / border `#d8d2c4` / **amber accent `#fbae17`** (this is the "yellow" Dennis perceived, not the teal/green from the old remap). Dark (internal/portals) variant: surface `#181914`, text `#f7f5ed`, gold `#ffba3e`.
+- **LP-18 CEFR telemetry surfaced on student dashboard** (`src/lib/scoring/rubric.ts` + `src/app/(app)/dashboard/page.tsx`, commit `b54e273`). Added `scoreToLp18()` (18 micro-bands across the 0–1000 scale: A1.1→C2.3) and now render `score · LP-18 · CEFR` on each ScoreBar + LP-18 on the Now/Target badges. The granular LLM scoring is the thing that supersedes the old single-number scoring; display now matches.
+- **`aria-discovery` split client-safe vs server-only** (`aria-discovery-config.ts` + `aria-discovery.ts`, commit `5926438`) — fixing the `supabaseKey is required` runtime error. Client widget imports **config only**; service-role Supabase client + ElevenLabs deps live behind `import "server-only"` (added `server-only` dep). Security: the service key never reaches a client bundle.
+- **Session route hardened + agent id wired** (`e94974e`). `startSession()` was throwing (`existingAgentId` never passed) and the route returned an empty 500 that the client couldn't `.json()`. Now `aria-discovery.ts` passes `ELEVENLABS_AGENT_ID`, the route returns JSON errors, and `DiscoverySession` surfaces them.
+- **Deferred to Minh (live-config blocker):** at `localhost` the Aria livekit call joins, then the ElevenLabs agent errors (`Cannot read properties of undefined (reading 'error_type')` — vendor SDK crash after the agent's error frame). Diagnosis: agent was provisioned against the **prod app URL/allowlist**, so `npm run dev` isn't the right host to test the live voice path. The working list is: `ELEVENLABS_AGENT_ID` (set), `ELEVENLABS_WEBHOOK_SECRET`, live Supabase (current project paused), Vercel reconnect → then production smoke test, not localhost. Sandbox remains valid for everything except live voice.
 
 ## Build sequence (C0–C7) and current position
 

@@ -27,6 +27,27 @@ us, only the adapter file changes.
 
 ## What's stubbed and why
 
+### 0. Aria voice discovery — live path pending prod config
+
+**Files:** `src/lib/onboarding/aria-discovery.ts`, `src/lib/onboarding/aria-discovery-config.ts`,
+`src/app/api/onboarding/discovery/session/route.ts`, `scripts/provision-discovery-agent.ts`
+
+**What works:**
+- The discovery session endpoint mints + returns a signed LiveKit token
+- The client widget connects to ElevenLabs LiveKit for real
+- The agent is provisioned (`ELEVENLABS_AGENT_ID` set locally)
+
+**What's blocked (localhost vs prod host):**
+- The agent was provisioned against the **production app URL + allowlist**, so the
+  live voice call is only testable from the deployed site — at `localhost:3000` the
+  agent joins then immediately errors (vendor SDK `error_type undefined` crash).
+- Full live smoke test therefore waits on: **live Supabase** (current project paused),
+  **Vercel reconnect**, and **`ELEVENLABS_WEBHOOK_SECRET`** (only set if a new
+  workspace webhook was created at provision time).
+
+**Not blocked:** scoring, gap profiles, lessons, class scheduling, employer console —
+the voice transcript input is the only live dependency.
+
 ### 1. ClassIn live classroom (Vietnamese live-class platform)
 
 **Files:** `src/lib/classin/token.ts`, `src/lib/classin/api.ts`,

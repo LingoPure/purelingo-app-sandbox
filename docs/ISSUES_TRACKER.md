@@ -84,3 +84,21 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 - [x] **ISS-040**: Observability/recovery — trace every assessment (C22) — `/assessments/{id}/status` ledger route + `result_frozen` event on pipeline completion (G12)
 - [x] **ISS-041**: Security — auth, media controls, retention, raw audio access — secured signed-URL audio GET with denial logging (G13) + daily retention cron `/api/cron/2k-retention` (0030 RLS + private bucket already in place)
 - [ ] **ISS-042**: Run G1–G14 acceptance gates with real external test users
+
+## Phase 8 — Live-config block (deferred to Minh, 2026-09-13)
+
+These are **environment/config items, not code**. The discovery-agent code is
+committed + working; the live voice path can only be smoke-tested from the
+deployed site (see `docs/integration-status.md` §0).
+
+- [ ] **ISS-043**: Live Aria voice smoke test — agent joins LiveKit then the ElevenLabs
+      agent errors (vendor `error_type undefined` crash) because the agent was
+      provisioned against the prod URL/allowlist, not `localhost:3000`. Fix = re-provision
+      or smoke-test from prod. (`docs/integration-status.md` §0 for scope)
+- [ ] **ISS-044**: Live Supabase reconnect — current project `nbvprbaumwmfczsfcyrv` is
+      paused/INACTIVE; greenfield rebuild per Path A of the handover plan needed before
+      auth/scoring can run anywhere but the local sandbox
+- [ ] **ISS-045**: Vercel reconnect — `lingo-pure-ai` project must be re-pointed at the
+      new `LingoPure/LingoPureAI` repo before the deployed site is demo-able
+- [ ] **ISS-046**: `ELEVENLABS_WEBHOOK_SECRET` — only needed if provision created a NEW
+      workspace webhook (ElevenLabs → Webhooks); otherwise the existing secret still matches
