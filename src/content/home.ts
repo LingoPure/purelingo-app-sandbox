@@ -24,7 +24,7 @@ export const home = {
       { label: "Method", href: "/method" },
       { label: "The report", href: "/#proof" },
     ],
-    cta: { label: "Try the demo", href: "/demo" },
+    cta: { label: "Start free assessment", href: "/signup" },
   },
 
   hero: {
@@ -38,7 +38,7 @@ export const home = {
     h1: "English that holds up when it actually counts.",
     lede: "Placement in one class. Progress you can see. Certification you can show. For teams that need to work in English, and for professionals who need to be heard in it.",
     ctas: [
-      { label: "Try a free demo class", href: "/demo" },
+      { label: "Start free assessment", href: "/signup" },
       { label: "I'm looking for my team", href: "/for-companies", ghost: true },
     ] as Cta[],
     micro: "Free · 45 minutes · you receive an LP-18 placement report either way",
