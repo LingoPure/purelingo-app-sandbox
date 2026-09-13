@@ -144,6 +144,23 @@ Per-speaker recording separability **not documented** by EEO; enrolment API is d
 
 ---
 
-## 4. Not yet documented
+## LLM Provider Abstraction
+**Module:** Cross-cutting
+**Status:** [V]
 
-Copy the §0 block to add: **Investor dataroom RAG** (chunk→embed→`match_dataroom_chunks`→cited answer; NDA gate; access log), **i18n** (11-lang dictionary + Claude-Haiku render-time translation), **Employer cohort console**, **LCI Bridge interpreter**, **micro-lessons / lesson evaluation**, and **TrackTest certification**. Per the keep-it-current convention, the PR that next touches one of these lands its LLD block.
+### Purpose
+Allows the application to run on any Anthropic-compatible gateway (e.g., OmniRoute) by abstracting the SDK instantiation and handling fallback for structured-output support.
+
+### Entry points
+- `src/lib/llm/client.ts`: The central `anthropicClient()` factory reads `ANTHROPIC_BASE_URL` (proxy root), `ANTHROPIC_API_KEY`, and `ANTHROPIC_MODEL` (the combo).
+
+### Core logic
+- **SDK Factory:** `anthropicClient()` creates a standard SDK instance but overrides `baseURL` if `ANTHROPIC_BASE_URL` is set, making the app provider-agnostic.
+- **Parsing Fallback:** The shared `parseStructured` helper detects if a gateway rejects `output_config` (the Anthropic-native structured output). If rejection occurs, it falls back to:
+    1. Executing `messages.create` without `output_config`.
+    2. Injecting the required JSON schema into the system prompt.
+    3. Parsing the resulting text response with the provided Zod schema.
+
+### Verify
+- Ensure `ANTHROPIC_BASE_URL` is set in `.env.development.local` to the local OmniRoute endpoint.
+- Verify structured-scoring logs: `PARSED OK:` confirms the fallback flow works.

@@ -108,6 +108,9 @@ flowchart TB
 | **Investor dataroom** | `/investor` + `/investor/(authed)/*`; **admin** `/investor/admin/(console)/*` | Cited RAG Q&A, documents, reports, NDA-gated deep-dive, voice (Morgan) | OpenAI embeddings + Claude answers |
 | **LCI Bridge** | `/lci-bridge`; `api/interpret` | Single-device turn-based live interpreter | Claude / STT |
 | **i18n** | (cross-cutting) | 11-language UI dictionary + render-time translation | Claude Haiku |
+| **Platform admin** | `/admin/*` (audit, content, editors, onboarding) | Operator console for org provisioning, content management, and RLS audit | — |
+| **Org admin** | `/org/[slug]/*` (dashboard, departments, staff, students, teachers, billing, onboarding) | Multi-tenant portal for client organisations | — |
+| **Teacher portal** | `/teacher/*` (students, notes) | Teacher-facing view of assigned students and notes | — |
 | **Static/legal** | `/about`, `/contact`, `/pricing`, `/privacy`, `/terms`, `/languages`, `/demo` | Marketing/legal + the original product landing (`/demo`) | — |
 
 `[V]` Auth roles differ by context (§8): **learners** (`students`), **employer admins** (`employer_admins`: owner/hr/viewer), **investor operators** (`ADMIN_EMAILS` allowlist), **content editors** (`content_editors`: admin/marketing/readonly). There is no single global role enum.
@@ -126,7 +129,7 @@ flowchart TB
 | Database | Supabase Postgres (**Tokyo `ap-northeast-1`**) | `@supabase/supabase-js ^2.105.1`, `@supabase/ssr ^0.10.2`. Project `nbvprbaumwmfczsfcyrv`. **25 migrations** (`0001`–`0025`) |
 | Vector / RAG | pgvector | `dataroom_chunks.embedding vector(1536)`, **HNSW** (`vector_cosine_ops`), RPC `match_dataroom_chunks` (`0020_investor_dataroom.sql:27,57,61,133`) |
 | Object storage | Supabase Storage | dataroom document buckets; `marketing-assets` (public, created on demand by the upload route) |
-| LLM (generation) | Anthropic Claude | `@anthropic-ai/sdk ^0.91.1`; **`claude-sonnet-4-6`** for discovery scoring (`score-discovery.ts:45`), **`claude-haiku-4-5-20251001`** for i18n translation (`i18n/translate.ts:32`) |
+| LLM (generation) | Anthropic (provider-agnostic via bridge) | `src/lib/llm/client.ts` centralizes construction. Honors `ANTHROPIC_BASE_URL` (OmniRoute/OpenRouter) and `ANTHROPIC_MODEL` env vars. `parseStructured` falls back to schema-injected prompt for free models. Defaults: **`claude-sonnet-4-6`** (scoring/lessons), **`claude-haiku-4-5-20251001`** (i18n) |
 | LLM (embeddings + STT) | OpenAI | `openai ^6.35.0`; **`text-embedding-3-large`@1536** for dataroom RAG (`0020:46`, `lib/investor/retrieval.ts`); **Whisper** STT (`lib/transcription/whisper.ts`) |
 | Voice (conversational) | ElevenLabs ConvAI | `@caistech/elevenlabs-convai ^0.4.0` + `@elevenlabs/client ^1.4.0` + `@elevenlabs/react ^1.3.0`. Discovery coach ("Aria"), investor voice ("Morgan") |
 | Auth surface | `@caistech/corporate-components ^0.3.0` | shared auth components |
@@ -138,7 +141,7 @@ flowchart TB
 | Testing | Playwright | `@playwright/test ^1.59.1` (`tests/e2e/`) |
 | Hosting | Vercel | slug `lingo-pure-ai`; `NEXT_PUBLIC_CANVAS_MODE` gates the marketing review canvas |
 
-> `[V]` **AI routing.** Unlike MMC there is **no central routing table**; each call site picks its model directly: Claude Sonnet 4.6 for the prescriptive discovery rubric (strict Zod schema, `messages.parse`); Claude Haiku for batched UI-string translation; OpenAI `text-embedding-3-large`@1536 for dataroom chunk embeddings + Whisper for audio transcription; Claude for investor-dataroom answer synthesis. `[A]` No cross-provider fallback chain observed.
+> `[V]` **AI routing.** LLM traffic is now centralized through `src/lib/llm/client.ts`. Production routes to Anthropic (`claude-sonnet-4-6`), but setting `ANTHROPIC_BASE_URL` (e.g. to OmniRoute or LiteLLM) and `ANTHROPIC_MODEL` instantly switches the entire scoring/lesson/translation stack to a free-model bridge. `parseStructured` handles the fallback from native structured output to schema-injected prompt generation for gateways that don't support Anthropic's `output_config`.
 
 ---
 
@@ -181,6 +184,23 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 `[V]` Vercel (slug `lingo-pure-ai`, prod `lingo-pure-ai.vercel.app`); Supabase **Tokyo `ap-northeast-1`** (`nbvprbaumwmfczsfcyrv`) for data/auth/storage; **AU/JP residency posture** — derived learner data resides in Japan, not the PRC (contrast the scaffolded ClassIn source). `NEXT_PUBLIC_CANVAS_MODE=true` on the deployed marketing canvas.
 `[V]` Migrations are **CLI-driven** (`supabase db push --linked`); the shell `SUPABASE_ACCESS_TOKEN` holds a Vercel token — use the `sbp_` token at `~/.supabase-token` (memory `project_lingopure_deploy_gate`).
 `[?]` Environment list (prod/preview/local) and prod-access ownership are operational facts not determinable from the repo.
+
+### Local Development (Dry-Run)
+`[V]` To run the full platform (including admin and portal surfaces) without touching hosted Supabase/Vercel:
+1.  Start the local stack: `supabase start` (runs on `localhost:54321`).
+2.  Create `.env.development.local` (gitignored) with local URLs/keys:
+    ```text
+    NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+    SUPABASE_URL=http://127.0.0.1:54321
+    SUPABASE_SERVICE_ROLE_KEY=<from supabase status>
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=<from supabase status>
+    ANTHROPIC_BASE_URL=http://localhost:20128/v1  # OmniRoute bridge (optional)
+    ANTHROPIC_MODEL=lingopure-ai                 # Bridge combo (optional)
+    ANTHROPIC_API_KEY=<proxy-key>                # Bridge key (optional)
+    ```
+3.  Seed the sandbox: `npm run admin:seed-platform` (creates platform admins) + `npx tsx scripts/seed-abc-manufacturer.ts` (creates employer/roles/personas) + `npx tsx scripts/seed-abc-portal.ts` (creates org memberships/billing).
+4.  Run the app: `npm run dev` (will use `.env.development.local` automatically in development).
+5.  Browse `http://localhost:3000/admin` (platform console) or `/org/abc-manufacturer` (org portal).
 
 ---
 
