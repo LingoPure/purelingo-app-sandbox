@@ -312,6 +312,7 @@ export const home = {
       { label: "Terms", href: "/terms" },
       { label: "Contact", href: "/contact" },
       { label: "Company", href: "/company" },
+      { label: "Book a demo", href: "/book-a-demo" },
     ],
     langs: "English · Tiếng Việt",
     anno: {

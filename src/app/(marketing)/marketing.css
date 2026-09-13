@@ -216,6 +216,11 @@
 .mkt .card p { color: var(--muted); }
 .mkt .card a { margin-top: auto; align-self: flex-start; }
 
+/* cap-grid */
+.mkt .cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+@media (max-width: 900px) { .mkt .cap-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .mkt .cap-grid { grid-template-columns: 1fr; } }
+
 /* steps */
 .mkt .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--line); }
 @media (max-width: 820px) { .mkt .steps { grid-template-columns: 1fr; } }

@@ -16,6 +16,7 @@ const NAV: { href: string; label: string; exact?: boolean }[] = [
   { href: "/admin/billing", label: "Billing" },
   { href: "/admin/onboarding", label: "Onboarding" },
   { href: "/admin/content", label: "Content" },
+  { href: "/admin/demo-bookings", label: "Bookings" },
 ];
 
 export default async function AdminLayout({
