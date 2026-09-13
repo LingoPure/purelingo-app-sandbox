@@ -31,6 +31,7 @@ export default async function EmployerAuthedLayout({
   const navItems: MobileNavItem[] = [
     { href: "/employer", label: t("emp.navOverview"), exact: true },
     { href: "/employer/students", label: t("emp.navStudents") },
+    { href: "/employer/candidates", label: "Candidates" },
     { href: "/employer/roles", label: "Roles" },
     { href: "/employer/teachers", label: "Teachers" },
     { href: "/employer/departments", label: "Departments" },
