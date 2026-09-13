@@ -1,9 +1,27 @@
 import { ariaDiscovery } from "@/lib/onboarding/aria-discovery";
+import { CONVAI_TOOL_SECRET_HEADER } from "@caistech/elevenlabs-convai";
 
 // The discovery-agent provides all routes via webhookRoutes()
 const routes = ariaDiscovery.webhookRoutes();
 
-// Map the catch-all [...all] slug to the corresponding route handler
+// Map the catch-all [all] slug to the corresponding route handler.
+//
+// SECURITY — memory-loop endpoints (recall/save/topic) are unauthenticated at the
+// library level (identity derives from the public agent id). When CONVAI_TOOL_SECRET
+// is set we guard here: ONLY requests carrying the matching `x-convai-tool-secret`
+// header (baked into provisioned agents' tools) pass. The post-call route is exempt —
+// it is independently HMAC-verified via the post-call webhook secret.
+const TOOL_SECRET = process.env.CONVAI_TOOL_SECRET || undefined;
+
+function guard(handler: (req: Request) => Promise<Response>) {
+  return async (req: Request): Promise<Response> => {
+    if (TOOL_SECRET && req.headers.get(CONVAI_TOOL_SECRET_HEADER) !== TOOL_SECRET) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    return handler(req);
+  };
+}
+
 export const POST = async (
   req: Request,
   ctx: { params: Promise<{ all: string }> }
@@ -15,13 +33,13 @@ export const POST = async (
     case "postCall":
       return routes.postCall(req);
     case "saveMessage":
-      return routes.saveMessage(req);
+      return guard(routes.saveMessage)(req);
     case "recallMemory":
-      return routes.recallMemory(req);
+      return guard(routes.recallMemory)(req);
     case "saveMemory":
-      return routes.saveMemory(req);
+      return guard(routes.saveMemory)(req);
     case "updateTopic":
-      return routes.updateTopic(req);
+      return guard(routes.updateTopic)(req);
     default:
       return new Response("Not Found", { status: 404 });
   }
