@@ -7,15 +7,30 @@
  */
 
 .mkt {
-  --ink: #0b1f24;
-  --teal: #12525f;
+  /* Semantic layer (landing directive — lingopure.com visual baseline).
+     --lp-* maps onto the .mkt system so new pages can target either name. */
+  --lp-bg: #f7f7f4;              /* page background, warm off-white */
+  --lp-bg-soft: #f1f2ee;         /* alternating sections */
+  --lp-white: #ffffff;           /* cards / panels */
+  --lp-dark: #111111;            /* text + deliberate dark sections */
+  --lp-text: #111111;
+  --lp-text-muted: #666666;
+  --lp-border: #d9d9d4;
+  --lp-radius: 0px;
+  --lp-section-padding: clamp(72px, 9vw, 140px);
+  --lp-content-width: 1280px;
+
+  /* .mkt aliases — remapped to the neutral register. */
+  --ink: var(--lp-dark);
+  --teal: #12525f;               /* single controlled brand accent */
   --teal-soft: #e7eff0;
-  --go: #0e7c66;
+  --go: #0e7c66;                 /* CTA green (brand action colour) */
   --go-dark: #0a5c4c;
-  --paper: #fafaf7;
-  --line: #dce3e3;
-  --muted: #5c6b6e;
-  --mark: #b91c1c;
+  --paper: var(--lp-bg);
+  --paper-soft: var(--lp-bg-soft);
+  --line: var(--lp-border);
+  --muted: var(--lp-text-muted);
+  --mark: #b91c1c;               /* spec/annotation only — hidden in clean view */
   --mark-bg: #fef3f2;
   --mark-line: #f3c9c4;
 
@@ -25,7 +40,7 @@
   --quote: var(--font-quote), Georgia, serif;
 
   --gut: clamp(20px, 5vw, 72px);
-  --maxw: 1180px;
+  --maxw: var(--lp-content-width);
 
   font-family: var(--body);
   background: var(--paper);
@@ -76,7 +91,7 @@
   text-transform: uppercase; color: var(--mark);
   writing-mode: vertical-rl; padding-top: 8px; opacity: 0.75;
 }
-.mkt section { position: relative; padding: clamp(56px, 7vw, 104px) 0; }
+.mkt section { position: relative; padding: var(--lp-section-padding) 0; }
 .mkt .tight { padding-top: 0; }
 
 /* toggle */
@@ -118,7 +133,7 @@
 .mkt-hamburger {
   display: none; align-items: center; justify-content: center;
   width: 44px; height: 44px; margin-left: auto; border: 1px solid var(--line);
-  border-radius: 6px; background: var(--paper); color: var(--ink); cursor: pointer;
+  border-radius: var(--lp-radius); background: var(--paper); color: var(--ink); cursor: pointer;
 }
 @media (max-width: 860px) { .mkt-hamburger { display: inline-flex; } }
 .mkt-drawer {
@@ -139,7 +154,7 @@
 
 .mkt .btn {
   display: inline-block; background: var(--go); color: #fff !important;
-  padding: 12px 20px; border-radius: 4px; text-decoration: none !important;
+  padding: 12px 20px; border-radius: var(--lp-radius); text-decoration: none !important;
   font-weight: 600; font-size: 15px; line-height: 1; opacity: 1 !important;
   border: 1px solid var(--go); transition: background 0.15s ease;
 }
@@ -192,10 +207,10 @@
 .mkt .fork { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 @media (max-width: 820px) { .mkt .fork { grid-template-columns: 1fr; } }
 .mkt .card {
-  border: 1px solid var(--line); border-radius: 6px; padding: 34px; background: #fff;
-  display: flex; flex-direction: column; gap: 14px; transition: border-color 0.15s, transform 0.15s;
+  border: 1px solid var(--line); border-radius: var(--lp-radius); padding: 34px; background: #fff;
+  display: flex; flex-direction: column; gap: 14px; transition: border-color 0.15s;
 }
-.mkt .card:hover { border-color: var(--teal); transform: translateY(-2px); }
+.mkt .card:hover { border-color: var(--teal); }
 .mkt .card .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--teal); }
 .mkt .card h3 { font-size: 26px; line-height: 1.15; }
 .mkt .card p { color: var(--muted); }
@@ -213,12 +228,11 @@
 .mkt .step p { color: var(--muted); font-size: 16px; }
 
 /* proof */
-.mkt .proof { background: var(--teal-soft); }
+.mkt .proof { background: var(--paper-soft); }
 .mkt .proofgrid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
 @media (max-width: 900px) { .mkt .proofgrid { grid-template-columns: 1fr; } }
 .mkt .reportframe {
-  background: #fff; border: 1px solid var(--line); border-radius: 6px;
-  box-shadow: 0 20px 50px -22px rgba(11, 31, 36, 0.35);
+  background: #fff; border: 1px solid var(--line); border-radius: var(--lp-radius);
   aspect-ratio: 1 / 1.35; display: flex; align-items: center; justify-content: center;
   padding: 26px; text-align: center;
 }
@@ -236,7 +250,7 @@
 /* testimonials */
 .mkt .tgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 900px) { .mkt .tgrid { grid-template-columns: 1fr; } }
-.mkt .tcard { border: 1px solid var(--line); border-radius: 8px; padding: 24px; background: #fff; }
+.mkt .tcard { border: 1px solid var(--line); border-radius: var(--lp-radius); padding: 24px; background: #fff; }
 .mkt .tcard blockquote { font-family: var(--quote); font-style: italic; font-size: 18px; line-height: 1.4; color: var(--ink); }
 .mkt .tcard figcaption { margin-top: 16px; display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
 .mkt .tcard figcaption strong { color: var(--ink); font-weight: 600; }
