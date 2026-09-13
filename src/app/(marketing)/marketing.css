@@ -125,7 +125,7 @@
 .mkt .navlinks { display: flex; gap: 22px; margin-left: auto; font-size: 15px; align-items: center; }
 .mkt .navlinks a { color: var(--ink); text-decoration: none; opacity: 0.8; }
 .mkt .navlinks a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 4px; }
-.mkt .nav-actions { display: flex; align-items: center; }
+.mkt .nav-actions { display: flex; align-items: center; gap: 14px; margin-left: 18px; }
 /* On mobile the whole inline nav collapses into the hamburger drawer. */
 @media (max-width: 860px) { .mkt .navlinks { display: none; } }
 

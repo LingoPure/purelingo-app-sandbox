@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MarketingHomeView } from "@/components/marketing/HomeView";
 import { getHomeContent } from "@/content/resolve";
 import { getContentEditor } from "@/lib/content/auth";
+import { getActiveLanguage } from "@/lib/i18n";
 
 export const metadata = { title: "Preview · LingoPure content", robots: { index: false } };
 
@@ -16,6 +17,7 @@ export default async function MarketingPreview() {
   const editor = await getContentEditor();
   if (!editor) redirect("/login?next=/preview");
 
+  const lang = await getActiveLanguage();
   const { home, testimonials, logos } = await getHomeContent({ draft: true });
   return (
     <>
@@ -23,7 +25,7 @@ export default async function MarketingPreview() {
         Draft preview — not published ·{" "}
         <Link href="/admin/content">← back to the editor</Link>
       </div>
-      <MarketingHomeView home={home} testimonials={testimonials} logos={logos} />
+      <MarketingHomeView home={home} testimonials={testimonials} logos={logos} lang={lang} />
     </>
   );
 }

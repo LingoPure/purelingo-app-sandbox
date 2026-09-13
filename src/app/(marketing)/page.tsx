@@ -1,5 +1,6 @@
 import { MarketingHomeView } from "@/components/marketing/HomeView";
 import { getHomeContent } from "@/content/resolve";
+import { getActiveLanguage } from "@/lib/i18n";
 
 /**
  * Marketing homepage. Renders PUBLISHED content — the row-overlaid home object
@@ -8,6 +9,7 @@ import { getHomeContent } from "@/content/resolve";
  * draft content.
  */
 export default async function MarketingHome() {
+  const lang = await getActiveLanguage();
   const { home, testimonials, logos } = await getHomeContent();
-  return <MarketingHomeView home={home} testimonials={testimonials} logos={logos} />;
+  return <MarketingHomeView home={home} testimonials={testimonials} logos={logos} lang={lang} />;
 }

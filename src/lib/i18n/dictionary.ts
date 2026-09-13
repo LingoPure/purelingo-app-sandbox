@@ -196,79 +196,85 @@ const en: Dict = {
   "emp.loginSubmitting": "Signing in…",
 
   // ── Marketing site (mkt.*) ──────────────────────────────────────────────
-  // Nav
-  "mkt.nav.method": "Method",
+  // Nav links + CTA
   "mkt.nav.forCompanies": "For companies",
   "mkt.nav.forIndividuals": "For individuals",
-  "mkt.nav.demo": "See the demo",
+  "mkt.nav.method": "Method",
   "mkt.nav.bookDemo": "Book a demo",
-  // 01 Hero (CTAs only; headline/subhead pending research)
-  "mkt.hero.ctaPrimary": "Book a free demo class",
+  "mkt.nav.theReport": "The report",
+  "mkt.nav.cta": "Start free assessment",
+  // 01 Hero
+  "mkt.hero.eyebrow": "Business English · Vietnam & Southeast Asia",
+  "mkt.hero.h1": "English that holds up when it actually counts.",
+  "mkt.hero.lede":
+    "Placement in one class. Progress you can see. Certification you can show. For teams that need to work in English, and for professionals who need to be heard in it.",
+  "mkt.hero.ctaPrimary": "Start free assessment",
   "mkt.hero.ctaSecondary": "I'm looking for my team",
-  // 02 TrustBand (placeholder — validate)
-  "mkt.trust.caption": "Trusted by teams across Vietnam and Southeast Asia",
-  "mkt.trust.statValue": "1,200+",
-  "mkt.trust.statLabel": "learners assessed",
-  // 03 Problem (one illustrative verbatim; rest pending)
-  "mkt.problem.title": "The moment English costs you",
-  "mkt.problem.q1":
-    "In meetings with head office, our best engineer just goes quiet. It's not the work — it's the English.",
-  "mkt.problem.q1.attr": "Operations lead, manufacturing (illustrative)",
-  // 04 AudienceFork
-  "mkt.fork.title": "Where do you start?",
-  "mkt.fork.company.title": "For companies",
-  "mkt.fork.company.body":
-    "Assess a whole team in a week. Get a capability baseline, not an attendance sheet.",
-  "mkt.fork.company.cta": "Explore for companies",
-  "mkt.fork.individual.title": "For individuals",
-  "mkt.fork.individual.body":
-    "Start with one free class and a placement report that tells you exactly where you are.",
-  "mkt.fork.individual.cta": "Explore for individuals",
-  // 05 HowItWorks
-  "mkt.how.title": "How it works",
-  "mkt.how.lead": "Three steps from unknown to measured.",
-  "mkt.how.step1.title": "Voice discovery",
-  "mkt.how.step1.body":
-    "A 20–35 minute conversational AI assessment surfaces each person's real fluency, role and target level — before a single class.",
-  "mkt.how.step2.title": "Live classes, embedded",
-  "mkt.how.step2.body":
-    "Virtual classrooms run inside LingoPure on ClassIn — no separate logins, full session analytics flow back.",
-  "mkt.how.step3.title": "Measured gap, closing",
-  "mkt.how.step3.body":
-    "Live classes and micro-lessons targeted at your gaps, re-measured as you go, with CEFR certification via TrackTest.",
-  // 06 ProofOfMethod (copy ready; image pending)
-  "mkt.proof.title": "Proof of method: the LP-18 report",
-  "mkt.proof.body":
-    "Every learner gets an LP-18 profile — eighteen sub-skills scored from their own voice, mapped to CEFR, with the evidence quoted back. It's the artifact a manager can act on.",
-  // 07 Outcomes (company confirm; individual pending)
-  "mkt.outcomes.title": "What changes",
-  "mkt.outcomes.company.title": "For companies",
-  "mkt.outcomes.company.item1":
-    "A baseline for every employee in weeks, not a vague 'intermediate'.",
-  "mkt.outcomes.company.item2":
-    "Cohort dashboards that show the gap closing, tied to roles.",
-  "mkt.outcomes.company.item3":
-    "CEFR certification you can put in a capability matrix.",
-  // 08 Testimonials (all pending — title only)
-  "mkt.testimonials.title": "What learners say",
-  // 09 Objections (questions drafted; answers pending)
-  "mkt.objections.title": "Questions you're probably asking",
-  "mkt.objections.q1": "How is this different from an English tutor or an app?",
-  "mkt.objections.q2": "Do our staff need to install anything?",
-  "mkt.objections.q3": "How do you measure progress objectively?",
-  "mkt.objections.q4": "What about data privacy for our employees?",
-  // 10 FinalCTA
-  "mkt.finalCta.title": "See your team's English gap — measured, in one class.",
-  "mkt.finalCta.body":
-    "Book a free demo class. We'll assess a few of your people and show you the LP-18 report.",
-  "mkt.finalCta.button": "Book a free demo class",
+  "mkt.hero.micro": "Free · 45 minutes · you receive an LP-18 placement report either way",
+  // 03 Problem
+  "mkt.problem.eyebrow": "The situation",
+  "mkt.problem.h2": "Most people here don't need more English. They need it to work under pressure.",
+  "mkt.problem.quote": "I can read English fine. I freeze the moment I have to speak in the meeting.",
+  // 04 Fork
+  "mkt.fork.company.tag": "For companies",
+  "mkt.fork.company.h3": "Your team can read the contract. Can they hold the call?",
+  "mkt.fork.company.p": "Assess a whole team in a week. Get a capability baseline, not an attendance sheet — and a monthly report you can take to your board.",
+  "mkt.fork.company.cta": "Try a team assessment",
+  "mkt.fork.individual.tag": "For individuals",
+  "mkt.fork.individual.h3": "You've done the courses. You still don't sound like yourself.",
+  "mkt.fork.individual.p": "Start with one free class and a placement report that tells you exactly where you are, and exactly what's holding you back.",
+  "mkt.fork.individual.cta": "Try a free demo class",
+  // 05 How
+  "mkt.how.eyebrow": "How it works",
+  "mkt.how.h2": "Three steps, and the first one is free.",
+  "mkt.how.step1.num": "STEP 01",
+  "mkt.how.step1.h3": "A real class, not a sales call",
+  "mkt.how.step1.p": "45 minutes with a LingoPure teacher. Live, in ClassIn. You are assessed while you speak, not by a form.",
+  "mkt.how.step2.num": "STEP 02",
+  "mkt.how.step2.h3": "Your LP-18 placement report",
+  "mkt.how.step2.p": "Within 48 hours: your CEFR level, your micro-level placement across 18 bands, your strengths, and the specific things holding you back.",
+  "mkt.how.step3.num": "STEP 03",
+  "mkt.how.step3.h3": "A programme built on that report",
+  "mkt.how.step3.p": "Live classes and micro-lessons targeted at your gaps. Progress re-measured as you go. CEFR-aligned certification through TrackTest.",
+  // 06 Proof
+  "mkt.proof.eyebrow": "What you receive",
+  "mkt.proof.h2": "We don't tell you you're \"intermediate\". We show you which eighteenth.",
+  "mkt.proof.lede":
+    "CEFR gives you six levels. That's too coarse to act on. LP-18 splits each level into three micro-bands and maps your communication signals against them — so the next class targets something specific instead of something general.",
+  "mkt.proof.cta": "See yours after one class",
+  // 07 Outcomes
+  "mkt.outcomes.eyebrow": "What you get",
+  "mkt.outcomes.h2": "Different buyers. Different wins.",
+  "mkt.outcomes.company.h3": "If you run a team",
+  "mkt.outcomes.company.item1.b": "Capability you can measure",
+  "mkt.outcomes.company.item1.span": "A baseline, a target, and a monthly movement figure per person — not hours attended.",
+  "mkt.outcomes.company.item2.b": "Fewer expensive misunderstandings",
+  "mkt.outcomes.company.item2.span": "The rework, the lost deal, the client who quietly stopped replying.",
+  "mkt.outcomes.company.item3.b": "Something to show the board",
+  "mkt.outcomes.company.item3.span": "Reporting that survives contact with a CFO, and certification that outlasts the employee.",
+  // 08 Testimonials
+  "mkt.testimonials.eyebrow": "In their words",
+  "mkt.testimonials.h2": "Not testimonials. Receipts.",
+  // 10 Final CTA
+  "mkt.final.h2": "Find out where you actually stand. It takes 45 minutes.",
+  "mkt.final.p": "One free class with a real teacher. One LP-18 placement report. No obligation to continue, and the report is yours either way.",
+  "mkt.final.cta": "Try a free demo class",
+  "mkt.final.microPrefix": "Companies with five or more staff — ",
+  "mkt.final.microLink": "try a team assessment instead",
   // Footer
-  "mkt.footer.tagline": "AI-first business English for Southeast Asia.",
-  "mkt.footer.method": "Method",
+  "mkt.footer.note": "Business English for Vietnam & Southeast Asia",
+  "mkt.footer.legalL1": "LingoPure Pte. Ltd. · Singapore",
+  "mkt.footer.legalL2": "A subsidiary of LingoPure Limited (New Zealand)",
+  "mkt.footer.legalL3": "CEFR certification delivered in partnership with TrackTest",
+  "mkt.footer.colCompany": "Company",
+  "mkt.footer.colContract": "Contract",
+  "mkt.footer.colLanguages": "Languages",
+  "mkt.footer.allRights": "All rights reserved.",
   "mkt.footer.privacy": "Privacy",
   "mkt.footer.terms": "Terms",
+  "mkt.footer.contact": "Contact",
   "mkt.footer.company": "Company",
-  "mkt.footer.rights": "© 2026 LingoPure · Strategic platform demo",
+  "mkt.footer.bookDemo": "Book a demo",
 };
 
 const vi: Dict = {
@@ -417,67 +423,75 @@ const vi: Dict = {
   "emp.loginSubmitting": "Đang đăng nhập…",
 
   // ── Marketing site (mkt.*) ──────────────────────────────────────────────
-  "mkt.nav.method": "Phương pháp",
   "mkt.nav.forCompanies": "Cho doanh nghiệp",
   "mkt.nav.forIndividuals": "Cho cá nhân",
-  "mkt.nav.demo": "Xem bản demo",
+  "mkt.nav.method": "Phương pháp",
   "mkt.nav.bookDemo": "Đặt lịch demo",
-  "mkt.hero.ctaPrimary": "Đặt lịch học thử miễn phí",
+  "mkt.nav.theReport": "Báo cáo LP-18",
+  "mkt.nav.cta": "Bắt đầu đánh giá miễn phí",
+  "mkt.hero.eyebrow": "Tiếng Anh thương mại · Việt Nam & Đông Nam Á",
+  "mkt.hero.h1": "Tiếng Anh vững vàng khi thực sự cần.",
+  "mkt.hero.lede":
+    "Định vị trong một buổi học. Tiến bộ thấy được. Chứng chỉ demonstrate được. Cho đội ngũ cần làm việc bằng tiếng Anh, và cho chuyên gia cần được lắng nghe trong đó.",
+  "mkt.hero.ctaPrimary": "Bắt đầu đánh giá miễn phí",
   "mkt.hero.ctaSecondary": "Tôi đang tìm giải pháp cho đội ngũ",
-  "mkt.trust.caption": "Được các đội ngũ tại Việt Nam và Đông Nam Á tin dùng",
-  "mkt.trust.statValue": "1.200+",
-  "mkt.trust.statLabel": "học viên đã được đánh giá",
-  "mkt.problem.title": "Khoảnh khắc tiếng Anh khiến bạn trả giá",
-  "mkt.problem.q1":
-    "Trong các cuộc họp với trụ sở chính, kỹ sư giỏi nhất của chúng tôi chỉ im lặng. Không phải vì chuyên môn — mà vì tiếng Anh.",
-  "mkt.problem.q1.attr": "Trưởng phòng vận hành, sản xuất (minh họa)",
-  "mkt.fork.title": "Bạn bắt đầu từ đâu?",
-  "mkt.fork.company.title": "Cho doanh nghiệp",
-  "mkt.fork.company.body":
-    "Đánh giá cả đội ngũ, tổ chức theo nhóm, và chứng minh khoảng cách đang thu hẹp bằng báo cáo đạt chuẩn kiểm toán.",
-  "mkt.fork.company.cta": "Khám phá cho doanh nghiệp",
-  "mkt.fork.individual.title": "Cho cá nhân",
-  "mkt.fork.individual.body":
-    "Xác định trình độ, nhận lộ trình, và chứng nhận tiếng Anh thương mại theo nhịp độ của riêng bạn.",
-  "mkt.fork.individual.cta": "Khám phá cho cá nhân",
-  "mkt.how.title": "Cách thức hoạt động",
-  "mkt.how.lead": "Ba bước từ chưa rõ đến đo lường được.",
-  "mkt.how.step1.title": "Khám phá bằng giọng nói",
-  "mkt.how.step1.body":
-    "Bài đánh giá hội thoại bằng AI trong 20–35 phút làm rõ trình độ, vai trò và mục tiêu thực của từng người — trước cả buổi học đầu tiên.",
-  "mkt.how.step2.title": "Lớp học trực tiếp, tích hợp sẵn",
-  "mkt.how.step2.body":
-    "Lớp học ảo chạy ngay trong LingoPure trên ClassIn — không cần đăng nhập riêng, toàn bộ dữ liệu buổi học được ghi nhận.",
-  "mkt.how.step3.title": "Khoảng cách được đo, và thu hẹp",
-  "mkt.how.step3.body":
-    "Điểm khoảng cách sáu chiều cập nhật sau mỗi bài học và lớp trực tiếp, kèm chứng nhận CEFR qua TrackTest.",
-  "mkt.proof.title": "Bằng chứng phương pháp: báo cáo LP-18",
-  "mkt.proof.body":
-    "Mỗi học viên nhận một hồ sơ LP-18 — mười tám kỹ năng con được chấm điểm từ chính giọng nói của họ, ánh xạ sang CEFR, kèm dẫn chứng trích lại. Đây là tài liệu mà người quản lý có thể hành động dựa trên đó.",
-  "mkt.outcomes.title": "Điều gì thay đổi",
-  "mkt.outcomes.company.title": "Cho doanh nghiệp",
-  "mkt.outcomes.company.item1":
-    "Có mốc chuẩn cho mọi nhân viên trong vài tuần, không còn 'trung cấp' chung chung.",
-  "mkt.outcomes.company.item2":
-    "Bảng theo dõi theo nhóm cho thấy khoảng cách thu hẹp, gắn với từng vai trò.",
-  "mkt.outcomes.company.item3":
-    "Chứng nhận CEFR có thể đưa vào ma trận năng lực.",
-  "mkt.testimonials.title": "Học viên nói gì",
-  "mkt.objections.title": "Những câu hỏi bạn có thể đang thắc mắc",
-  "mkt.objections.q1": "Điều này khác gì so với gia sư tiếng Anh hay một ứng dụng?",
-  "mkt.objections.q2": "Nhân viên của chúng tôi có cần cài đặt gì không?",
-  "mkt.objections.q3": "Các bạn đo lường tiến bộ một cách khách quan như thế nào?",
-  "mkt.objections.q4": "Còn quyền riêng tư dữ liệu của nhân viên thì sao?",
-  "mkt.finalCta.title": "Nhìn thấy khoảng cách tiếng Anh của đội ngũ — được đo, trong một buổi học.",
-  "mkt.finalCta.body":
-    "Đặt lịch học thử miễn phí. Chúng tôi sẽ đánh giá một vài người của bạn và cho bạn xem báo cáo LP-18.",
-  "mkt.finalCta.button": "Đặt lịch học thử miễn phí",
-  "mkt.footer.tagline": "Tiếng Anh thương mại ưu tiên AI cho Đông Nam Á.",
-  "mkt.footer.method": "Phương pháp",
+  "mkt.hero.micro": "Miễn phí · 45 phút · bạn nhận báo cáo LP-18 dù tiếp tục hay không",
+  "mkt.problem.h2": "Hầu hết mọi người ở đây không cần thêm tiếng Anh. Họ cần nó hoạt động dưới áp lực.",
+  "mkt.problem.eyebrow": "Tình hình hiện tại",
+  "mkt.problem.quote": "Tôi đọc tiếng Anh tốt. Tôi đông cứng lúc phải nói trong cuộc họp.",
+  "mkt.fork.company.tag": "Cho doanh nghiệp",
+  "mkt.fork.company.h3": "Đội bạn đọc được hợp đồng. Họ trò chuyện được không?",
+  "mkt.fork.company.p": "Đánh giá cả đội ngũ trong một tuần. Nhận baseline năng lực, không phải sheet điểm danh — kèm báo cáo hàng tháng trình lên hội đồng.",
+  "mkt.fork.company.cta": "Thử đánh giá đội ngũ",
+  "mkt.fork.individual.tag": "Cho cá nhân",
+  "mkt.fork.individual.h3": "Bạn đã học các khoá rồi. Bạn vẫn không thấy mình trong đó.",
+  "mkt.fork.individual.p": "Bắt đầu với một buổi học miễn phí và báo cáo định vị cho biết chính xác bạn đang ở đâu, và chính xác điều gì đang kìm bạn lại.",
+  "mkt.fork.individual.cta": "Thử buổi học miễn phí",
+  "mkt.how.eyebrow": "Cách thức hoạt động",
+  "mkt.how.h2": "Ba bước, và bước đầu tiên miễn phí.",
+  "mkt.how.step1.num": "BƯỚC 01",
+  "mkt.how.step1.h3": "Buổi học thực, không phải cuộc gọi bán hàng",
+  "mkt.how.step1.p": "45 phút với giáo viên LingoPure. Trực tiếp, trên ClassIn. Bạn được đánh giá lúc nói, không phải bằng phiếu.",
+  "mkt.how.step2.num": "BƯỚC 02",
+  "mkt.how.step2.h3": "Báo cáo định vị LP-18 của bạn",
+  "mkt.how.step2.p": "Trong 48 giờ: cấp CEFR, vị trí vi mô trên 18 dải, thế mạnh, và những điều cụ thể đang kìm bạn lại.",
+  "mkt.how.step3.num": "BƯỚC 03",
+  "mkt.how.step3.h3": "Chương trình xây trên báo cáo đó",
+  "mkt.how.step3.p": "Lớp học trực tiếp và bài học siêu nhỏ nhắm vào khoảng cách. Tiến bộ được đo lại khi bạn đi. Chứng nhận CEFR qua TrackTest.",
+  "mkt.proof.eyebrow": "Bạn nhận gì",
+  "mkt.proof.h2": "Chúng tôi không nói bạn \"trung bình\". Chúng tôi cho bạn xem bạn thuộc phần mười tám nào.",
+  "mkt.proof.lede":
+    "CEFR cho sáu cấp. Quá thô để hành động. LP-18 chia mỗi cấp thành ba vi-dải và ánh xạ tín hiệu giao tiếp của bạn — để buổi học tiếp theo nhắm vào điều cụ thể thay vì điều chung chung.",
+  "mkt.proof.cta": "Xem của bạn sau một buổi học",
+  "mkt.outcomes.eyebrow": "Bạn nhận gì",
+  "mkt.outcomes.h2": "Người mua khác. Lợi ích khác.",
+  "mkt.outcomes.company.h3": "Nếu bạn quản lý đội",
+  "mkt.outcomes.company.item1.b": "Năng lực đo được",
+  "mkt.outcomes.company.item1.span": "Baseline, mục tiêu, và con số dịch chuyển hàng tháng mỗi người — không phải giờ tham dự.",
+  "mkt.outcomes.company.item2.b": "Ít hiểu lầm tốn kém hơn",
+  "mkt.outcomes.company.item2.span": "Làm lại, mất deal, khách hàng lặng lẽ ngừng phản hồi.",
+  "mkt.outcomes.company.item3.b": "Có thứ trình hội đồng",
+  "mkt.outcomes.company.item3.span": "Báo cáo survive được cuộc gặp CFO, và chứng chỉ tồn tại lâu hơn nhân viên.",
+  "mkt.testimonials.eyebrow": "Lời chia sẻ",
+  "mkt.testimonials.h2": "Không phải lời chứng thực. Là kết quả thực.",
+  "mkt.final.h2": "Tìm hiểu bạn thực sự đứng ở đâu. Chỉ 45 phút.",
+  "mkt.final.p": "Một buổi học miễn phí với giáo viên thực. Một báo cáo LP-18. Không nghĩa vụ tiếp tục, và báo cáo là của bạn dù gì đi nữa.",
+  "mkt.final.cta": "Thử buổi học miễn phí",
+  "mkt.final.microPrefix": "Đội ngũ năm người trở lên — ",
+  "mkt.final.microLink": "thử đánh giá đội ngũ thay thế",
+  "mkt.footer.note": "Tiếng Anh thương mại cho Việt Nam & Đông Nam Á",
+  "mkt.footer.legalL1": "LingoPure Pte. Ltd. · Singapore",
+  "mkt.footer.legalL2": "Công ty con của LingoPure Limited (New Zealand)",
+  "mkt.footer.legalL3": "Chứng nhận CEFR hợp tác với TrackTest",
+  "mkt.footer.colCompany": "Công ty",
+  "mkt.footer.colContract": "Liên hệ",
+  "mkt.footer.colLanguages": "Ngôn ngữ",
+  "mkt.footer.allRights": "Bảo lưu mọi quyền.",
   "mkt.footer.privacy": "Quyền riêng tư",
   "mkt.footer.terms": "Điều khoản",
+  "mkt.footer.contact": "Liên hệ",
   "mkt.footer.company": "Công ty",
-  "mkt.footer.rights": "© 2026 LingoPure · Bản demo nền tảng chiến lược",
+  "mkt.footer.bookDemo": "Đặt lịch demo",
 };
 
 // The remaining 4 languages translate the highest-impact public surface

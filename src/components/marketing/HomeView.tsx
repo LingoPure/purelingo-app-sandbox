@@ -3,6 +3,8 @@ import type { HomeContent } from "@/content/home";
 import type { PublicTestimonial, PublicLogo } from "@/content/resolve";
 import { Anno, Stage, EmptySlot } from "@/components/marketing/AnnotationLayer";
 import { SectionGate, SpecOnly } from "@/components/marketing/CanvasGates";
+import type { LanguageCode } from "@/lib/i18n/dictionary";
+import { MarketingHomeCopy } from "./promo-copy";
 
 /**
  * The ten-stage sales-flow homepage. Renders a home-shaped content object —
@@ -14,11 +16,14 @@ export function MarketingHomeView({
   home,
   testimonials: liveTestimonials = [],
   logos = [],
+  lang,
 }: {
   home: HomeContent;
   testimonials?: PublicTestimonial[];
   logos?: PublicLogo[];
+  lang?: LanguageCode;
 }) {
+  const copy = new MarketingHomeCopy(lang);
   const { hero, trust, problem, fork, how, proof, outcomes, testimonials, objections, final } =
     home;
   const hasLogos = logos.length > 0;
@@ -30,21 +35,21 @@ export function MarketingHomeView({
         <Stage>{hero.stage}</Stage>
         <div className="wrap">
           <Anno annotation={hero.anno} status={hero.anno.status} />
-          <p className="eyebrow">{hero.eyebrow}</p>
-          <h1>{hero.h1}</h1>
-          <p className="lede">{hero.lede}</p>
+          <p className="eyebrow">{copy.hero.eyebrow(hero.eyebrow)}</p>
+          <h1>{copy.hero.h1(hero.h1)}</h1>
+          <p className="lede">{copy.hero.lede(hero.lede)}</p>
           <div className="ctas">
-            {hero.ctas.map((c) => (
+            {hero.ctas.map((c, i) => (
               <Link
                 key={c.href + c.label}
                 href={c.href}
                 className={`btn btn--lg${c.ghost ? " btn--ghost" : ""}`}
               >
-                {c.label}
+                {copy.hero.cta(i, c.label)}
               </Link>
             ))}
           </div>
-          <p className="micro">{hero.micro}</p>
+          <p className="micro">{copy.hero.micro(hero.micro)}</p>
         </div>
       </section>
 
@@ -91,12 +96,12 @@ export function MarketingHomeView({
       <section id="problem" className="tight" style={{ paddingTop: 56 }}>
         <Stage>{problem.stage}</Stage>
         <div className="wrap">
-          <p className="eyebrow">{problem.eyebrow}</p>
-          <h2 style={{ maxWidth: "20ch", marginBottom: 36 }}>{problem.h2}</h2>
+          <p className="eyebrow">{copy.problem.eyebrow(problem.eyebrow)}</p>
+          <h2 style={{ maxWidth: "20ch", marginBottom: 36 }}>{copy.problem.h2(problem.h2)}</h2>
           <Anno annotation={problem.anno} status={problem.anno.status} />
           <div className="problems">
             <blockquote className="problem">
-              &ldquo;{problem.quote.text}&rdquo;
+              &ldquo;{copy.problem.quote(problem.quote.text)}&rdquo;
               {problem.quote.attribution ? (
                 <cite>{problem.quote.attribution}</cite>
               ) : null}
@@ -116,16 +121,21 @@ export function MarketingHomeView({
         <div className="wrap">
           <Anno annotation={fork.anno} status={fork.anno.status} />
           <div className="fork">
-            {fork.cards.map((card) => (
-              <div className="card" key={card.tag}>
-                <span className="tag">{card.tag}</span>
-                <h3>{card.h3}</h3>
-                <p>{card.p}</p>
-                <Link href={card.cta.href} className="btn">
-                  {card.cta.label}
-                </Link>
-              </div>
-            ))}
+            {fork.cards.map((card) => {
+              const company = card.tag === "For companies";
+              return (
+                <div className="card" key={card.tag}>
+                  <span className="tag">
+                    {company ? copy.forkCompany.tag(card.tag) : copy.forkIndividual.tag(card.tag)}
+                  </span>
+                  <h3>{company ? copy.forkCompany.h3(card.h3) : copy.forkIndividual.h3(card.h3)}</h3>
+                  <p>{company ? copy.forkCompany.p(card.p) : copy.forkIndividual.p(card.p)}</p>
+                  <Link href={card.cta.href} className="btn">
+                    {company ? copy.forkCompany.cta(card.cta.label) : copy.forkIndividual.cta(card.cta.label)}
+                  </Link>
+                </div>
+              );
+            })}
           </div>
           <div style={{ marginTop: 18 }}>
             <Anno annotation={fork.annoConfirm} status={fork.annoConfirm.status} />
@@ -138,14 +148,14 @@ export function MarketingHomeView({
         <Stage>{how.stage}</Stage>
         <div className="wrap">
           <Anno annotation={how.anno} status={how.anno.status} />
-          <p className="eyebrow">{how.eyebrow}</p>
-          <h2 style={{ maxWidth: "16ch", marginBottom: 44 }}>{how.h2}</h2>
+          <p className="eyebrow">{copy.how.eyebrow(how.eyebrow)}</p>
+          <h2 style={{ maxWidth: "16ch", marginBottom: 44 }}>{copy.how.h2(how.h2)}</h2>
           <div className="steps">
-            {how.steps.map((s) => (
+            {how.steps.map((s, i) => (
               <div className="step" key={s.num}>
                 <div className="stepnum">{s.num}</div>
-                <h3>{s.h3}</h3>
-                <p>{s.p}</p>
+                <h3>{copy.step(i).h3(s.h3)}</h3>
+                <p>{copy.step(i).p(s.p)}</p>
               </div>
             ))}
           </div>
@@ -159,13 +169,13 @@ export function MarketingHomeView({
           <Anno annotation={proof.anno} status={proof.anno.status} />
           <div className="proofgrid">
             <div>
-              <p className="eyebrow">{proof.eyebrow}</p>
-              <h2 style={{ marginBottom: 22 }}>{proof.h2}</h2>
+              <p className="eyebrow">{copy.proof.eyebrow(proof.eyebrow)}</p>
+              <h2 style={{ marginBottom: 22 }}>{copy.proof.h2(proof.h2)}</h2>
               <p className="lede" style={{ marginBottom: 26 }}>
-                {proof.lede}
+                {copy.proof.lede(proof.lede)}
               </p>
               <Link href={proof.cta.href} className="btn">
-                {proof.cta.label}
+                {copy.proof.cta(proof.cta.label)}
               </Link>
             </div>
             <SpecOnly>
@@ -184,16 +194,16 @@ export function MarketingHomeView({
         <Stage>{outcomes.stage}</Stage>
         <div className="wrap">
           <Anno annotation={outcomes.anno} status={outcomes.anno.status} />
-          <p className="eyebrow">{outcomes.eyebrow}</p>
-          <h2 style={{ maxWidth: "18ch", marginBottom: 44 }}>{outcomes.h2}</h2>
+          <p className="eyebrow">{copy.outcomes.eyebrow(outcomes.eyebrow)}</p>
+          <h2 style={{ maxWidth: "18ch", marginBottom: 44 }}>{copy.outcomes.h2(outcomes.h2)}</h2>
           <div className="outcomes">
             <div className="outcol">
-              <h3>{outcomes.company.h3}</h3>
+              <h3>{copy.outcomes.company.h3(outcomes.company.h3)}</h3>
               <ul>
-                {outcomes.company.items.map((it) => (
+                {outcomes.company.items.map((it, i) => (
                   <li key={it.b}>
-                    <b>{it.b}</b>
-                    <span>{it.span}</span>
+                    <b>{copy.outcomes.company.item(i).b(it.b)}</b>
+                    <span>{copy.outcomes.company.item(i).span(it.span)}</span>
                   </li>
                 ))}
               </ul>
@@ -216,8 +226,8 @@ export function MarketingHomeView({
           <Stage>{testimonials.stage}</Stage>
           <div className="wrap">
             <Anno annotation={testimonials.anno} status={testimonials.anno.status} />
-            <p className="eyebrow">{testimonials.eyebrow}</p>
-            <h2 style={{ marginBottom: 40 }}>{testimonials.h2}</h2>
+            <p className="eyebrow">{copy.testimonials.eyebrow(testimonials.eyebrow)}</p>
+            <h2 style={{ marginBottom: 40 }}>{copy.testimonials.h2(testimonials.h2)}</h2>
             <div className="tgrid">
               {hasTestimonials
                 ? liveTestimonials.map((t) => (
@@ -275,15 +285,15 @@ export function MarketingHomeView({
         <Stage>{final.stage}</Stage>
         <div className="wrap">
           <Anno annotation={final.anno} status={final.anno.status} />
-          <h2>{final.h2}</h2>
-          <p>{final.p}</p>
+          <h2>{copy.final.h2(final.h2)}</h2>
+          <p>{copy.final.p(final.p)}</p>
           <Link href={final.cta.href} className="btn btn--lg">
-            {final.cta.label}
+            {copy.final.cta(final.cta.label)}
           </Link>
           <p className="micro" style={{ marginTop: 22, color: "#7c8f92" }}>
-            {final.microPrefix}
+            {copy.final.microPrefix(final.microPrefix)}
             <Link href={final.microLink.href} style={{ color: "#9fb4b7" }}>
-              {final.microLink.label}
+              {copy.final.microLink(final.microLink.label)}
             </Link>
           </p>
         </div>
