@@ -1,7 +1,13 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-13
+**Updated:** 2026-09-14
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-14 (battery report email, marketing i18n toggle, OmniRoute fix, test docs)
+- **Battery-complete report email** (`af828c1`) — migration 0048 (`students.battery_report_sent_at`), `src/lib/emails/battery-report.ts`, `src/lib/scoring/lp18.ts`, trigger `battery_report_on_complete`. Fires once when all 4 battery tasks complete (4-skill completeness + `sent_at` guard). Email: personalised name + target, overall LP-18 band + 6 skill bars, "Book a demo" CTA to `/book-a-demo`. Resend transport, no-reply from address, HTML + text fallback. Taste → report → demo bridge.
+- **Marketing i18n — functional EN/VI toggle** (`71c66b2`, pushed both remotes). `src/lib/i18n/dictionary.ts` rebuilt to prod-aligned copy: **67 EN + 67 VI `mkt.*` keys, full parity**, per-section granularity. New: `src/components/marketing/i18n-context.tsx` (client `t()` with EN fallback, cookie `lp_lang`), `src/components/marketing/promo-copy.ts` (server-safe `MarketingHomeCopy` resolver). `Nav.tsx` consumes context + `LanguagePill` (cookie toggle via `/api/i18n/lang`, `router.refresh`). `Footer.tsx` server-side `getDict()`. `HomeView.tsx` + homepage + preview render `lang`. **Verified live:** `lp_lang=vi` → `<html lang="vi">` + VI hero/nav/footer, EN h1 gone; default → EN → `lang="en"`. Font note: Lato lacks `vietnamese` subset in this Next version — VI body diacritics fall back to system; Montserrat + JetBrains Mono carry VI subsets. Landing pages (`/for-companies`, `/for-individuals`, `/method`) keep nav/footer translated; body copy EN until content validated.
+- **OmniRoute `lingopure-ai` combo 500 root-caused** — the `POST /api/lessons/[id]/submit` 500 was **not** app code: env routes Claude via `ANTHROPIC_BASE_URL=http://localhost:20128/v1` (OmniRoute bridge, model `lingopure-ai`). App error `401 "Missing API key" / invalid_api_key` was **DeepSeek's verbatim schema** (primary step rejecting in 193ms). Combo test proved it: DeepSeek error → Gemini fallback OK (7838ms). Fix is in OmniRoute dashboard (DeepSeek account key `acct f263b66c`, or promote Gemini to primary). Logged in bug knowledge base via Mnemo `bug-memory.mjs remember`. HLD.md:197 documents the bridge as optional.
+- **Test protocol + functionality docs** (`b0c020d`, pushed both remotes) — `docs/TEST_PROTOCOL.md` + `.docx`, `docs/FUNCTIONALITY_WORKFLOWS.md` + `.docx`, generator `scripts/generate-docs.mjs` (`docx` npm package, devDependency). Audience: Thao, Dan, Shamni. Test protocol = 10 sections, tick-box checklists (Student/Employer/Investor/Marketing/Assessment/Email/Mobile), bug-report format, sign-off sheet. Functionality doc = exec summary + architecture + 3 packages + 6 portals page-by-page + assessment/scoring + integrations + role-matrix/env/db appendices. Regenerate .docx with `node scripts/generate-docs.mjs`.
 
 ## Session log — 2026-09-13 (landing palette, LP-18 dashboard telemetry, discovery-agent split)
 - **Landing palette synced to live lingopure.com brand tokens** (`src/app/(marketing)/marketing.css`, commit `d6fe9e1`). Extracted the real palette from the live site's compiled CSS: warm cream bg `#f8f5ec` / card `#fffdf7` / ink `#151617` / muted `#6e777d` / border `#d8d2c4` / **amber accent `#fbae17`** (this is the "yellow" Dennis perceived, not the teal/green from the old remap). Dark (internal/portals) variant: surface `#181914`, text `#f7f5ed`, gold `#ffba3e`.
@@ -41,7 +47,15 @@
 - `0014` teachers PK is `id` (not `teacher_id`) — 0037 uses `teachers(id)`.
 - 2K result renders inline in `assessment-runner.tsx`; the dedicated result page (`/assessment/results/[id]`) now exists and is linked from the result phase.
 - `@caistech/discovery-agent` NOT yet in package.json — add when wiring voice (C2 discovery surface, §11 lock 4).
+- **LLM env split:** `.env.local` = sandbox Supabase (`uovbwccvxgdghqvlpuql`, prod-bound); `.env.development.local` = local Supabase (`localhost:54321`) + `ANTHROPIC_BASE_URL=http://localhost:20128/v1` (OmniRoute bridge, combos by account acct-IDs). Unset base URL → traffic goes straight to Anthropic.
+- **Lesson submit 500 signature:** error body `"Missing API key"` with `code: invalid_api_key` is a provider above the bridge rejecting (193ms fast-fail), not the gateway and not app code. Check the combo step authz first.
+- **Admin testing account:** `dennis@factory2key.com.au` / `Logoinabc123` (ABC Manufacturer org admin persona, `src/lib/seed/abc-personas.ts`).
+- **Pushed commits:** `af828c1` battery-report email, `71c66b2` i18n toggle, `b0c020d` docs — all on `origin` + `lingopure`. No push key needed (already authenticated).
+- Two untracked PNGs remain in `docs/` from prior screenshot work (`Lingopurelanding screenshot.png`, `lingopureinternalphoebe.png`) — deliberately uncommitted.
 
 ## Environment
 - Win32 / PowerShell 7 shell. Tests: `npm run test:curriculum` (node:test + tsx; `@/` path alias resolves).
 - Unrelated pre-existing changes in tree: `src/middleware.ts` → `src/proxy.ts` migration in flight (Next 16), `tree.py`, BPO gate fixtures.
+- One WIP stash remains: `stash@{0}` "WIP from prior session: demo banner + prod site_url + auth/callback route" — but it actually contains only a `@caistech/elevenlabs-convai` 0.1.4→0.1.5 bump (label is misleading). Drop or keep as is; not needed for the current build.
+- `.env.local` (sandbox) has: VERCEL_OIDC_TOKEN, RESEND_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, both Supabase keys, ELEVENLABS_API_KEY/AGENT_ID/WEBHOOK_SECRET, EMPLOYER_DEMO_PASSWORD, HEYGEN_API_KEY, SUPABASE_ACCESS_TOKEN, NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID — all set.
+- `.env.development.local` (local dev) has: local Supabase, plus ANTHROPIC_BASE_URL/module pointing at OmniRoute bridge on localhost:20128.
