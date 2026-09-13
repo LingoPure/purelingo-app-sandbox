@@ -22,6 +22,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { TASK_SKILL, type TaskType } from "./types";
 import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
 import { setCanonicalGapScore } from "@/lib/scoring/set-canonical";
+import { sendBatteryCompleteReport } from "./report";
 
 export async function reconcileBatteryScore(
   supabase: SupabaseClient,
@@ -39,4 +40,8 @@ export async function reconcileBatteryScore(
     target: baselines[skill],
     source: "battery_task",
   });
+
+  // Fire-and-track the battery-complete report email. Best-effort: it
+  // catches internally and sends exactly once (4 skills + sent_at guard).
+  await sendBatteryCompleteReport(supabase, studentId);
 }
