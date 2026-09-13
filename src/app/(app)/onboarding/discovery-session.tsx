@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { DiscoveryWidget } from "@caistech/discovery-agent/react";
-import { ariaDiscovery } from "@/lib/onboarding/aria-discovery";
+import { ariaDiscoveryConfig } from "@/lib/onboarding/aria-discovery-config";
 
 export function DiscoverySession({ userId }: { userId: string }) {
   const [session, setSession] = useState<{ token: string; agentId: string; promptOverride?: string } | null>(null);
@@ -22,7 +22,7 @@ export function DiscoverySession({ userId }: { userId: string }) {
   return (
     <div className="h-full w-full">
       <DiscoveryWidget 
-        config={ariaDiscovery.config} 
+        config={ariaDiscoveryConfig} 
         session={session} 
         activeStageId={activeStageId} 
         onEnd={() => window.location.href = "/onboarding/battery"}
