@@ -30,6 +30,7 @@ export const ariaDiscovery = defineDiscovery(
       },
     },
     elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+    existingAgentId: process.env.ELEVENLABS_AGENT_ID || undefined,
     sessionSecret: process.env.DISCOVERY_SESSION_SECRET || "temp-secret",
     supabase: createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",

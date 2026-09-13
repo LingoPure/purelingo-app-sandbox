@@ -7,8 +7,14 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // In standard discovery-agent pattern, we start a session for the user
-  const session = await ariaDiscovery.startSession(user.id);
-  
-  return NextResponse.json(session);
+  try {
+    const session = await ariaDiscovery.startSession(user.id);
+    return NextResponse.json(session);
+  } catch (err) {
+    console.error("discovery session start failed:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to start session" },
+      { status: 500 }
+    );
+  }
 }
