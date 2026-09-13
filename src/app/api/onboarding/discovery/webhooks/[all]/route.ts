@@ -10,7 +10,7 @@ export const POST = async (
 ) => {
   const { all } = await ctx.params;
   const slug = all.split("/").pop();
-  
+
   switch (slug) {
     case "postCall":
       return routes.postCall(req);

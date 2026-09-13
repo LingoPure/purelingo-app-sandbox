@@ -140,6 +140,7 @@ export async function parseStructuredFull<Z extends ZodType>(
     try {
       const response = await client.messages.parse({
         ...baseParams,
+        stream: false,
         output_config: { format: zodOutputFormat(schema) },
       });
       if (response.parsed_output) {
@@ -151,9 +152,10 @@ export async function parseStructuredFull<Z extends ZodType>(
     }
   }
 
-  const response = await client.messages.create(
-    stripCacheControls(injectSchema(baseParams, schema))
-  );
+  const response = await client.messages.create({
+    ...stripCacheControls(injectSchema(baseParams, schema)),
+    stream: false,
+  });
   const text = extractJsonText(textOf(response));
   try {
     return {
