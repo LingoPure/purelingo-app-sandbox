@@ -1,6 +1,6 @@
-# Service package & pricing — questions for Adam
+# Service package & pricing — questions for Dan
 
-Adam — before we wire pricing into the corporate flow, we need the commercial
+Dan — before we wire pricing into the corporate flow, we need the commercial
 model settled. The production LingoPure site prices *per class hour* (1:1 /
 group tables), but the Sandbox offering is structured around three **service
 packages** instead, so prod pricing doesn't map cleanly. These questions define
@@ -99,5 +99,5 @@ it to the proposal as evidence.
 ---
 
 **Echo to Dennis:** prod's pricing page stays as-is for now; nothing is built
-against it. Once Adam answers A–D, we wire the agreed model into the packages,
+against it. Once Dan answers A–D, we wire the agreed model into the packages,
 the demo booking, and the proposal template in one pass.
