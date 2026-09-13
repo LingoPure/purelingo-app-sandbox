@@ -9,23 +9,24 @@
 .mkt {
   /* Semantic layer (landing directive — lingopure.com visual baseline).
      --lp-* maps onto the .mkt system so new pages can target either name. */
-  --lp-bg: #f7f7f4;              /* page background, warm off-white */
-  --lp-bg-soft: #f1f2ee;         /* alternating sections */
-  --lp-white: #ffffff;           /* cards / panels */
-  --lp-dark: #111111;            /* text + deliberate dark sections */
-  --lp-text: #111111;
-  --lp-text-muted: #666666;
-  --lp-border: #d9d9d4;
+  --lp-bg: #f8f5ec;              /* page background, warm cream */
+  --lp-bg-soft: #fffdf7;         /* cards / panels */
+  --lp-white: #ffffff;           /* alternative white surfaces */
+  --lp-dark: #151617;            /* text + deliberate dark sections */
+  --lp-text: #151617;
+  --lp-text-muted: #6e777d;
+  --lp-border: #d8d2c4;
+  --lp-accent: #fbae17;         /* amber accent */
   --lp-radius: 0px;
   --lp-section-padding: clamp(72px, 9vw, 140px);
   --lp-content-width: 1280px;
 
   /* .mkt aliases — remapped to the neutral register. */
   --ink: var(--lp-dark);
-  --teal: #12525f;               /* single controlled brand accent */
-  --teal-soft: #e7eff0;
-  --go: #0e7c66;                 /* CTA green (brand action colour) */
-  --go-dark: #0a5c4c;
+  --teal: var(--lp-accent);      /* remapped accent */
+  --teal-soft: #fdf5e0;          /* light amber tint */
+  --go: var(--lp-accent);        /* CTA amber */
+  --go-dark: #e09900;           /* darker amber */
   --paper: var(--lp-bg);
   --paper-soft: var(--lp-bg-soft);
   --line: var(--lp-border);
