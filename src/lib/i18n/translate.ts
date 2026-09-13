@@ -20,16 +20,17 @@
  * request lifetime so the same string isn't translated twice.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_FAST_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import { z } from "zod";
 import {
   DEFAULT_LANGUAGE,
   isLanguageCode,
   type LanguageCode,
 } from "./dictionary";
-
-const MODEL = "claude-haiku-4-5-20251001";
 
 export type Bilingual = {
   /** The student's native-language version (or the English original if
@@ -60,9 +61,7 @@ const TranslationsSchema = z.object({
 });
 
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 const SYSTEM_PROMPT = `You are LingoPure's translation engine. You translate
@@ -130,22 +129,20 @@ export async function translateBatch(
       ...unique.map((t, i) => `[${i}] ${t}`),
     ].join("\n");
 
-    const r = await anthropic.messages.parse({
-      model: MODEL,
-      max_tokens: 2000,
-      temperature: 0,
-      system: [
-        { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-      ],
-      messages: [{ role: "user", content: userMessage }],
-      output_config: { format: zodOutputFormat(TranslationsSchema) },
-    });
+    const parsed = await parseStructured(
+      anthropic,
+      {
+        model: ANTHROPIC_FAST_MODEL,
+        max_tokens: 2000,
+        temperature: 0,
+        system: [
+          { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+        ],
+        messages: [{ role: "user", content: userMessage }],
+      },
+      TranslationsSchema
+    );
 
-    const parsed = r.parsed_output;
-    if (!parsed) {
-      console.warn("[i18n] translateBatch: model returned no parsed output");
-      return [...texts];
-    }
     translatedUnique = unique.map((original, i) => {
       const match = parsed.translations.find((t) => t.index === i);
       return match?.translated ?? original;

@@ -22,7 +22,8 @@
  * override and the distillation.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
+import { anthropicClient } from "@/lib/llm/client";
 import type { createAdminClient } from "@/lib/supabase/admin";
 import type { MemoryExtractor, DistilledMemory } from "@caistech/elevenlabs-convai";
 import { MORGAN_SYSTEM_PROMPT } from "./morgan-prompt.mjs";
@@ -211,7 +212,7 @@ export function morganMemoryExtractor(): MemoryExtractor {
       .map((t) => `${t.role === "assistant" ? "Morgan" : "Investor"}: ${t.content}`)
       .join("\n");
 
-    const anthropic = new Anthropic({ apiKey });
+    const anthropic = anthropicClient();
     try {
       const completion = await anthropic.messages.create({
         model: DISTILL_MODEL,

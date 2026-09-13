@@ -128,7 +128,7 @@ export function ContentEditorClient({
                       value={cur.status}
                       disabled={!canEdit}
                       onChange={(e) => update(id, { status: e.target.value as Local["status"] })}
-                      className="rounded-md border border-cream px-2 py-1 font-mono text-[11px] uppercase tracking-widest text-navy disabled:opacity-60"
+                      className="rounded-md border border-cream px-2 py-1 font-mono text-[12px] uppercase tracking-widest text-navy disabled:opacity-60"
                     >
                       <option value="ready">ready</option>
                       <option value="confirm">confirm</option>
@@ -191,7 +191,7 @@ function Field({
 }) {
   return (
     <div>
-      <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-mute">
+      <span className="mb-1 block font-mono text-[12px] uppercase tracking-widest text-mute">
         {label}
       </span>
       {multiline ? (

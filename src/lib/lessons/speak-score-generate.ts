@@ -6,8 +6,11 @@
  * micro_lessons row with status='active'.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   SPEAK_SCORE_GENERATOR_PROMPT,
@@ -17,16 +20,12 @@ import {
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 import { loadStudentContext } from "./email-sprint-generate";
 
-const MODEL = "claude-sonnet-4-6";
-
 export type GenerateInput = {
   studentId: string;
 };
 
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 export async function generateSpeakScorePrompt(
@@ -67,23 +66,24 @@ export async function generateSpeakScorePrompt(
     .filter((line): line is string => line !== null)
     .join("\n");
 
-  const response = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 1200,
-    temperature: 0.7,
-    system: [
-      {
-        type: "text",
-        text: SPEAK_SCORE_GENERATOR_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userMessage }],
-    output_config: { format: zodOutputFormat(SpeakScorePromptSchema) },
-  });
+  const parsed = await parseStructured(
+    anthropic,
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1200,
+      temperature: 0.7,
+      system: [
+        {
+          type: "text",
+          text: SPEAK_SCORE_GENERATOR_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: userMessage }],
+    },
+    SpeakScorePromptSchema
+  );
 
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("Generator returned no parsed output");
   return parsed;
 }
 

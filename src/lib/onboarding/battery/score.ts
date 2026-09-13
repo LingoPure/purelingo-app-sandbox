@@ -17,8 +17,11 @@
  * is not bound by the request's body-streaming lifetime.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { CEFR_BANDS, type CefrBand } from "@/lib/scoring/rubric";
@@ -29,10 +32,7 @@ import {
   type TaskType,
 } from "./types";
 
-// claude-sonnet-4-6 mirrors src/lib/scoring/score-discovery.ts — same
-// cost/latency profile, same accuracy floor for prescriptive rubrics.
-const MODEL = "claude-sonnet-4-6";
-const SCORING_MODEL_TAG = `claude-sonnet-4-6:battery:v1`;
+const SCORING_MODEL_TAG = `${ANTHROPIC_MODEL}:battery:v1`;
 
 export type BatteryScoreOutput = {
   score: number;
@@ -48,9 +48,7 @@ const RubricOutputSchema = z.object({
 });
 
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 const SCALE_PROMPT = `LingoPure scale: 0-1000 mapped to CEFR.
@@ -108,16 +106,17 @@ it shifted the score."`;
     },
   });
 
-  const result = await client().messages.parse({
-    model: MODEL,
-    max_tokens: 600,
-    temperature: 0,
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(RubricOutputSchema) },
-  });
-  const parsed = result.parsed_output;
-  if (!parsed) throw new Error("Claude returned no parsed output");
+  const parsed = await parseStructured(
+    client(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 600,
+      temperature: 0,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    RubricOutputSchema
+  );
   return { ...parsed, scoring_model: SCORING_MODEL_TAG };
 }
 
@@ -164,16 +163,17 @@ missed/garbled. Format: "Got: <X>. Missed: <Y>."`;
     },
   });
 
-  const result = await client().messages.parse({
-    model: MODEL,
-    max_tokens: 600,
-    temperature: 0,
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(RubricOutputSchema) },
-  });
-  const parsed = result.parsed_output;
-  if (!parsed) throw new Error("Claude returned no parsed output");
+  const parsed = await parseStructured(
+    client(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 600,
+      temperature: 0,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    RubricOutputSchema
+  );
   return { ...parsed, scoring_model: SCORING_MODEL_TAG };
 }
 
@@ -218,16 +218,17 @@ revealed (or missed) the subtext.`;
     student_summary: response.data.summary,
   });
 
-  const result = await client().messages.parse({
-    model: MODEL,
-    max_tokens: 600,
-    temperature: 0,
-    system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(RubricOutputSchema) },
-  });
-  const parsed = result.parsed_output;
-  if (!parsed) throw new Error("Claude returned no parsed output");
+  const parsed = await parseStructured(
+    client(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 600,
+      temperature: 0,
+      system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    RubricOutputSchema
+  );
   return { ...parsed, scoring_model: SCORING_MODEL_TAG };
 }
 

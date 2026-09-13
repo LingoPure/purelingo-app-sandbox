@@ -26,12 +26,14 @@ import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local" });
 loadEnv();
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "../src/lib/llm/client";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-const MODEL = "claude-sonnet-4-6";
 type TaskType =
   | "email_writing"
   | "listen_paraphrase"
@@ -86,9 +88,7 @@ function adminSupabase() {
 }
 
 function anthropic() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 // ─── Role lookup ─────────────────────────────────────────────────────────────
@@ -275,16 +275,18 @@ async function generateEmailWritingPair(role: RoleRow, band: Band) {
     "The two scenarios must come from different angles of the role (e.g. one client-facing, one internal; one negotiation, one coordination).",
   ].join("\n");
 
-  const r = await anthropic().messages.parse({
-    model: MODEL,
-    max_tokens: 3500,
-    temperature: 0.6,
-    system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(EmailWritingPair) },
-  });
-  if (!r.parsed_output) throw new Error("email_writing: no parsed output");
-  return r.parsed_output.prompts;
+  const parsed = await parseStructured(
+    anthropic(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 3500,
+      temperature: 0.6,
+      system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    EmailWritingPair
+  );
+  return parsed.prompts;
 }
 
 async function generateListenParaphrasePair(role: RoleRow, band: Band) {
@@ -305,16 +307,18 @@ async function generateListenParaphrasePair(role: RoleRow, band: Band) {
     "The transcript MUST sound like real workplace speech — natural hesitation OK, but no filler-word overload. Use the role's industry vocabulary.",
   ].join("\n");
 
-  const r = await anthropic().messages.parse({
-    model: MODEL,
-    max_tokens: 3500,
-    temperature: 0.6,
-    system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(ListenParaphrasePair) },
-  });
-  if (!r.parsed_output) throw new Error("listen_paraphrase: no parsed output");
-  return r.parsed_output.prompts;
+  const parsed = await parseStructured(
+    anthropic(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 3500,
+      temperature: 0.6,
+      system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    ListenParaphrasePair
+  );
+  return parsed.prompts;
 }
 
 async function generateReadSummarisePair(role: RoleRow, band: Band) {
@@ -336,16 +340,18 @@ async function generateReadSummarisePair(role: RoleRow, band: Band) {
     "Pick scenarios drawn from this role's actual workflow.",
   ].join("\n");
 
-  const r = await anthropic().messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    temperature: 0.6,
-    system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(ReadSummarisePair) },
-  });
-  if (!r.parsed_output) throw new Error("read_summarise: no parsed output");
-  return r.parsed_output.prompts;
+  const parsed = await parseStructured(
+    anthropic(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 4000,
+      temperature: 0.6,
+      system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    ReadSummarisePair
+  );
+  return parsed.prompts;
 }
 
 async function generateVocabClozePair(role: RoleRow, band: Band) {
@@ -370,16 +376,18 @@ async function generateVocabClozePair(role: RoleRow, band: Band) {
     "Items should test register sensitivity, collocation, and idiomatic phrasing — not literal vocabulary recall.",
   ].join("\n");
 
-  const r = await anthropic().messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    temperature: 0.6,
-    system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: user }],
-    output_config: { format: zodOutputFormat(VocabClozePair) },
-  });
-  if (!r.parsed_output) throw new Error("vocab_cloze: no parsed output");
-  return r.parsed_output.prompts;
+  const parsed = await parseStructured(
+    anthropic(),
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 4000,
+      temperature: 0.6,
+      system: [{ type: "text", text: sys, cache_control: { type: "ephemeral" } }],
+      messages: [{ role: "user", content: user }],
+    },
+    VocabClozePair
+  );
+  return parsed.prompts;
 }
 
 // ─── DB write ────────────────────────────────────────────────────────────────

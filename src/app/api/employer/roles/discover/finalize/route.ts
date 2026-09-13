@@ -15,8 +15,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import { requireEmployerAdmin } from "@/lib/employer/auth";
 import {
   ChatTurnSchema,
@@ -27,8 +30,6 @@ import {
 const BodySchema = z.object({
   history: z.array(ChatTurnSchema).min(2).max(40),
 });
-
-const MODEL = "claude-sonnet-4-6";
 
 export async function POST(request: NextRequest) {
   const auth = await requireEmployerAdmin();
@@ -42,14 +43,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },
       { status: 500 }
     );
   }
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = anthropicClient();
 
   // Render the transcript as a single user message so the finalizer
   // sees it as input data, not as part of an ongoing conversation.
@@ -58,33 +58,28 @@ export async function POST(request: NextRequest) {
     .join("\n\n");
 
   try {
-    const response = await anthropic.messages.parse({
-      model: MODEL,
-      max_tokens: 4000,
-      temperature: 0.2,
-      system: [
-        {
-          type: "text",
-          text: ROLE_DISCOVERY_FINALIZER_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages: [
-        {
-          role: "user",
-          content: `Here is the role-architecture interview transcript. Build the structured RoleDiscoveryProfile.\n\n${transcriptText}`,
-        },
-      ],
-      output_config: { format: zodOutputFormat(RoleDiscoveryProfileSchema) },
-    });
-
-    const profile = response.parsed_output;
-    if (!profile) {
-      return NextResponse.json(
-        { error: "Finalizer returned no parsed output" },
-        { status: 502 }
-      );
-    }
+    const profile = await parseStructured(
+      anthropic,
+      {
+        model: ANTHROPIC_MODEL,
+        max_tokens: 4000,
+        temperature: 0.2,
+        system: [
+          {
+            type: "text",
+            text: ROLE_DISCOVERY_FINALIZER_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: [
+          {
+            role: "user",
+            content: `Here is the role-architecture interview transcript. Build the structured RoleDiscoveryProfile.\n\n${transcriptText}`,
+          },
+        ],
+      },
+      RoleDiscoveryProfileSchema
+    );
 
     return NextResponse.json({ profile });
   } catch (err) {

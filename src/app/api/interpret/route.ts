@@ -26,7 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
+import { ANTHROPIC_FAST_MODEL, anthropicClient } from "@/lib/llm/client";
 import { transcribeAudio } from "@/lib/transcription/whisper";
 
 export const runtime = "nodejs";
@@ -74,7 +74,7 @@ async function translateTurn(
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = anthropicClient();
 
   const system = `You are a live business interpreter rendering one spoken turn
 from ${languageName(sourceLang)} into ${languageName(targetLang)}.
@@ -90,7 +90,7 @@ Rules:
   unchanged.`;
 
   const r = await anthropic.messages.create({
-    model: TRANSLATE_MODEL,
+    model: ANTHROPIC_FAST_MODEL,
     max_tokens: 1000,
     temperature: 0,
     system,

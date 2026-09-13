@@ -15,13 +15,14 @@
  * the buyer see authentic-looking dashboard radars across the cohort.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import type { TranscriptTurn } from "@/lib/scoring/score-discovery";
 import type { AbcPersona, AbcRole } from "./abc-personas";
-
-const MODEL = "claude-sonnet-4-6";
 
 const TranscriptSchema = z.object({
   turns: z
@@ -98,9 +99,7 @@ export async function generatePersonaTranscript(
   persona: AbcPersona,
   role: AbcRole
 ): Promise<TranscriptTurn[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = anthropicClient();
 
   const userMessage = [
     "Generate a discovery-session transcript for this persona.",
@@ -120,22 +119,23 @@ export async function generatePersonaTranscript(
     "Produce a realistic 10–14 turn discovery transcript between Aria and this person, in their actual current voice. They will be SCORED on this transcript by a separate model — be honest to the proficiency band.",
   ].join("\n");
 
-  const response = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 4000,
-    temperature: 0.6,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userMessage }],
-    output_config: { format: zodOutputFormat(TranscriptSchema) },
-  });
+  const parsed = await parseStructured(
+    anthropic,
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 4000,
+      temperature: 0.6,
+      system: [
+        {
+          type: "text",
+          text: SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: userMessage }],
+    },
+    TranscriptSchema
+  );
 
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("Transcript generator returned no parsed output");
   return parsed.turns.map((t) => ({ role: t.role, message: t.message }));
 }

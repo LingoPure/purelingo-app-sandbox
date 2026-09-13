@@ -8,6 +8,10 @@
 
 import { z } from "zod";
 import { defineDiscovery } from "@caistech/discovery-agent";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+} from "@/lib/llm/client";
 
 // ─── Extraction schema ────────────────────────────────────────────────────────
 // Aria's post-call webhook extracts these facts; the battery + session page
@@ -115,10 +119,9 @@ export const ariaDiscovery = defineDiscovery<AriaExtraction>(
        * the installed @anthropic-ai/sdk (README §Injecting the runner).
        */
       async run({ model, system, input }) {
-        const Anthropic = (await import("@anthropic-ai/sdk")).default;
-        const client = new Anthropic();
+        const client = anthropicClient();
         const res = await client.messages.create({
-          model: model.model ?? "claude-sonnet-4-20250514",
+          model: model.model ?? ANTHROPIC_MODEL,
           max_tokens: 2048,
           system,
           messages: [{ role: "user", content: JSON.stringify(input) }],

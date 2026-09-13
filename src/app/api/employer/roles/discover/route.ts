@@ -17,8 +17,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import { requireEmployerAdmin } from "@/lib/employer/auth";
 import {
   ChatTurnSchema,
@@ -30,8 +33,6 @@ import {
 const BodySchema = z.object({
   history: z.array(ChatTurnSchema).max(40),
 });
-
-const MODEL = "claude-sonnet-4-6";
 
 export async function POST(request: NextRequest) {
   const auth = await requireEmployerAdmin();
@@ -64,14 +65,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY not configured" },
       { status: 500 }
     );
   }
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = anthropicClient();
 
   const messages = body.history.map((t) => ({
     role: t.role === "assistant" ? ("assistant" as const) : ("user" as const),
@@ -79,28 +79,23 @@ export async function POST(request: NextRequest) {
   }));
 
   try {
-    const response = await anthropic.messages.parse({
-      model: MODEL,
-      max_tokens: 1500,
-      temperature: 0.6,
-      system: [
-        {
-          type: "text",
-          text: ROLE_DISCOVERY_AGENT_PROMPT,
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages,
-      output_config: { format: zodOutputFormat(ChatStepSchema) },
-    });
-
-    const step = response.parsed_output;
-    if (!step) {
-      return NextResponse.json(
-        { error: "Agent returned no parsed output" },
-        { status: 502 }
-      );
-    }
+    const step = await parseStructured(
+      anthropic,
+      {
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1500,
+        temperature: 0.6,
+        system: [
+          {
+            type: "text",
+            text: ROLE_DISCOVERY_AGENT_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages,
+      },
+      ChatStepSchema
+    );
 
     return NextResponse.json({ step });
   } catch (err) {

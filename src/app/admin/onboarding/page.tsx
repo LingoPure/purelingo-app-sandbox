@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadOnboardingDirectory } from "@/lib/platform/directory";
 import { PageHeading } from "../page-heading";
 import { ONBOARDING_STEPS } from "@/lib/org/onboarding";
+import { AddClientOrg } from "./add-client-org";
 
 export default async function AdminOnboardingPage() {
   const supabase = await createClient();
@@ -12,8 +13,10 @@ export default async function AdminOnboardingPage() {
     <div>
       <PageHeading
         title="Onboarding"
-        lead="Where every organisation sits in the wizard: package → departments → staff → teachers → baseline → curriculum → done. Baseline and curriculum steps run automatically once the manual steps complete."
+        lead="Where every organisation sits in the wizard: package  departments  staff  teachers  baseline  curriculum  done. Baseline and curriculum steps run automatically once the manual steps complete."
       />
+
+      <AddClientOrg />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
         {ONBOARDING_STEPS.map((step) => {

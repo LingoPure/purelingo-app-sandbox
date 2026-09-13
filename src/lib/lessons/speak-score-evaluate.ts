@@ -9,8 +9,11 @@
  *      evaluation in content_json
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   SPEAK_SCORE_EVALUATOR_PROMPT,
@@ -26,8 +29,6 @@ import {
 import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
 import type { SkillKey } from "@/lib/scoring/rubric";
 
-const MODEL = "claude-sonnet-4-6";
-
 export type SubmitInput = {
   lessonId: string;
   studentId: string;
@@ -42,9 +43,7 @@ export type SubmitResult = {
 };
 
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 export async function submitSpeakScore(
@@ -167,22 +166,23 @@ async function evaluateTranscript(
     transcript,
   ].join("\n");
 
-  const response = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 2000,
-    temperature: 0,
-    system: [
-      {
-        type: "text",
-        text: SPEAK_SCORE_EVALUATOR_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userMessage }],
-    output_config: { format: zodOutputFormat(SpeakScoreEvaluationSchema) },
-  });
+  const parsed = await parseStructured(
+    anthropic,
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2000,
+      temperature: 0,
+      system: [
+        {
+          type: "text",
+          text: SPEAK_SCORE_EVALUATOR_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: userMessage }],
+    },
+    SpeakScoreEvaluationSchema
+  );
 
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("Evaluator returned no parsed output");
   return parsed;
 }

@@ -5,8 +5,11 @@
  * role context, then asks Claude to generate a calibrated scenario.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructured,
+} from "@/lib/llm/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   EmailSprintPromptSchema,
@@ -19,8 +22,6 @@ import {
   FLAT_FALLBACK_TARGET,
   type Baselines,
 } from "@/lib/scoring/baselines";
-
-const MODEL = "claude-sonnet-4-6";
 
 export type GenerateInput = {
   studentId: string;
@@ -129,9 +130,7 @@ export async function loadStudentContext(
 }
 
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 export async function generateEmailSprintPrompt(
@@ -172,23 +171,24 @@ export async function generateEmailSprintPrompt(
     .filter((line): line is string => line !== null)
     .join("\n");
 
-  const response = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 1500,
-    temperature: 0.7,
-    system: [
-      {
-        type: "text",
-        text: GENERATOR_SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [{ role: "user", content: userMessage }],
-    output_config: { format: zodOutputFormat(EmailSprintPromptSchema) },
-  });
+  const parsed = await parseStructured(
+    anthropic,
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 1500,
+      temperature: 0.7,
+      system: [
+        {
+          type: "text",
+          text: GENERATOR_SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [{ role: "user", content: userMessage }],
+    },
+    EmailSprintPromptSchema
+  );
 
-  const parsed = response.parsed_output;
-  if (!parsed) throw new Error("Generator returned no parsed output");
   return parsed;
 }
 

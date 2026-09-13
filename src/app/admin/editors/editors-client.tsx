@@ -127,10 +127,10 @@ export function EditorsClient({ initialEditors }: { initialEditors: EditorRow[] 
               >
                 <span className="text-sm text-navy">{ed.email}</span>
                 <span className="flex items-center gap-3">
-                  <span className="rounded-full bg-mist px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-navy">
+                  <span className="rounded-full bg-mist px-2.5 py-0.5 font-mono text-[12px] uppercase tracking-widest text-navy">
                     {ed.role}
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-mute">
+                  <span className="font-mono text-[12px] uppercase tracking-widest text-mute">
                     {ed.accepted_at ? "active" : "invited"}
                   </span>
                 </span>

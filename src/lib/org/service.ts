@@ -18,6 +18,7 @@ import {
   PACKAGE_DEPARTMENTS,
   type ServicePackage,
 } from "@/lib/org/onboarding";
+import { sendInviteEmail } from "@/lib/email/invite";
 
 export type CreateOrgInput = {
   name: string;
@@ -107,7 +108,7 @@ export async function createOrganisation(
   return { organisation_id: orgId, slug };
 }
 
-type ServiceClient = SupabaseClient;
+export type ServiceClient = SupabaseClient;
 type ServiceStep = "departments" | "staff" | "teachers" | "baseline";
 
 /** Select the service package → seeds the department set + updates the subscription. */
@@ -182,7 +183,7 @@ export async function setDepartments(
 }
 
 /** Resolve an auth user id by email with paginated lookup (HR pattern). */
-async function findAuthUserByEmail(
+export async function findAuthUserByEmail(
   admin: SupabaseClient,
   email: string
 ): Promise<string | null> {
@@ -425,4 +426,118 @@ export async function loadOnboarding(
       ended_at: a.ended_at,
     })),
   };
+}
+
+export type CreateClientOrgInput = {
+  name: string;
+  slug?: string;
+  package?: ServicePackage;
+  ownerEmail?: string;
+  ownerName?: string;
+};
+
+export type ClientOrgInvite = {
+  kind: "magiclink" | "invite";
+  email: string;
+  actionLink: string;
+  mailOk: boolean;
+  mailWarning?: string;
+};
+
+/**
+ * Platform-admin "Add client org" — the operator path into the same
+ * org_onboarding pipeline the self-serve wizard uses.
+ *
+ * Creates the org owned by the client contact: resolves an existing auth
+ * user, or provisions their account (invite) when it doesn't exist yet.
+ * Advances the package step when a package is chosen, then returns a
+ * copy-pasteable invite link that lands the owner directly inside the
+ * wizard at the right step.
+ */
+export async function createClientOrganisation(
+  admin: ServiceClient,
+  actorUserId: string,
+  input: CreateClientOrgInput,
+  opts: { origin: string }
+): Promise<{
+  organisation_id: string;
+  slug: string;
+  owner: "linked" | "invited" | "actor";
+  invite?: ClientOrgInvite;
+}> {
+  const email = input.ownerEmail?.trim().toLowerCase();
+  let ownerUserId = actorUserId;
+  let owner: "linked" | "invited" | "actor" = "actor";
+  let inviteKind: "magiclink" | "invite" | null = null;
+  const inviteeName = input.ownerName?.trim() || input.name.trim();
+
+  if (email) {
+    const existing = await findAuthUserByEmail(admin, email);
+    if (existing) {
+      ownerUserId = existing;
+      owner = "linked";
+      inviteKind = "magiclink";
+    } else {
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${opts.origin}/org`,
+        data: { full_name: inviteeName },
+      });
+      if (error || !data.user) {
+        throw new Error(
+          `Could not provision owner account: ${error?.message ?? "unknown"}`
+        );
+      }
+      ownerUserId = data.user.id;
+      owner = "invited";
+      inviteKind = "invite";
+    }
+  }
+
+  const { organisation_id, slug } = await createOrganisation(admin, ownerUserId, {
+    name: input.name,
+    slug: input.slug,
+  });
+
+  if (input.package) {
+    await selectPackage(admin, organisation_id, input.package);
+  }
+
+  let invite: ClientOrgInvite | undefined;
+  if (email && inviteKind) {
+    const redirectTo = `${opts.origin}/org/${slug}`;
+    const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
+      type: inviteKind,
+      email,
+      options: { redirectTo, data: { full_name: inviteeName } },
+    });
+    const hashedToken = linkErr ? null : link.properties?.hashed_token;
+    const actionLink = hashedToken
+      ? `${opts.origin}/auth/callback?token_hash=${encodeURIComponent(
+          hashedToken
+        )}&type=${inviteKind}&next=${encodeURIComponent(redirectTo)}`
+      : null;
+
+    const mail = actionLink
+      ? await sendInviteEmail({
+          to: email,
+          inviteeName,
+          employerName: input.name,
+          actionLink,
+          kind: inviteKind,
+        })
+      : {
+          ok: false as const,
+          error: linkErr?.message ?? "could not generate link",
+        };
+
+    invite = {
+      kind: inviteKind,
+      email,
+      actionLink: actionLink ?? "",
+      mailOk: mail.ok,
+      mailWarning: mail.error,
+    };
+  }
+
+  return { organisation_id, slug, owner, invite };
 }

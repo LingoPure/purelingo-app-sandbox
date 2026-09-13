@@ -7,7 +7,7 @@
  * `dataroom` instance exported here.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import { anthropicClient } from "@/lib/llm/client";
 import { createDataroom, type ChatFn } from "@caistech/dataroom-core";
 import { retrieve } from "@/lib/investor/retrieval";
 import {
@@ -22,9 +22,7 @@ const ANSWER_MODEL = process.env.INVESTOR_ANSWER_MODEL ?? "claude-sonnet-4-6";
 
 /** Inject Anthropic as the engine's ChatFn (returns the assistant text, or ""). */
 const chat: ChatFn = async ({ system, user, model, maxTokens }) => {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = anthropicClient();
   const r = await anthropic.messages.create({
     model: model ?? ANSWER_MODEL,
     max_tokens: maxTokens ?? 1500,

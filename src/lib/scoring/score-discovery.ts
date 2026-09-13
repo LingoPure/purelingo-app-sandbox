@@ -10,8 +10,11 @@
  *          + profile_json on the matching public.discovery_sessions row.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import {
+  ANTHROPIC_MODEL,
+  anthropicClient,
+  parseStructuredFull,
+} from "@/lib/llm/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   GapScoresSchema,
@@ -42,14 +45,8 @@ export type ScoreDiscoveryResult = {
   cacheWriteTokens: number;
 };
 
-// Briefing §06 picked claude-sonnet-4-6 for cost/latency on per-call scoring.
-// Opus is overkill here — the rubric is prescriptive and the schema is strict.
-const MODEL = "claude-sonnet-4-6";
-
 function client() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-  return new Anthropic({ apiKey });
+  return anthropicClient();
 }
 
 export async function scoreDiscoverySession(
@@ -66,32 +63,29 @@ export async function scoreDiscoverySession(
     input.transcript.map((t) => ({ role: t.role, message: t.message }))
   );
 
-  const response = await anthropic.messages.parse({
-    model: MODEL,
-    max_tokens: 2048,
-    temperature: 0,
-    system: [
-      {
-        type: "text",
-        text: SYSTEM_PROMPT,
-        cache_control: { type: "ephemeral" },
-      },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: `Here is the discovery-session transcript. Score the student now.\n\n${userMessage}`,
-      },
-    ],
-    output_config: { format: zodOutputFormat(GapScoresSchema) },
-  });
+  const { output: parsed, usage } = await parseStructuredFull(
+    anthropic,
+    {
+      model: ANTHROPIC_MODEL,
+      max_tokens: 2048,
+      temperature: 0,
+      system: [
+        {
+          type: "text",
+          text: SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [
+        {
+          role: "user",
+          content: `Here is the discovery-session transcript. Score the student now.\n\n${userMessage}`,
+        },
+      ],
+    },
+    GapScoresSchema
+  );
 
-  const parsed = response.parsed_output;
-  if (!parsed) {
-    throw new Error("Claude returned no parsed output");
-  }
-
-  const usage = response.usage;
   const inputTokens = usage?.input_tokens ?? 0;
   const outputTokens = usage?.output_tokens ?? 0;
   const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
