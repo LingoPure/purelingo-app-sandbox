@@ -25,6 +25,24 @@ export type SkillKey = (typeof SKILL_KEYS)[number];
 export const CEFR_BANDS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 export type CefrBand = (typeof CEFR_BANDS)[number];
 
+export const LP18_BANDS = [
+  "A1.1", "A1.2", "A1.3",
+  "A2.1", "A2.2", "A2.3",
+  "B1.1", "B1.2", "B1.3",
+  "B2.1", "B2.2", "B2.3",
+  "C1.1", "C1.2", "C1.3",
+  "C2.1", "C2.2", "C2.3"
+] as const;
+
+export type Lp18Band = (typeof LP18_BANDS)[number];
+
+export function scoreToLp18(score: number): Lp18Band {
+  // 18 levels across 1000 points: each level is ~55.5 points wide.
+  // C2.3 is capped at 1000.
+  const idx = Math.min(17, Math.max(0, Math.floor(score / 1000 * 18)));
+  return LP18_BANDS[idx];
+}
+
 export const SubScore = z.object({
   score: z
     .number()

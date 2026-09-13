@@ -12,7 +12,7 @@ import { RecommendedPlan } from "@/components/dashboard/recommended-plan";
 import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
-import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import { SKILL_KEYS, scoreToLp18 } from "@/lib/scoring/rubric";
 import { readClassinCredentials } from "@/lib/classin/token";
 import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
@@ -33,6 +33,15 @@ type SkillKey = (typeof SKILLS)[number]["key"];
 type ScoreRow = { skill: string; score: number; target: number | null };
 
 type CefrBand = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+
+const TARGET_SCORE: Record<CefrBand, number> = {
+  A1: 250,
+  A2: 400,
+  B1: 550,
+  B2: 700,
+  C1: 850,
+  C2: 950,
+};
 
 type SubScoreEvidence = {
   score: number;
@@ -145,6 +154,9 @@ export default async function DashboardPage() {
   const student = studentResult.data;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
+  const profileScores = profile
+    ? SKILL_KEYS.map((k) => profile[k]?.score ?? 0)
+    : [];
   const nextClass = nextClassResult.data as NextClass | null;
   const recentClasses = (recentClassesResult.data ?? []) as RecentClass[];
   const lessons = (lessonsResult.data ?? []) as { xp_awarded: number | null; status: string | null }[];
@@ -318,8 +330,24 @@ export default async function DashboardPage() {
       {profile && (
         <section className="rounded-lg border border-cream bg-paper p-6">
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <CefrBadge label="Now" band={profile.overall_cefr} tone="current" />
-            <CefrBadge label="Target" band={profile.target_level} tone="target" />
+            <CefrBadge
+              label="Now"
+              band={profile.overall_cefr}
+              lp18={scoreToLp18(
+                profileScores.length > 0
+                  ? profileScores.reduce((a, b) => a + b, 0) / profileScores.length
+                  : 800
+              )}
+              tone="current"
+            />
+            <CefrBadge
+              label="Target"
+              band={profile.target_level}
+              lp18={scoreToLp18(
+                TARGET_SCORE[profile.target_level]
+              )}
+              tone="target"
+            />
           </div>
           <BilingualText
             text={summaryBilingual}
@@ -547,8 +575,10 @@ function ScoreBar({
             />
           )}
         </div>
-        <span className="w-16 text-right font-mono text-xs text-mute">
-          {score == null ? "—" : `${score} · ${band ?? ""}`}
+        <span className="w-24 text-right font-mono text-xs text-mute">
+          {score == null
+            ? "—"
+            : `${score} · ${scoreToLp18(score)} · ${band ?? ""}`}
         </span>
       </div>
       {evidence && (
@@ -572,10 +602,12 @@ function ScoreBar({
 function CefrBadge({
   label,
   band,
+  lp18,
   tone,
 }: {
   label: string;
   band: CefrBand;
+  lp18: string;
   tone: "current" | "target";
 }) {
   const styles =
@@ -589,7 +621,10 @@ function CefrBadge({
       <span className="font-mono text-[10px] uppercase tracking-[0.22em]">
         {label}
       </span>
-      <span className="font-serif text-base">{band}</span>
+      <span className="font-serif text-base">{lp18}</span>
+      <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-mute sm:inline">
+        {band}
+      </span>
     </span>
   );
 }
