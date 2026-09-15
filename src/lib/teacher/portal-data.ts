@@ -141,6 +141,84 @@ export async function loadStudentDetail(
   };
 }
 
+export type ClassSession = {
+  scheduleId: string;
+  studentId: string;
+  studentName: string | null;
+  scheduledAt: string | null;
+  status: string | null;
+  durationMins: number | null;
+  teacherName: string | null;
+  recordingUrl: string | null;
+};
+
+/** A student's ClassIn sessions (org/teacher read via 0049 RLS). */
+export async function loadStudentClasses(
+  supabase: SupabaseClient,
+  studentId: string
+): Promise<ClassSession[]> {
+  const { data, error } = await supabase
+    .from("classin_sessions")
+    .select(
+      `id, scheduled_at, status, duration_mins, teacher_name, recording_url,
+       students(name)`
+    )
+    .eq("student_id", studentId)
+    .order("scheduled_at", { ascending: false });
+
+  if (error) return [];
+  if (!data) return [];
+
+  return data.map((row) => ({
+    scheduleId: row.id,
+    studentId,
+    studentName: (row.students as unknown as { name: string } | null)?.name ?? null,
+    scheduledAt: row.scheduled_at as string | null,
+    status: row.status as string | null,
+    durationMins: row.duration_mins as number | null,
+    teacherName: row.teacher_name as string | null,
+    recordingUrl: row.recording_url as string | null,
+  }));
+}
+
+/** Upcoming (and recent) classes across the teacher's assigned students. */
+export async function loadTeacherClasses(
+  supabase: SupabaseClient,
+  teacherId: string
+): Promise<ClassSession[]> {
+  const { data: assignments } = await supabase
+    .from("student_teacher_assignments")
+    .select("student_id")
+    .eq("teacher_id", teacherId)
+    .is("ended_at", null);
+
+  const studentIds = (assignments ?? []).map((a) => a.student_id);
+  if (studentIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("classin_sessions")
+    .select(
+      `id, student_id, scheduled_at, status, duration_mins, teacher_name, recording_url,
+       students(name)`
+    )
+    .in("student_id", studentIds)
+    .order("scheduled_at", { ascending: false });
+
+  if (error) return [];
+  if (!data) return [];
+
+  return data.map((row) => ({
+    scheduleId: row.id,
+    studentId: row.student_id,
+    studentName: (row.students as unknown as { name: string } | null)?.name ?? null,
+    scheduledAt: row.scheduled_at as string | null,
+    status: row.status as string | null,
+    durationMins: row.duration_mins as number | null,
+    teacherName: row.teacher_name as string | null,
+    recordingUrl: row.recording_url as string | null,
+  }));
+}
+
 export { listCompletedAssessments };
 
 export type { AssessmentSummary } from "@/lib/2k/journey-data";

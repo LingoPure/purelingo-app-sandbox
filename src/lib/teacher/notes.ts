@@ -20,13 +20,17 @@ export type TeacherNote = {
 /** Notes visible to the caller (own/org via RLS), newest first. */
 export async function loadTeacherNotes(
   supabase: SupabaseClient,
-  limit = 100
+  limit = 100,
+  studentId?: string
 ): Promise<TeacherNote[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from("teacher_notes")
     .select("id, teacher_id, student_id, body, created_at, students(name)")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (studentId) query.eq("student_id", studentId);
+
+  const { data, error } = await query;
 
   if (error) throw new Error(`teacher_notes read failed: ${error.message}`);
   if (!data) return [];
