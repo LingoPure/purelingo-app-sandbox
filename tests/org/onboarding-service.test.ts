@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // ── Onboarding service step-advancement logic ─────────────────────────────────
 //
@@ -7,47 +8,21 @@ import assert from "node:assert/strict";
 // These are unit tests for the write path — they verify the right columns
 // are set on `org_onboarding` for each wizard step, not the full DB round-trip.
 
-type UpdateRecord = { step?: string; [key: string]: unknown };
+type UpdateRecord = { table: string; update: Record<string, unknown> };
 
-function mockAdmin(updates: UpdateRecord[] = []) {
-  const calls: { table: string; update: Record<string, unknown>; eq: [string, string] }[] = [];
-  let updateIdx = 0;
+type AdminLike = (typeof window) extends never ? never : never;
 
+function makeAdmin(calls: UpdateRecord[]): AdminLike {
   return {
-    calls,
-    client: {
-      from(table: string) {
-        return {
-          select() { return this; },
-          eq() { return this; },
-          update(data: Record<string, unknown>) {
-            calls.push({ table, update: data, eq: ["organisation_id", "org-1"] });
-            return {
-              eq(_col: string, _val: string) {
-                updateIdx++;
-                return { error: null };
-              },
-            };
-          },
-        };
-      },
-    } as never,
-  };
-}
-
-// ── assignTeachers step persistence ────────────────────────────────────────────
-
-test("assignTeachers persists step=baseline + teachers_assigned_at", async () => {
-  // Import after all the existing imports
-  const { assignTeachers } = await import("@/lib/org/service");
-
-  const calls: { table: string; update: Record<string, unknown> }[] = [];
-  const admin = {
     from(table: string) {
       return {
-        select() { return this; },
-        eq() { return this; },
+        select(this: unknown) { return this; },
+        eq(this: unknown) { return this; },
         maybeSingle() { return { data: null, error: null }; },
+        single() { return { data: null, error: null }; },
+        order(this: unknown) { return this; },
+        in(this: unknown) { return this; },
+        limit(this: unknown) { return this; },
         upsert() { return { error: null }; },
         update(data: Record<string, unknown>) {
           calls.push({ table, update: data });
@@ -55,9 +30,16 @@ test("assignTeachers persists step=baseline + teachers_assigned_at", async () =>
         },
       };
     },
-  } as never;
+  } as AdminLike;
+}
 
-  await assignTeachers(admin, "org-1", [
+// ── assignTeachers step persistence ────────────────────────────────────────────
+
+test("assignTeachers persists step=baseline + teachers_assigned_at", async () => {
+  const { assignTeachers } = await import("@/lib/org/service");
+
+  const calls: UpdateRecord[] = [];
+  await assignTeachers(makeAdmin(calls) as unknown as SupabaseClient, "org-1", [
     { teacherUserId: "t-1", studentUserId: "s-1", assignmentRole: "primary" },
   ]);
 
@@ -75,19 +57,11 @@ test("assignTeachers persists step=baseline + teachers_assigned_at", async () =>
 test("advanceBaseline persists step=curriculum + baseline_at", async () => {
   const { advanceBaseline } = await import("@/lib/org/service");
 
-  const calls: { table: string; update: Record<string, unknown> }[] = [];
-  const admin = {
-    from(table: string) {
-      return {
-        update(data: Record<string, unknown>) {
-          calls.push({ table, update: data });
-          return { eq() { return { error: null }; } };
-        },
-      };
-    },
-  } as never;
-
-  const result = await advanceBaseline(admin, "org-1");
+  const calls: UpdateRecord[] = [];
+  const result = await advanceBaseline(
+    makeAdmin(calls) as unknown as SupabaseClient,
+    "org-1"
+  );
   assert.equal(result, "curriculum");
 
   const onbUpdate = calls.find((c) => c.table === "org_onboarding");
@@ -101,41 +75,13 @@ test("advanceBaseline persists step=curriculum + baseline_at", async () => {
 test("advanceCurriculumAndComplete persists step=done + curriculum_at + completed_at", async () => {
   const { advanceCurriculumAndComplete } = await import("@/lib/org/service");
 
-  const calls: { table: string; update: Record<string, unknown> }[] = [];
-  const admin = {
-    from(table: string) {
-      return {
-        update(data: Record<string, unknown>) {
-          calls.push({ table, update: data });
-          return { eq() { return { error: null }; } };
-        },
-      };
-    },
-  } as never;
-
-  // advanceCurriculumAndComplete also calls generateCurriculumForOrgStudents
-  // which queries employers/students — return empty results so it no-ops.
-  const origAdmin = admin as Record<string, unknown>;
-  const origFrom = admin.from;
-  origAdmin.from = (table: string) => {
-    const chain = {
-      select() { return chain; },
-      eq(_col: string, _val: string) { return chain; },
-      order() { return chain; },
-      in() { return chain; },
-      limit() { return chain; },
-      maybeSingle() { return { data: null, error: null }; },
-      single() { return { data: null, error: null }; },
-      update(data: Record<string, unknown>) {
-        calls.push({ table, update: data });
-        return { eq() { return { error: null }; } };
-      },
-    };
-    // Return empty rows for curriculum generation queries
-    return { ...chain, then: undefined };
-  };
-
-  await advanceCurriculumAndComplete(admin, "org-1");
+  const calls: UpdateRecord[] = [];
+  // advanceCurriculumAndComplete also calls generateCurriculumForOrgStudents,
+  // which queries employers/students — the chain above returns empty rows so it no-ops.
+  await advanceCurriculumAndComplete(
+    makeAdmin(calls) as unknown as SupabaseClient,
+    "org-1"
+  );
 
   const onbUpdate = calls.find((c) => c.table === "org_onboarding");
   assert.ok(onbUpdate, "should update org_onboarding");

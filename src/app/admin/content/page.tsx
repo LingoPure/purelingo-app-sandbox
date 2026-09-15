@@ -1,12 +1,21 @@
 // @explanatory-header-exempt — portal surface; the page heading is the explanatory header
 import { createClient } from "@/lib/supabase/server";
 import { loadContentDirectory } from "@/lib/platform/directory";
+import { loadEditorBlocks } from "@/content/resolve";
+import { getContentEditor, canEdit } from "@/lib/content/auth";
 import { PageHeading } from "../page-heading";
 import { SERVICE_PACKAGES, PACKAGE_DEPARTMENTS } from "@/lib/org/onboarding";
+import { ContentEditorClient } from "./content-editor-client";
 
 export default async function AdminContentPage() {
   const supabase = await createClient();
-  const banks = await loadContentDirectory(supabase);
+  const [banks, blocks, editor] = await Promise.all([
+    loadContentDirectory(supabase),
+    loadEditorBlocks(),
+    getContentEditor(),
+  ]);
+
+  const editable = editor ? canEdit(editor.role) : false;
 
   return (
     <div>
@@ -15,7 +24,10 @@ export default async function AdminContentPage() {
         lead="The assessment content in play and the service packages every organisation can subscribe to. Question bank versions are read live from assessment sessions."
       />
 
-      <h2 className="mb-3 font-serif text-xl text-navy">Question banks in use</h2>
+      <h2 className="mb-3 font-serif text-2xl text-navy">Marketing copy</h2>
+      <ContentEditorClient blocks={blocks} canEdit={editable} />
+
+      <h2 className="mb-3 mt-10 font-serif text-xl text-navy">Question banks in use</h2>
       <div className="overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>

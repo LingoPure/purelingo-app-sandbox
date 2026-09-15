@@ -59,7 +59,7 @@
 | **C1. platform_admins bootstrap** | DONE | `src/lib/platform-admin.ts` canonical gate (ADMIN_EMAILS first-time sync, table owns after) · `scripts/seed-platform-admins.ts` idempotent bootstrap (`npm run admin:seed-platform`) |
 | **C2. Dan dashboards → React** | DONE | `e068562` — telemetry kit + A1/A2/A3 (see below) |
 | **C3. Org onboarding wizard** | DONE | `src/lib/org/service.ts` (createOrganisation, selectPackage, setDepartments, allocateStaff, assignTeachers, advanceBaseline, advanceCurriculumAndComplete) · `src/components/org/onboarding/wizard.tsx` (7-step wizard: Package → Departments → Staff → Teachers → Baseline → Curriculum → Done) · `src/app/api/org/[orgId]/onboarding/route.ts` (GET bundle + POST 6 actions) · `src/lib/org/onboarding.ts` (state machine + SERVICE_PACKAGES + PACKAGE_DEPARTMENTS) · tests/org/onboarding-service.test.ts (3/3 pass) |
-| C4–C7 | PENDING | See §8 of scope doc |
+| **C4. Platform admin console** | DONE | `/admin` gated by `platform_admins` (layout.tsx fail-closed `isPlatformAdmin`) · overview (org directory + subscription + onboarding KPIs) · onboarding (live directory + AddClientOrg → `/api/admin/orgs` creates organisations + org_onboarding + subscriptions) · billing (live table + MRR) · content (now renders the marketing ContentEditorClient via new `loadEditorBlocks` in resolve.ts — was orphaned) · demo-bookings · audit · editors · testimonials · logos · `src/lib/platform/directory.ts` + `auth.ts` · role-matrix e2e covers `/admin` denial · tests/org/content-editor.test.ts (3/3 pass) |
 
 ## Key decisions locked (§11 of scope doc)
 - Kira org pattern ADDITIVE (no rename, no `persons` table — memberships anchor `auth.users.id`)
