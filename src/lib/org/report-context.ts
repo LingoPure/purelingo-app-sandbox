@@ -11,6 +11,8 @@
  * relationship vocabulary is unit-testable without a Supabase connection.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export type ReportContext = {
   can_view: boolean;
   viewer_user_id: string | null;
@@ -171,12 +173,7 @@ function normalize(raw: unknown): ReportContext {
  * only when the RPC itself fails / the student row does not exist.
  */
 export async function resolveTeacherReportContext(
-  supabase: {
-    rpc: (
-      fn: string,
-      args: Record<string, unknown>
-    ) => Promise<{ data: unknown; error: { message: string } | null }>;
-  },
+  supabase: SupabaseClient,
   studentId: string
 ): Promise<ReportContext | null> {
   const { data, error } = await supabase.rpc("teacher_report_context", {

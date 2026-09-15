@@ -410,6 +410,52 @@ begin
 end;
 $$;
 
+-- ── teacher_report_context (0040) — the §7 assignment link for the A3 report ──
+-- The report page's single RPC must surface BOTH the boolean gate AND the
+-- teacher→student assignment link (viewer_teacher_id / viewer_assignment_role /
+-- primary_teacher / owning org). Fail-closed: unauthorized viewer gets
+-- can_view = false and no identity fields.
+
+do $$
+declare
+  r jsonb;
+begin
+  -- Assigned primary teacher → gate + assignment link + org identity.
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000003', true);
+  r := public.teacher_report_context('d0000000-0000-4000-8000-000000000001');
+  if (r->>'can_view')::boolean is not true then raise exception 'FAIL: primary teacher can_view must be true'; end if;
+  if r->>'viewer_org_role' is distinct from 'teacher' then raise exception 'FAIL: teacher viewer_org_role'; end if;
+  if r->>'viewer_teacher_id' is distinct from 'e0000000-0000-4000-8000-000000000001' then raise exception 'FAIL: teacher viewer_teacher_id'; end if;
+  if r->>'viewer_assignment_role' is distinct from 'primary' then raise exception 'FAIL: teacher viewer_assignment_role'; end if;
+  if r->>'organisation_name' is distinct from 'Celadon BPO' then raise exception 'FAIL: teacher org identity'; end if;
+  if r->'primary_teacher'->>'id' is distinct from 'e0000000-0000-4000-8000-000000000001' then raise exception 'FAIL: primary_teacher link'; end if;
+
+  -- HR admin → gate true (org role), no direct assignment link, but the
+  -- student's primary coach is exposed for the "who coaches this learner" UI.
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000002', true);
+  r := public.teacher_report_context('d0000000-0000-4000-8000-000000000001');
+  if (r->>'can_view')::boolean is not true then raise exception 'FAIL: hr can_view must be true'; end if;
+  if r->>'viewer_org_role' is distinct from 'hr' then raise exception 'FAIL: hr viewer_org_role'; end if;
+  if r->>'viewer_assignment_role' is not null then raise exception 'FAIL: hr must have no assignment link'; end if;
+  if r->'primary_teacher'->>'full_name' is distinct from 'Coach Linh' then raise exception 'FAIL: hr sees primary coach'; end if;
+
+  -- Cross-org outsider → fail closed, no org identity leaked.
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000006', true);
+  r := public.teacher_report_context('d0000000-0000-4000-8000-000000000001');
+  if (r->>'can_view')::boolean is not false then raise exception 'FAIL: outsider can_view must be false'; end if;
+  if r->>'organisation_name' is not null then raise exception 'FAIL: outsider org identity leaked'; end if;
+  if r->'primary_teacher' is not null then raise exception 'FAIL: outsider primary_teacher leaked'; end if;
+
+  -- Assigned teacher on the OTHER-ORG student → assignment grants cross-org view.
+  perform set_config('request.jwt.claim.sub', 'a0000000-0000-4000-8000-000000000007', true);
+  r := public.teacher_report_context('3c000000-0000-4000-8000-000000000001');
+  if (r->>'can_view')::boolean is not true then raise exception 'FAIL: cross-org assigned teacher can_view'; end if;
+  if r->>'organisation_name' is distinct from 'OtherCo' then raise exception 'FAIL: cross-org teacher org identity'; end if;
+
+  raise notice 'ok: teacher_report_context — gate + assignment link + org identity (0040)';
+end;
+$$;
+
 begin;
 select pg_temp.assert_eq(
   pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'),

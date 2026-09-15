@@ -2,10 +2,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { listCompletedAssessments, loadAssessmentPipeline, canViewStudent } from "@/lib/2k/journey-data";
+import { listCompletedAssessments, loadAssessmentPipeline } from "@/lib/2k/journey-data";
 import { buildTeacherIntelligenceView } from "@/lib/2k/teacher-intelligence";
 import { buildEvidencePackets } from "@/lib/2k/engines/evidence-packet-builder";
 import { ScoreRing } from "@/components/telemetry/score-ring";
+import {
+  resolveTeacherReportContext,
+  relationshipFor,
+  type ReportContext,
+} from "@/lib/org/report-context";
 import "@/components/telemetry/telemetry.css";
 
 const BAND_COLORS: Record<string, string> = {
@@ -28,10 +33,16 @@ const ARCHETYPE_COLOR: Record<string, string> = {
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
+type StudentView = {
+  student: { id: string; name: string; target_level: string; native_language: string | null };
+  viewerCanRead: boolean;
+  completed: Awaited<ReturnType<typeof listCompletedAssessments>>;
+  context: ReportContext | null;
+};
 
-async function resolveStudentView(supabase: Supabase, studentId: string) {
+async function resolveStudentView(supabase: Supabase, studentId: string): Promise<StudentView | null> {
   // Student row — self-read via RLS is unconditional; org/teacher visibility is
-  // resolved by the org_can_view_student gate (0038) via the gated loader.
+  // resolved by the teacher_report_context gate (0040).
   const { data: student } = await supabase
     .from("students")
     .select("id, name, target_level, native_language, xp, streak_days")
@@ -39,14 +50,16 @@ async function resolveStudentView(supabase: Supabase, studentId: string) {
     .maybeSingle();
   if (!student) return null;
 
-  const viewerCanRead = await canViewStudent(supabase, studentId);
+  // Single RPC is the source of truth for both the gate and the teacher→student
+  // assignment link (§7). Fail closed: an RPC failure is a denial, and the
+  // loader short-circuits to [] so no assessment row is ever queried.
+  const context = await resolveTeacherReportContext(supabase, studentId);
+  const viewerCanRead = context?.can_view === true;
 
-  // Strict RLS gate: listCompletedAssessments short-circuits to [] when the
-  // viewer cannot read this learner, so no assessment row is even queried.
   const completed = await listCompletedAssessments(supabase, studentId, 40, {
     canView: viewerCanRead,
   });
-  return { student, viewerCanRead, completed };
+  return { student, viewerCanRead, completed, context };
 }
 
 export default async function TeacherReportPage({
@@ -59,7 +72,8 @@ export default async function TeacherReportPage({
   const view = await resolveStudentView(supabase, id);
   if (!view) notFound();
 
-  const { student, viewerCanRead, completed } = view;
+  const { student, viewerCanRead, completed, context } = view;
+  const relationship = context ? relationshipFor(context, id) : null;
 
   // Load newest→oldest frozen results so "latest" is the first element.
   const results = [];
@@ -112,6 +126,45 @@ export default async function TeacherReportPage({
           </Link>
         </div>
       </div>
+
+      {viewerCanRead && context && relationship && (
+        <section className="mx-auto mt-4 max-w-6xl">
+          <article className="t-card flex flex-col gap-3 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <span
+                className={`t-pill ${
+                  relationship.kind === "primary-coach" || relationship.kind === "specialist-coach"
+                    ? "t-pill-good"
+                    : relationship.kind === "owner" || relationship.kind === "hr"
+                      ? "t-pill-warn"
+                      : ""
+                }`}
+              >
+                {relationship.label}
+              </span>
+              <p className="text-sm text-t-soft-mute">{relationship.description}</p>
+            </div>
+            <div className="flex flex-col gap-1 text-xs text-t-mute sm:flex-row sm:items-center sm:gap-6">
+              {context.primary_teacher && (
+                <span>
+                  Primary coach{" "}
+                  <span className="text-t-text">
+                    {context.primary_teacher.full_name}
+                    {context.viewer_teacher_id &&
+                      context.viewer_teacher_id === context.primary_teacher.id &&
+                      " (you)"}
+                  </span>
+                </span>
+              )}
+              {context.organisation_name && (
+                <span>
+                  Organisation <span className="text-t-text">{context.organisation_name}</span>
+                </span>
+              )}
+            </div>
+          </article>
+        </section>
+      )}
 
       {!viewerCanRead && (
         <div className="mx-auto mt-8 max-w-6xl rounded-lg border border-t-red/40 bg-[rgba(255,101,117,0.07)] p-6">
