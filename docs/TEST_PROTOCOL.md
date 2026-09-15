@@ -318,7 +318,7 @@ These tests cover the full 2K assessment engine — the most complex part of the
 
 | Step | Action | Expected result | Tick |
 |---|---|---|---|
-| 8.1 | Signup email | Confirmation email arrives from `LingoPure <noreply@updates.corporateaisolutions.com>` | ☐ |
+| 8.1 | Signup email | Confirmation email arrives from `LingoPure <noreply@lingopure.com>` | ☐ |
 | 8.2 | Magic-link login | Click link in email → logged in, redirected to dashboard | ☐ |
 | 8.3 | Battery report | LP-18 scores + Book-a-demo CTA in email | ☐ |
 | 8.4 | Demo booking confirmation | Customer-facing email confirms booking details | ☐ |

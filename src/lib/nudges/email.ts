@@ -7,7 +7,7 @@
  * brand stays consistent.
  */
 
-const FROM_ADDRESS = "LingoPure <noreply@updates.corporateaisolutions.com>";
+const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://lingo-pure-ai.vercel.app";
 

@@ -3,6 +3,29 @@
 **Updated:** 2026-09-14
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
+## Session log — 2026-09-14 late (LingoPure account swap: ElevenLabs + Resend)
+
+### ElevenLabs — LingoPure workspace swap
+- **`LINGOPURE_ELEVENLABS_API_KEY`** (`sk_752f3a...`) in `.env.development.local`; same value now set as `ELEVENLABS_API_KEY` in both `.env.local` + `.env.development.local`. Old buildtech key removed.
+- **Seat:** Dennis (`mcmdennis@gmail.com`) is `workspace_lite_member` in the LingoPure ElevenLabs workspace — **cannot manage webhooks** (`403 webhooks_manage`).
+- **Orphaned agent:** `agent_8701m2eyrep6exysepd25r16msst` ("LingoPure Discovery Agent") exists in the workspace, created by Dennis, but webhook **not bound**.
+- **Blocker:** Thao must promote Dennis to **Admin** in ElevenLabs team settings (or create a new API key as owner). Then re-run provisioning with `existingAgentId: agent_8701m2eyrep6exysepd25r16msst`.
+- **Re-provision command** (after role fix): load `.env.local` into env → `node --import tsx scripts/provision-discovery-agent.ts`. The `node --import tsx` is mandatory; see packaging bug below.
+- Morgan (`NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID`) blanked + pending same resolution.
+
+### `@caistech/elevenlabs-convai@0.9.0` packaging bug
+- **`ERR_PACKAGE_PATH_NOT_EXPORTED`** when tsx resolves the package in CJS mode. Root: `exports` map has only `import`/`types` conditions — no `default`/`require` fallback.
+- **Local fix:** added `"default": "./dist/index.js"` to all three export paths in `node_modules/@caistech/elevenlabs-convai/package.json`. Not durable (node_modules).
+- **Canonical fix:** needs `cais-shared-services/packages/elevenlabs-convai/package.json` — add `"default"` to exports, bump version, reinstall.
+
+### Resend — LingoPure key + domain swap
+- **`RESEND_API_KEY`** swapped to LingoPure key (`re_XTq...`) in both env files; verified valid.
+- **All 6 from-addresses flipped** from `noreply@updates.corporateaisolutions.com` → `noreply@lingopure.com` (5 `src/lib/email/*.ts` files + `src/lib/hr/email/send.ts` DEFAULT_FROM).
+- **Config/docs updated:** `supabase/config.toml`, `.env.example`, `docs/TEST_PROTOCOL.md`.
+- **Blocker:** applingopure Resend team has **zero verified domains** — Thao must verify `lingopure.com` in Resend (add domain → DNS records).
+
+---
+
 ## Session log — 2026-09-14 (battery report email, marketing i18n toggle, OmniRoute fix, test docs)
 - **Battery-complete report email** (`af828c1`) — migration 0048 (`students.battery_report_sent_at`), `src/lib/emails/battery-report.ts`, `src/lib/scoring/lp18.ts`, trigger `battery_report_on_complete`. Fires once when all 4 battery tasks complete (4-skill completeness + `sent_at` guard). Email: personalised name + target, overall LP-18 band + 6 skill bars, "Book a demo" CTA to `/book-a-demo`. Resend transport, no-reply from address, HTML + text fallback. Taste → report → demo bridge.
 - **Marketing i18n — functional EN/VI toggle** (`71c66b2`, pushed both remotes). `src/lib/i18n/dictionary.ts` rebuilt to prod-aligned copy: **67 EN + 67 VI `mkt.*` keys, full parity**, per-section granularity. New: `src/components/marketing/i18n-context.tsx` (client `t()` with EN fallback, cookie `lp_lang`), `src/components/marketing/promo-copy.ts` (server-safe `MarketingHomeCopy` resolver). `Nav.tsx` consumes context + `LanguagePill` (cookie toggle via `/api/i18n/lang`, `router.refresh`). `Footer.tsx` server-side `getDict()`. `HomeView.tsx` + homepage + preview render `lang`. **Verified live:** `lp_lang=vi` → `<html lang="vi">` + VI hero/nav/footer, EN h1 gone; default → EN → `lang="en"`. Font note: Lato lacks `vietnamese` subset in this Next version — VI body diacritics fall back to system; Montserrat + JetBrains Mono carry VI subsets. Landing pages (`/for-companies`, `/for-individuals`, `/method`) keep nav/footer translated; body copy EN until content validated.
@@ -57,5 +80,5 @@
 - Win32 / PowerShell 7 shell. Tests: `npm run test:curriculum` (node:test + tsx; `@/` path alias resolves).
 - Unrelated pre-existing changes in tree: `src/middleware.ts` → `src/proxy.ts` migration in flight (Next 16), `tree.py`, BPO gate fixtures.
 - One WIP stash remains: `stash@{0}` "WIP from prior session: demo banner + prod site_url + auth/callback route" — but it actually contains only a `@caistech/elevenlabs-convai` 0.1.4→0.1.5 bump (label is misleading). Drop or keep as is; not needed for the current build.
-- `.env.local` (sandbox) has: VERCEL_OIDC_TOKEN, RESEND_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, both Supabase keys, ELEVENLABS_API_KEY/AGENT_ID/WEBHOOK_SECRET, EMPLOYER_DEMO_PASSWORD, HEYGEN_API_KEY, SUPABASE_ACCESS_TOKEN, NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID — all set.
-- `.env.development.local` (local dev) has: local Supabase, plus ANTHROPIC_BASE_URL/module pointing at OmniRoute bridge on localhost:20128.
+- `.env.local` (sandbox): VERCEL_OIDC_TOKEN, RESEND_API_KEY (LingoPure `re_XTq...`), OPENAI_API_KEY, ANTHROPIC_API_KEY, both Supabase keys, ELEVENLABS_API_KEY (LingoPure `sk_752f3a...`), ELEVENLABS_AGENT_ID (blank — orphaned `agent_8701m2eyrep6exysepd25r16msst` needs binding), ELEVENLABS_WEBHOOK_SECRET (blank), EMPLOYER_DEMO_PASSWORD, HEYGEN_API_KEY, SUPABASE_ACCESS_TOKEN, NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID (blank), LINGOPURE_RESEND_API_KEY, LINGOPURE_ELEVENLABS_API_KEY.
+- `.env.development.local` (local dev): local Supabase (`localhost:54321`), same LingoPure keys as above, ANTHROPIC_BASE_URL/module pointing at OmniRoute bridge on localhost:20128, CONVAI_TOOL_SECRET, LINGOPURE_LINGOPURE_SANDBOX_* vars.

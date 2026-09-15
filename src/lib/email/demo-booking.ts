@@ -10,7 +10,7 @@
 
 import type { DemoBookingInput } from "@/app/(marketing)/book-a-demo/schema";
 
-const FROM_ADDRESS = "LingoPure <noreply@updates.corporateaisolutions.com>";
+const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 const SALES_EMAIL_DEFAULT = "dennis@corporateaisolutions.com";
 
 function escapeHtml(s: string): string {

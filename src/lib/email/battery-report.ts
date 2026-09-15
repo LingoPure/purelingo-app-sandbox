@@ -9,7 +9,7 @@
 
 import { scoreToLp18 } from "@/lib/scoring/rubric";
 
-const FROM_ADDRESS = "LingoPure <noreply@updates.corporateaisolutions.com>";
+const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 
 function escapeHtml(s: string): string {
   return s

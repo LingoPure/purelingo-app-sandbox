@@ -34,7 +34,7 @@ const RESEND_ENDPOINT = "https://api.resend.com/emails";
  * verified domain without touching code.
  */
 const DEFAULT_FROM =
-  process.env.HR_EMAIL_FROM ?? "LingoPure <noreply@updates.corporateaisolutions.com>";
+  process.env.HR_EMAIL_FROM ?? "LingoPure <noreply@lingopure.com>";
 
 export type HrEmailSender = {
   /** Legal entity shown in the footer. The employer's, not the builder's. */

@@ -13,7 +13,7 @@
  * caller can fall back to the copy-pasteable link in the admin UI.
  */
 
-const FROM_ADDRESS = "LingoPure <noreply@updates.corporateaisolutions.com>";
+const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 
 export type InviteEmailInput = {
   to: string;
