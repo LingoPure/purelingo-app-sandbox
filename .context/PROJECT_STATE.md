@@ -3,6 +3,17 @@
 **Updated:** 2026-09-14
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
+## Session log — 2026-09-16 (C2 completion: evidence packets + responsive text pass)
+
+### Session log — 2026-09-16 (C2 completion: evidence packets + responsive text pass)
+- **Commit `4b4b6dd`** — escape apostrophe in `add-client-org.tsx` success copy (pre-existing JSX lint fix).
+- **A1 journey evidence panel wired to real `buildEvidencePackets`** — replaced the telemetry-dims-based "Behavioural evidence" section with real evidence packets from `buildEvidencePackets(latest.analyses)`. Top 3 OBSERVED packets sorted by confidence+quality. Removed now-unused `highDims` variable.
+- **Responsive text pass: all sub-12px CSS/JSX bumped to 12px minimum** — `telemetry.css` (eyebrow 10→12, pill 11→12, score-inner label 9→12, metric span 10→12, journey .when 9→12, journey .why 10→12, evidence .source 9→12, evidence p 11→12, evidence .change 11→12, timeline .tag 8→12). `learner-notes.tsx` (alert 11→12, empty-state 11→12, date 10→12). `radar.tsx` label `fontSize` 10.5→12. All three telemetry pages already had JSX-level sub-12px fixed in ac4ebd7; this pass covers the CSS and component layers.
+- **`@caistech/discovery-agent`** already in `package.json` (`^0.1.0`) and wired: `DiscoverySession` client component in `onboarding/discovery-session.tsx`, `aria-discovery-config.ts` + `aria-discovery.ts` server-side, webhook route at `api/onboarding/discovery/webhooks/[all]`. Provision script at `scripts/provision-discovery-agent.ts`. §11 lock 4 voice surface is code-complete; live binding blocked on Thao promoting Dennis to ElevenLabs Admin (orphaned agent `agent_8701m2eyrep6exysepd25r16msst` needs webhook binding).
+- **C2 is now COMPLETE.** All three telemetry pages (A1/A2/A3) render real engine data, responsive text floor enforced at 12px, evidence packets wired, A3 §7 org wiring done (teacher_report_context + relationship mapping from 77aecd4).
+
+---
+
 ## Session log — 2026-09-14 late (LingoPure account swap: ElevenLabs + Resend)
 
 ### ElevenLabs — LingoPure workspace swap

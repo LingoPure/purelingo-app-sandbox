@@ -101,7 +101,7 @@ export function TRadar({ skills, size = 360 }: { skills: Skill[]; size?: number 
             textAnchor={anchor}
             dominantBaseline="middle"
             fill="#91a8b8"
-            fontSize={10.5}
+            fontSize={12}
           >
             {s.label}
           </text>

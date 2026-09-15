@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadResultHistory, loadLatestPipeline } from "@/lib/2k/journey-data";
 import { buildLearnerDeliveryView } from "@/lib/2k/learner-delivery";
+import { buildEvidencePackets } from "@/lib/2k/engines/evidence-packet-builder";
 import { ScoreRing } from "@/components/telemetry/score-ring";
 import { TRadar } from "@/components/telemetry/radar";
 import { TProgress } from "@/components/telemetry/score-ring";
@@ -64,6 +65,16 @@ export default async function LearnerJourneyPage() {
     loadLatestPipeline(supabase, user.id),
   ]);
 
+  // Evidence packets from latest analysis
+  const evidencePackets =
+    latest && latest.analyses.length
+      ? (await Promise.all(latest.analyses.map((analysis) => buildEvidencePackets(analysis)))).flat()
+      : [];
+  const highEvidence = evidencePackets
+    .filter((p) => p.status === "OBSERVED")
+    .sort((a, b) => (b.confidence + b.quality) - (a.confidence + a.quality))
+    .slice(0, 3);
+
   const name = (student as { name?: string } | null)?.name ?? "Phuong";
   const native = (student as { native_language?: string } | null)?.native_language ?? "en";
   const targetLevel = (student as { target_level?: string } | null)?.target_level ?? "B2.2";
@@ -98,7 +109,6 @@ export default async function LearnerJourneyPage() {
     pct: Math.round(d.score * 100),
   }));
   const lowDims = dims.filter((d) => d.score < 0.55).slice(0, 3);
-  const highDims = dims.slice().sort((a, b) => b.score - a.score).slice(0, 3);
 
   const moveTogether =
     lowDims.length >= 2
@@ -291,17 +301,17 @@ export default async function LearnerJourneyPage() {
             <p className="t-eyebrow t-eyebrow-purple">Behavioural evidence</p>
             <h2 className="t-h2 mt-2">What created this state</h2>
             <div className="mt-4 flex flex-col gap-3">
-              {highDims.length > 0 ? (
-                highDims.map((d) => (
-                  <div key={d.name} className="t-evidence">
-                    <p className="source">{d.name.replace(/_/g, " ")}</p>
-                    <h4>Measured across responses</h4>
-                    <p>{(d.score * 100).toFixed(0)}% signal strength · {(d.confidence * 100).toFixed(0)}% confidence</p>
-                    <p className="change">{d.score >= 0.7 ? "Working for you" : "Building"}</p>
+              {highEvidence.length > 0 ? (
+                highEvidence.map((packet) => (
+                  <div key={packet.evidence_id} className="t-evidence">
+                    <p className="source">{packet.construct.replace(/_/g, " ")}</p>
+                    <h4>{packet.observation}</h4>
+                    <p>{packet.authority} · {(packet.confidence * 100).toFixed(0)}% confidence · {packet.source.modality}</p>
+                    <p className="change">{packet.quality >= 0.7 ? "Strong signal" : "Building"}</p>
                   </div>
                 ))
               ) : (
-                <p className="t-muted">No telemetry signals recorded yet.</p>
+                <p className="t-muted">No evidence packets recorded yet.</p>
               )}
             </div>
           </article>

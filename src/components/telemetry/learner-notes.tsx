@@ -89,14 +89,14 @@ export function LearnerNotes({ learnerId }: Props) {
       </form>
 
       {error && (
-        <p className="text-[11px] text-t-red" role="alert">
+        <p className="text-[12px] text-t-red" role="alert">
           {error}
         </p>
       )}
 
       <ul className="space-y-2">
         {notes.length === 0 && (
-          <li className="text-[11px] text-t-mute">
+          <li className="text-[12px] text-t-mute">
             No notes yet — reflections stay visible here across sessions.
           </li>
         )}
@@ -107,7 +107,7 @@ export function LearnerNotes({ learnerId }: Props) {
           >
             <div className="min-w-0">
               <p className="text-sm text-t-soft-mute">{n.body}</p>
-              <p className="mt-1 text-[10px] text-t-mute">
+              <p className="mt-1 text-[12px] text-t-mute">
                 {new Date(n.created_at).toLocaleDateString()}
               </p>
             </div>

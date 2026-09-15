@@ -54,7 +54,7 @@
 }
 
 .telemetry .t-eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -74,7 +74,7 @@
   border: 1px solid var(--t-line);
   background: rgba(15, 34, 49, 0.8);
   color: var(--t-soft-mute);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -128,7 +128,7 @@
 }
 
 .telemetry .t-score-inner span {
-  font-size: 9px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--t-mute);
@@ -178,7 +178,7 @@
 }
 
 .telemetry .t-metric span {
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--t-mute);
@@ -200,7 +200,7 @@
 }
 
 .telemetry .t-journey .when {
-  font-size: 9px;
+  font-size: 12px;
   color: var(--t-mute);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -213,7 +213,7 @@
 }
 
 .telemetry .t-journey .why {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--t-mute);
   line-height: 1.4;
   margin: 0;
@@ -231,7 +231,7 @@
 }
 
 .telemetry .t-evidence .source {
-  font-size: 9px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--t-purple);
@@ -243,10 +243,10 @@
   margin: 6px 0 4px;
 }
 
-.telemetry .t-evidence p { font-size: 11px; color: var(--t-mute); line-height: 1.5; margin: 0; }
+.telemetry .t-evidence p { font-size: 12px; color: var(--t-mute); line-height: 1.5; margin: 0; }
 
 .telemetry .t-evidence .change {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--t-green);
   margin-top: 6px;
@@ -333,7 +333,7 @@
 .telemetry .t-timeline .stop.band-5 .dot { background: var(--t-purple); }
 
 .telemetry .t-timeline .stop .tag {
-  font-size: 8px;
+  font-size: 12px;
   color: var(--t-mute);
   white-space: nowrap;
   overflow: hidden;
