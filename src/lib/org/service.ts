@@ -109,7 +109,7 @@ export async function createOrganisation(
 }
 
 export type ServiceClient = SupabaseClient;
-type ServiceStep = "departments" | "staff" | "teachers" | "baseline";
+type ServiceStep = "departments" | "staff" | "teachers" | "baseline" | "curriculum" | "done";
 
 /** Select the service package → seeds the department set + updates the subscription. */
 export async function selectPackage(
@@ -242,6 +242,7 @@ export async function allocateStaff(
  */
 export async function assignTeachers(
   admin: SupabaseClient,
+  organisationId: string,
   assignments: TeacherAssignment[]
 ): Promise<ServiceStep> {
   for (const a of assignments) {
@@ -273,11 +274,36 @@ export async function assignTeachers(
     );
   }
 
-  return "baseline"; // automatic steps follow; the light flag below marks them queued.
+  const { error } = await admin
+    .from("org_onboarding")
+    .update({
+      step: "baseline",
+      teachers_assigned_at: new Date().toISOString(),
+    })
+    .eq("organisation_id", organisationId);
+  if (error) throw new Error(`Could not save teacher assignments: ${error.message}`);
+
+  return "baseline";
 }
 
-/** The wizard has finished manual steps — mark baseline as impending. */
-export async function markBaselineQueued(
+/** Advance from baseline → curriculum — marks baseline_at. */
+export async function advanceBaseline(
+  admin: SupabaseClient,
+  organisationId: string
+): Promise<ServiceStep> {
+  const { error } = await admin
+    .from("org_onboarding")
+    .update({
+      step: "curriculum",
+      baseline_at: new Date().toISOString(),
+    })
+    .eq("organisation_id", organisationId);
+  if (error) throw new Error(`Could not advance baseline: ${error.message}`);
+  return "curriculum";
+}
+
+/** Advance from curriculum → done, trigger curriculum generation. */
+export async function advanceCurriculumAndComplete(
   admin: SupabaseClient,
   organisationId: string
 ): Promise<void> {
@@ -285,14 +311,12 @@ export async function markBaselineQueued(
     .from("org_onboarding")
     .update({
       step: "done",
-      teachers_assigned_at: new Date().toISOString(),
-      baseline_at: new Date().toISOString(),
       curriculum_at: new Date().toISOString(),
       completed_at: new Date().toISOString(),
     })
     .eq("organisation_id", organisationId);
 
-  // Trigger curriculum generation for all org students with completed baselines
+  // Generate curricula for all org students with completed baselines
   const { generateCurriculumForOrgStudents } = await import("@/lib/curriculum/curriculum-service");
   await generateCurriculumForOrgStudents(admin, organisationId);
 }

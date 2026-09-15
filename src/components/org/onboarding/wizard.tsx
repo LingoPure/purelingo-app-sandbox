@@ -657,19 +657,19 @@ function AutoStep({
   busy: boolean;
   act: <T>(body: unknown) => Promise<T>;
 }) {
-  const label =
-    step === "baseline"
-      ? "2K baseline assessments run automatically per learner"
-      : "AI generates each learner's curriculum + timeline from the C0 engine";
   return (
     <StepCard
       eyebrow={`Step ${step === "baseline" ? "5" : "6"} · Automatic`}
-      title={step === "baseline" ? "Baseline assessments started" : "Curriculum generation queued"}
+      title={step === "baseline" ? "Baseline assessments queued" : "Curriculum generation queued"}
       busy={busy}
-      onSave={() => act({ action: "finish" })}
-      saveLabel="Mark onboarding complete →"
+      onSave={() => act({ action: step === "baseline" ? "advance-baseline" : "finish" })}
+      saveLabel={step === "baseline" ? "Queue curriculum generation →" : "Mark onboarding complete →"}
     >
-      <p className="text-sm leading-relaxed text-mute">{label}</p>
+      <p className="text-sm leading-relaxed text-mute">
+        {step === "baseline"
+          ? "Each learner will complete their 2K baseline assessment when they sign in. The results feed the curriculum engine automatically."
+          : "AI generates each learner's curriculum + timeline from the C0 engine using their baseline results."}
+      </p>
     </StepCard>
   );
 }

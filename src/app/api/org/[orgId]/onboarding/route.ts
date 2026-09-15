@@ -16,7 +16,8 @@ import {
   allocateStaff,
   assignTeachers,
   loadOnboarding,
-  markBaselineQueued,
+  advanceBaseline,
+  advanceCurriculumAndComplete,
   selectPackage,
   setDepartments,
 } from "@/lib/org/service";
@@ -53,6 +54,7 @@ type Body =
   | { action: "set-departments"; keep?: string[] }
   | { action: "allocate-staff"; allocations?: unknown[] }
   | { action: "assign-teachers"; assignments?: unknown[] }
+  | { action: "advance-baseline" }
   | { action: "finish" };
 
 export async function POST(
@@ -121,11 +123,15 @@ export async function POST(
                 : ("primary" as const),
           };
         });
-        const step = await assignTeachers(admin, assignments);
+        const step = await assignTeachers(admin, orgId, assignments);
+        return NextResponse.json({ ok: true, step });
+      }
+      case "advance-baseline": {
+        const step = await advanceBaseline(admin, orgId);
         return NextResponse.json({ ok: true, step });
       }
       case "finish": {
-        await markBaselineQueued(admin, orgId);
+        await advanceCurriculumAndComplete(admin, orgId);
         return NextResponse.json({ ok: true, step: "done" });
       }
       default:

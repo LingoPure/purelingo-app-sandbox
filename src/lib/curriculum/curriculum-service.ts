@@ -107,19 +107,38 @@ export async function generateCurriculumForOrgStudents(
     const session = sessions?.[0];
     if (!session) continue;
 
-    // Build a synthetic baseline snapshot from the LP-18 role_baselines or
-    // use the student's role_baselines row. For the MVP the curriculum engine
-    // generates deterministic lessons from the gap to the target — we provide
-    // an empty capabilities array and let the engine compute gaps from
-    // role_baselines (or default A1 across the board).
-    const baseline: BaselineSnapshot = {
-      assessment_id: session.assessment_id,
-      learner_id: student.id,
-      generated_at: session.completed_at ?? new Date().toISOString(),
-      lp1000: { score: 0, band: "", components: {} },
-      cefr_macro: "A1",
-      capabilities: [],
-    };
+    // Load the real canonical result from the frozen pipeline. This runs the
+    // engine chain on the stored responses so the curriculum is derived from
+    // actual student data, not fabricated scores.
+    let baseline: BaselineSnapshot;
+    try {
+      const { loadPipelineResult } = await import("@/lib/2k/pipeline-loader");
+      const pipeline = await loadPipelineResult(admin, session.assessment_id);
+      baseline = {
+        assessment_id: session.assessment_id,
+        learner_id: student.id,
+        generated_at: session.completed_at ?? new Date().toISOString(),
+        lp1000: pipeline.result.lp1000,
+        cefr_macro:
+          pipeline.result.capabilities[0]?.level ?? "A1",
+        capabilities: pipeline.result.capabilities.map((c) => ({
+          address: c.address,
+          score: c.confidence * 1000,
+          level: c.level,
+        })),
+      };
+    } catch {
+      // Pipeline load failed (missing responses, corrupt data). Fall back to a
+      // minimal snapshot so the student still gets a curriculum plan.
+      baseline = {
+        assessment_id: session.assessment_id,
+        learner_id: student.id,
+        generated_at: session.completed_at ?? new Date().toISOString(),
+        lp1000: { score: 0, band: "", components: {} },
+        cefr_macro: "A1",
+        capabilities: [],
+      };
+    }
 
     try {
       await generateCurriculumForStudent(admin, student.id, baseline, student.target_level);

@@ -55,10 +55,11 @@
 | Step | Status | Delivered |
 |---|---|---|
 | **C0. Curriculum Engine** | DONE | `suppabase/migrations/0037_curriculum_engine.sql` (curricula, curriculum_lessons, lesson_completions, tutor_feedback, curriculum_resets, all RLS + append-only triggers) · `src/lib/curriculum/curriculum-engine.ts` (CUR-ENGINE-v1.0.0, deterministic skill-gap/plan/reset) · `tests/curriculum/curriculum-engine.test.ts` (10/10 pass via `npm run test:curriculum`) |
-| **C1. Org model (additive)** | DONE | `supabase/migrations/0038_org_model_additive.sql` (organisations, organisation_memberships, organisation_departments, platform_admins; `current_org_role`, `org_is_owner_or_hr`, `org_employer_id`, `org_can_view_student`, `dept_can_view_student` SECURITY DEFINER; RLS per table). FK fix applied (teachers.id). Org RLS DB-verify: `tests/org/org-rls-verify.sql` + `scripts/org-db-verify.sh` — **9/9 assertions PASS** (`npm run test:org:db`). |
+| **C1. Org model (additive)** | DONE | `suppabase/migrations/0038_org_model_additive.sql` (organisations, organisation_memberships, organisation_departments, platform_admins; `current_org_role`, `org_is_owner_or_hr`, `org_employer_id`, `org_can_view_student`, `dept_can_view_student` SECURITY DEFINER; RLS per table). FK fix applied (teachers.id). Org RLS DB-verify: `tests/org/org-rls-verify.sql` + `scripts/org-db-verify.sh` — **9/9 assertions PASS** (`npm run test:org:db`). |
 | **C1. platform_admins bootstrap** | DONE | `src/lib/platform-admin.ts` canonical gate (ADMIN_EMAILS first-time sync, table owns after) · `scripts/seed-platform-admins.ts` idempotent bootstrap (`npm run admin:seed-platform`) |
-| **C2. Dan dashboards → React** | IN PROGRESS | `e068562` — telemetry kit + A1/A2/A3 (see below) |
-| C3–C7 | PENDING | See §8 of scope doc |
+| **C2. Dan dashboards → React** | DONE | `e068562` — telemetry kit + A1/A2/A3 (see below) |
+| **C3. Org onboarding wizard** | DONE | `src/lib/org/service.ts` (createOrganisation, selectPackage, setDepartments, allocateStaff, assignTeachers, advanceBaseline, advanceCurriculumAndComplete) · `src/components/org/onboarding/wizard.tsx` (7-step wizard: Package → Departments → Staff → Teachers → Baseline → Curriculum → Done) · `src/app/api/org/[orgId]/onboarding/route.ts` (GET bundle + POST 6 actions) · `src/lib/org/onboarding.ts` (state machine + SERVICE_PACKAGES + PACKAGE_DEPARTMENTS) · tests/org/onboarding-service.test.ts (3/3 pass) |
+| C4–C7 | PENDING | See §8 of scope doc |
 
 ## Key decisions locked (§11 of scope doc)
 - Kira org pattern ADDITIVE (no rename, no `persons` table — memberships anchor `auth.users.id`)
