@@ -159,7 +159,7 @@ export function AddClientOrg() {
                 </p>
               )}
               <p className="mt-1 text-xs text-mute">
-                They'll land at /org/{result.slug} and the wizard resumes at the right step.
+                They&apos;ll land at /org/{result.slug} and the wizard resumes at the right step.
               </p>
             </div>
           )}
