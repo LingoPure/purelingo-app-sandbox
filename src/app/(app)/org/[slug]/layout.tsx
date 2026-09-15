@@ -45,6 +45,10 @@ export default async function OrgAdminLayout({
     { href: `/org/${slug}/billing`, label: "Billing" },
   ];
 
+  if (identity.isOwnerOrHr) {
+    NAV.push({ href: `/org/${slug}/settings`, label: "Settings" });
+  }
+
   const navItems: MobileNavItem[] = NAV.map((n) => ({
     href: n.href,
     label: n.label,

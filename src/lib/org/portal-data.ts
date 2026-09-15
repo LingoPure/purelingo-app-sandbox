@@ -223,3 +223,69 @@ export async function loadOrgTeachers(
   }
   return results;
 }
+
+export type OrgSettings = {
+  org: { id: string; name: string; slug: string; created_at: string | null };
+  admins: Array<{ membership_id: string; user_id: string | null; email: string | null; role: string; status: string }>;
+  subscription: {
+    package: string | null;
+    tier: string | null;
+    status: string | null;
+    price_monthly: number | null;
+    currency: string | null;
+    next_billing_at: string | null;
+  } | null;
+};
+
+/** Org identity + its admins + subscription, for the org Settings page. */
+export async function loadOrgSettings(
+  supabase: SupabaseClient,
+  orgId: string
+): Promise<OrgSettings | null> {
+  const { data: org } = await supabase
+    .from("organisations")
+    .select("id, name, slug, created_at")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (!org) return null;
+
+  const [memberships, sub] = await Promise.all([
+    supabase
+      .from("organisation_memberships")
+      .select("id, user_id, role, status")
+      .eq("organisation_id", orgId)
+      .order("created_at"),
+    supabase
+      .from("subscriptions")
+      .select("package, tier, status, price_monthly, currency, next_billing_at")
+      .eq("organisation_id", orgId)
+      .maybeSingle(),
+  ]);
+
+  const admins = [];
+  for (const m of memberships.data ?? []) {
+    let email: string | null = null;
+    if (m.user_id) {
+      const { data: u } = await supabase.auth.admin.getUserById(m.user_id);
+      email = u?.user?.email ?? null;
+    }
+    admins.push({
+      membership_id: m.id,
+      user_id: m.user_id,
+      email,
+      role: m.role,
+      status: m.status,
+    });
+  }
+
+  return {
+    org: {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      created_at: org.created_at as string | null,
+    },
+    admins,
+    subscription: sub.data as OrgSettings["subscription"],
+  };
+}

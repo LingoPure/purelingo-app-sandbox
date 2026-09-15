@@ -33,6 +33,10 @@ export default async function OrgOverviewPage({
   const data = await loadOrgDashboard(supabase, orgId);
   if (!data) notFound();
 
+  const links = identity.isOwnerOrHr
+    ? [...NAV_LINKS, { label: "Settings", suffix: "settings" }]
+    : NAV_LINKS;
+
   return (
     <div>
       <h1 className="font-serif text-3xl text-navy">{data.org.name}</h1>
@@ -92,7 +96,7 @@ export default async function OrgOverviewPage({
 
       <h2 className="mb-3 mt-10 font-serif text-xl text-navy">Quick links</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {NAV_LINKS.map((link) => (
+        {links.map((link) => (
           <Link
             key={link.suffix}
             href={`/org/${slug}/${link.suffix}`}

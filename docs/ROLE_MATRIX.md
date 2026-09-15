@@ -28,6 +28,7 @@ Cross-cutting: **Content Editor** (`content_editors`) — out of C7 scope; and
 | `/org/onboarding/[orgId]` | ✅ | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
 | `/org/[slug]` + departments / billing | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
 | `/org/[slug]/staff`, `…/students`, `…/teachers` | ✅ | ✅ | ✅ list-only | 🚫 | 🚫 | 🚫 | 🚫 |
+| `/org/[slug]/settings` | ✅ | ✅ | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 |
 | `/teacher`, `/teacher/students/[id]` | 🚫 | 🚫 | ✅ assigned only | 🚫 | 🚫 | 🚫 | 🚫 |
 | `/teacher/students/[id]/report` | ✅ org ladder | ✅ | ✅ assigned | 🚫 | self only | ✅ | 🚫 |
 | `/employer`, `/employer/*` | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | 🚫 | HR-admin only (`employer_admins`) |
