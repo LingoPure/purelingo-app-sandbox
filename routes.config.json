@@ -1,5 +1,5 @@
 {
-  "baseUrl": "https://lingo-pure-ai.vercel.app",
+  "baseUrl": "https://purelingo-app-sandbox.vercel.app",
   "routes": [
     {
       "path": "/"

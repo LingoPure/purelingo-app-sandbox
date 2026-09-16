@@ -20,7 +20,7 @@ import path from "node:path";
 
 loadEnv({ path: path.resolve(__dirname, "../.env.local") });
 
-const PROD_URL = "https://lingo-pure-ai.vercel.app";
+const PROD_URL = "https://purelingo-app-sandbox.vercel.app";
 const EMAIL = "e2e-student@lingopure.demo";
 const PASSWORD = "Test-1234-LP-e2e";
 
@@ -67,7 +67,7 @@ async function main() {
   console.log(`[${ts()}] navigating to ${PROD_URL}/login`);
   await page.goto(`${PROD_URL}/login`, { waitUntil: "domcontentloaded" });
   await page.context().addCookies([
-    { name: "lp_lang", value: "en", domain: "lingo-pure-ai.vercel.app", path: "/" },
+    { name: "lp_lang", value: "en", domain: "purelingo-app-sandbox.vercel.app", path: "/" },
   ]);
 
   console.log(`[${ts()}] filling login form`);

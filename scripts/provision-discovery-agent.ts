@@ -24,7 +24,7 @@ async function main() {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set in env");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://lingo-pure-ai.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://purelingo-app-sandbox.vercel.app";
   const host = new URL(appUrl).host;
 
   const result = await provisionVoiceAgent(apiKey, {

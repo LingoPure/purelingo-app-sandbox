@@ -57,7 +57,7 @@ for (const raw of existsSync(path.join(REPO, ".env.local"))
 }
 
 const AGENT_NAME = "LingoPure Investor Morgan";
-const PROD_HOSTNAME = "lingo-pure-ai.vercel.app";
+const PROD_HOSTNAME = "purelingo-app-sandbox.vercel.app";
 const RACHEL_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 // Base persona + opener are single-sourced in src/lib/investor/morgan-prompt.mjs

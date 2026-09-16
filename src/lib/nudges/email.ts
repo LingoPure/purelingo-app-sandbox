@@ -9,7 +9,7 @@
 
 const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ?? "https://lingo-pure-ai.vercel.app";
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://purelingo-app-sandbox.vercel.app";
 
 export async function sendNudgeEmail(input: {
   to: string;

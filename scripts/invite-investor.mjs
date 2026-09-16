@@ -38,7 +38,7 @@ const fullName = arg('name', null);
 const firm = arg('firm', null);
 const tier = arg('tier', 'main');
 const password = arg('password', null);
-const site = arg('site', process.env.NEXT_PUBLIC_SITE_URL || 'https://lingo-pure-ai.vercel.app');
+const site = arg('site', process.env.NEXT_PUBLIC_SITE_URL || 'https://purelingo-app-sandbox.vercel.app');
 
 if (!email) { console.error('Missing --email'); process.exit(1); }
 if (!['main', 'restricted'].includes(tier)) { console.error('--tier must be main|restricted'); process.exit(1); }

@@ -3,6 +3,26 @@
 **Updated:** 2026-09-16
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
+## Session log — 2026-09-16 (env cleanup → CONVAI_TOOL_SECRET → auth redirects → Vercel env)
+
+- **`.env.local` cleanup**: removed all unused `LINGOPUREAI_*` / `LINGOPURE_*` entries (dead dups, wrong key formats, DB password, Postgres conn string). Final 18-line file. `.env.local` is gitignored (confirmed).
+- **New Supabase key system**: project `uovbwccvxgdghqvlpuql` (LingoPure Sandbox) uses `sb_publishable_*` / `sb_secret_*` keys. Mapping: `sb_publishable_*` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `sb_secret_*` → `SUPABASE_SERVICE_ROLE_KEY`. Both rotated after being exposed in session.
+- **CONVAI_TOOL_SECRET** added to `.env.local`, `.env.example`, and `scripts/provision-discovery-agent.ts` (bakes secret into agent tools via `createConversationTools`). Fixes `[convai] SECURITY` build warning.
+- **Canonical domain decision**: the LIVE app is `https://purelingo-app-sandbox.vercel.app` (Vercel project `purelingo-app-sandbox`, team `dev-lingo-pure`). The old `https://lingo-pure-ai.vercel.app` is a STALE project (Corporate AI Solutions team) running old middleware + old Supabase ref — that's the source of the 504s; do NOT use it.
+- **Auth redirect fix**: Supabase Dashboard → Auth → URL Configuration → Site URL must be `https://purelingo-app-sandbox.vercel.app`, redirect URLs include `/auth/callback`, `localhost:3000`, `localhost:3000/**`. (Dashboard-only — Supabase CLI lacks privileges on this project.)
+- **Middleware hardening** (`src/lib/supabase/middleware.ts`): skip `getUser()` network call when no auth cookie exists; fail OPEN on network error. Prevents a Supabase connectivity blip from 504ing the whole app.
+- **Vercel env vars**: added via dashboard (Production+Preview): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CONVAI_TOOL_SECRET`, `ELEVENLABS_API_KEY`, `SUPABASE_ACCESS_TOKEN`, `NEXT_PUBLIC_APP_URL=https://purelingo-app-sandbox.vercel.app/`.
+- **CLI lessons**: `vercel link` fails (multiple teams, project-name validation loop); `vercel env add` needs linked project. Supabase CLI link fails ("account does not have necessary privileges") — use Dashboard instead.
+- **Open**: after deploying this commit, in the Supabase dashboard set Site URL + redirects to the sandbox domain, then confirm signup confirmation link lands on `purelingo-app-sandbox.vercel.app` (not localhost, not the old domain).
+
+## Session log — 2026-09-16 (Vercel deployment wiring, waiting on Thao for Supabase keys)
+
+- Wired repo to Vercel project `purelingo-app-sandbox` (team `lingopure-cloud`).
+- Pushed empty trigger commit `c8538a0` to `lingopure/main` to fire Vercel build.
+- Build succeeded after adding `NODE_AUTH_TOKEN` env var (fixes `@caistech/*` private package install).
+- **Blocked:** Missing Supabase env vars (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, etc.) because Thao has not yet approved entry into the lingopure sandbox Supabase project.
+- Once keys are available, will paste them into Vercel dashboard → Settings → Environment Variables (Production + Preview) and redeploy.
+
 ## Session log — 2026-09-16 (C7 completion: auth+RLS wiring, report-context security fix, docs snapshot)
 
 - **C7 is DONE** — commit `23236ae` (both remotes): all portals gated (admin/org/teacher/employer), `0049` classin read RLS, **`0050` report-context security fix**, org-RLS harness now runnable + PASSING, role-matrix e2e + ROLE_MATRIX DB grid, responsive pass on C5/C6. Follow-up `c7e2efc`: employer roles table `overflow-hidden` → `overflow-x-auto`.

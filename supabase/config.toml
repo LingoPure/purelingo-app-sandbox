@@ -1,19 +1,19 @@
 # LingoPure — Supabase project config (pushed to managed project via `supabase config push`).
-# Target project: TBD — new LingoPure-owned project (Phase 4). NOT `htycbbjbhokaztvtwvdo`
-# (that project belongs to LingoPure/purelingo-app, an unreachable repo — out of scope).
-# Replace this project_id with the new LingoPure project ref once created.
+# Target project: LingoPure Sandbox (uovbwccvxgdghqvlpuql) — the live project the app uses.
+# NOTE: site_url must be updated in the Supabase dashboard too (CLI `config push` cannot
+# set auth.site_url on managed projects — it's dashboard-only).
 
-project_id = "lingopure-tbd"
+project_id = "uovbwccvxgdghqvlpuql"
 
 [auth]
 # Production URL — used as the base for confirmation / magic-link / password-reset
 # emails. localhost stays in additional_redirect_urls so dev signup still works.
-site_url = "https://lingo-pure-ai.vercel.app"
+site_url = "https://purelingo-app-sandbox.vercel.app"
 additional_redirect_urls = [
   "http://localhost:3000",
   "http://localhost:3000/**",
-  "https://lingo-pure-ai.vercel.app",
-  "https://lingo-pure-ai.vercel.app/**",
+  "https://purelingo-app-sandbox.vercel.app",
+  "https://purelingo-app-sandbox.vercel.app/**",
   "https://*.vercel.app/**",
 ]
 jwt_expiry = 3600

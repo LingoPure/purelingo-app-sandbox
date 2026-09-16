@@ -97,7 +97,7 @@ export async function inviteInvestor(formData: FormData): Promise<ActionResult> 
       .insert({ investor_id: userId, action: "invite", detail: { by: op.email, deep_dive_invited: deepDive } })
       .then(() => {}, () => {});
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://lingo-pure-ai.vercel.app";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://purelingo-app-sandbox.vercel.app";
     const link = await svc.auth.admin.generateLink({
       type: "magiclink",
       email,

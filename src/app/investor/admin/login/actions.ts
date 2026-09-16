@@ -44,7 +44,7 @@ export async function operatorMagicLink(formData: FormData) {
     h.get("origin") ??
     (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
       ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
-      : `https://${h.get("host") ?? "lingo-pure-ai.vercel.app"}`);
+      : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
   // Lands at /investor/admin; the admin layout enforces the allowlist (post-auth reject).
   const emailRedirectTo = `${origin}/auth/callback?next=${encodeURIComponent(HOME)}`;
   const { error } = await supabase.auth.signInWithOtp({

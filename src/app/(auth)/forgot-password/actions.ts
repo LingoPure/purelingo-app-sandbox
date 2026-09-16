@@ -28,7 +28,7 @@ export async function requestPasswordReset(formData: FormData) {
     h.get("origin") ??
     (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
       ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
-      : `https://${h.get("host") ?? "lingo-pure-ai.vercel.app"}`);
+      : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
 
   const redirectTo = `${origin}/auth/callback?next=/reset-password`;
 
