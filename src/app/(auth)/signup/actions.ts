@@ -2,10 +2,10 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createOtpIssuerClient } from "@/lib/supabase/otp";
 
 export async function signup(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createOtpIssuerClient();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("fullName") ?? "");

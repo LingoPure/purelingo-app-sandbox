@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createOtpIssuerClient } from "@/lib/supabase/otp";
 
 /**
  * Investor-portal auth actions (self-contained so errors stay on
@@ -33,7 +34,7 @@ export async function investorLogin(formData: FormData) {
 }
 
 export async function investorMagicLink(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createOtpIssuerClient();
   const email = String(formData.get("email") ?? "").trim();
   if (!email) {
     redirect(`${LOGIN}?error=${encodeURIComponent("Enter your email address.")}`);

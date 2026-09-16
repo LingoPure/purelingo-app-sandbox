@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createOtpIssuerClient } from "@/lib/supabase/otp";
 
 /**
  * Send the signed-in user (or any returning student) a fresh magic link
@@ -18,7 +19,7 @@ import { createClient } from "@/lib/supabase/server";
  * inbox" without leaking which addresses are real.
  */
 export async function requestMagicLink(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createOtpIssuerClient();
   const email = String(formData.get("email") ?? "").trim();
   const redirectToRaw = String(formData.get("redirectTo") ?? "");
 

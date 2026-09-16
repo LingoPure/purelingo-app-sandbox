@@ -5,9 +5,12 @@ import { loadEmployerAdmin } from "@/lib/employer/auth";
 /**
  * Email confirmation / magic link callback.
  *
- * Supabase emails point users at {site_url}/auth/callback with either:
- *   - ?code=... (PKCE flow — exchange for a session)
- *   - ?token_hash=...&type=signup|recovery|email_change|invite (older OTP flow)
+ * Supabase emails point users at /auth/callback with either:
+ *   - ?token_hash=...&type=signup|recovery|email_change|invite|magiclink — the
+ *     PRIMARY emailed-link flow (all self-service links are issued by
+ *     @/lib/supabase/otp in the token_hash flow so they work on any device)
+ *   - ?code=... (PKCE flow — exchange for a session; kept for any legacy
+ *     PKCE links still in the wild)
  *
  * On success we redirect to ?next=... if explicitly set; otherwise we
  * route admins to /employer and everyone else to /dashboard. On failure

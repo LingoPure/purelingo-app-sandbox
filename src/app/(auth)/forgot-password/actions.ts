@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createOtpIssuerClient } from "@/lib/supabase/otp";
 
 /**
  * Send a password-reset email. The link points at /auth/callback?next=/reset-password
@@ -21,7 +21,7 @@ export async function requestPasswordReset(formData: FormData) {
     );
   }
 
-  const supabase = await createClient();
+  const supabase = createOtpIssuerClient();
 
   const h = await headers();
   const origin =
