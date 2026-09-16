@@ -47,7 +47,7 @@ export default async function RolesIndexPage() {
           </p>
         </section>
       ) : (
-        <section className="overflow-hidden rounded-lg border border-cream bg-paper">
+        <section className="overflow-x-auto rounded-lg border border-cream bg-paper">
           <table className="w-full text-sm">
             <thead className="border-b border-cream bg-mist/50 text-left">
               <tr>
