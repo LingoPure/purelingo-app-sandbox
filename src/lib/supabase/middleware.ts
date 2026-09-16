@@ -67,10 +67,26 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const requestCookies = request.cookies.getAll();
+  const hasAuthCookie = requestCookies.some((c) => c.name.includes("-auth-token"));
+
+  // Only hit the network when a session cookie actually exists. With no cookie there is
+  // nothing to verify — doing the round-trip anyway is pure latency on every public page
+  // and turns a slow/blocked Supabase connection into a site-wide 504 MIDDLEWARE timeout.
+  let user = null;
+  let error = null;
+  if (hasAuthCookie) {
+    try {
+      const res = await supabase.auth.getUser();
+      user = res.data.user;
+      error = res.error;
+    } catch {
+      // Network failure reaching Supabase from the edge. FAIL OPEN — let the request through;
+      // the page's own getUser gate (Node runtime, bigger budget) re-checks and bounces if the
+      // session is genuinely gone. A transient connectivity blip must not 504 the whole app.
+      return supabaseResponse;
+    }
+  }
 
   const isProtected = PROTECTED_PREFIXES.some((p) => path.startsWith(p));
 
@@ -80,9 +96,6 @@ export async function updateSession(request: NextRequest) {
     // and bouncing here would silently log a valid session out. Let the request
     // through; the page's own getUser gate re-checks and bounces if it's really
     // gone. Only redirect on a genuine no-session.
-    const hasAuthCookie = request.cookies
-      .getAll()
-      .some((c) => c.name.includes("-auth-token"));
     if (error && hasAuthCookie) {
       return supabaseResponse;
     }
