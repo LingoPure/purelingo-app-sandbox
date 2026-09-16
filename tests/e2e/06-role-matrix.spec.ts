@@ -16,7 +16,7 @@ import type { Page } from "@playwright/test";
  * staff/platform-admin at the row level.
  */
 
-const GUEST_PORTALS = ["/admin", "/teacher", "/org/celadon-portal"];
+const GUEST_PORTALS = ["/admin", "/teacher", "/org/celadon-portal", "/employer"];
 
 async function assertRedirectAway(page: Page, path: string): Promise<void> {
   await page.goto(path);

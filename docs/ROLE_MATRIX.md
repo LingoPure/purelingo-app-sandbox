@@ -45,19 +45,22 @@ Fixture orgs: **Celadon** (owner/hr/teacher/staff/student), **OtherCo** (staff +
 teacher with cross-org assignment). `responses` counts rows under Phuong's
 COMPLETE session only.
 
-| Role | organisations | memberships | subscriptions | org_onboarding | assessment_sessions | assessment_responses |
-|---|---:|---:|---:|---:|---:|---:|
-| owner | 1 | 5 | 1 | 1 | 2 | 1 |
-| hr | 1 | 5 | 1 | 1 | 2 | 1 |
-| teacher (assigned) | 1 | 1 | 1 | 1 | 2 | 1 |
-| staff | 1 | 1 | 1 | 1 | 0 | 0 |
-| student | 1 | 1 | — | — | 0 | 0 |
-| outsider (OtherCo) | 1 | 1 | 0 | 0 | 0 | 0 |
-| teacherB (cross-org) | 0 | 0 | 0 | 0 | 1 | 1 |
-| platform admin | 2 | 7 | 1 | 1 | 0 | 0 |
+| Role | organisations | memberships | subscriptions | org_onboarding | assessment_sessions | assessment_responses | teacher_notes | classin_sessions |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| owner | 1 | 5 | 1 | 1 | 2 | 1 | 1 | 1 |
+| hr | 1 | 5 | 1 | 1 | 2 | 1 | 1 | 1 |
+| teacher (assigned) | 1 | 1 | 1 | 1 | 2 | 1 | 1 | 1 |
+| staff | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
+| student | 1 | 1 | — | — | 0 | 0 | 0 | 0 |
+| outsider (OtherCo) | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| teacherB (cross-org) | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 |
+| platform admin | 2 | 7 | 1 | 1 | 0 | 0 | 0 | 0 |
 
 > Platform admin reads org-model tables (0044 read-all) only as a non-member;
-> learner sessions stay behind the `org_can_view_student` gate (0040).
+> learner sessions stay behind the `org_can_view_student` gate (0040). The
+> student-facing (C2) + teacher-facing (C6) surfaces — `teacher_notes` (0045)
+> and `classin_sessions` (0049) — use the same `org_can_view_student` policy
+> shape, so their row counts track the assessment tables exactly.
 
 ## DB functions (the permission model)
 

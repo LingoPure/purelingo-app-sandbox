@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 # Organisation-model database verification (C1).
 #
 # Spins up a throwaway Postgres, applies the SUPABASE SHIM plus the migrations
@@ -50,6 +50,7 @@ cd "$REPO_ROOT"
 FILES=(
   "tests/org/supabase-shim.sql"
   "supabase/migrations/0001_initial_schema.sql"
+  "supabase/migrations/0004_classin_session_schedule.sql"
   "supabase/migrations/0007_students_native_language.sql"
   "supabase/migrations/0014_teachers_departments.sql"
   "supabase/migrations/0030_2k_assessment_pipeline.sql"
@@ -63,6 +64,8 @@ FILES=(
   "supabase/migrations/0043_staff_department_allocation.sql"
   "supabase/migrations/0044_platform_admin_readall.sql"
   "supabase/migrations/0045_teacher_notes.sql"
+  "supabase/migrations/0049_classin_org_view.sql"
+  "supabase/migrations/0050_teacher_report_context_gate.sql"
   "tests/org/org-rls-verify.sql"
 )
 for f in "${FILES[@]}"; do
@@ -72,8 +75,8 @@ done
 echo "==> applying Supabase shim (auth.users, auth.uid, auth.jwt, role grants)"
 psql_run -q -f /tmp/supabase-shim.sql
 
-echo "==> applying prerequisite + org migrations"
-for f in "${FILES[@]:1:6}"; do
+echo "==> applying prerequisite + org migrations (0001-0037)"
+for f in "${FILES[@]:1:7}"; do
   echo "    $(basename "$f")"
   psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
 done
@@ -83,8 +86,8 @@ $DOCKER cp "supabase/migrations/0038_org_model_additive.sql" "$CONTAINER:/tmp/00
 psql_run -q -f /tmp/0038_rerun.sql >/dev/null 2>&1
 echo "    idempotent re-run: ok"
 
-echo "==> applying 0038-#45 migrations (org model + notes, idempotency-checked)"
-for f in "${FILES[@]:7:8}"; do
+echo "==> applying 0038-#50 migrations (org model + notes + classin + report gate, idempotency-checked)"
+for f in "${FILES[@]:8:10}"; do
   echo "    $(basename "$f")"
   psql_run -q -f "/tmp/$(basename "$f")" 2>&1 | grep -v "NOTICE" || true
   $DOCKER cp "$f" "$CONTAINER:/tmp/rerun-$(basename "$f")" >/dev/null

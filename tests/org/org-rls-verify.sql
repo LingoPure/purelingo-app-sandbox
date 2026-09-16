@@ -1,8 +1,8 @@
 -- RLS + SECURITY DEFINER budget verification for the org model (0038).
 --
 -- Runs against a throwaway Postgres seeded by tests/org/supabase-shim.sql plus
--- migrations 0001, 0014, 0038. Every check RAISEs on failure, so a non-zero
--- psql exit means the gate layer is broken.
+-- migrations 0001, 0004, 0007, 0014, 0030–0045, 0049. Every check RAISEs on
+-- failure, so a non-zero psql exit means the gate layer is broken.
 --
 -- The point of testing this way rather than through the UI: the gateway must be
 -- enforced by the DATABASE. These assertions query directly as each role and
@@ -318,6 +318,16 @@ values
   ('f0000000-0000-4000-8000-000000000102', 'e0000000-0000-4000-8000-000000000002', '3c000000-0000-4000-8000-000000000001', 'OtherCo teacher note.', now())
 on conflict (id) do nothing;
 
+-- classin_sessions fixtures (0001 + 0004 + 0049): one scheduled session for
+-- Phuong (Celadon) and one for the OtherCo student — the 0049 org/teacher
+-- read gate must expose only the former to Celadon org roles.
+insert into public.classin_sessions
+  (id, student_id, classin_class_id, scheduled_at, status)
+values
+  ('f0000000-0000-4000-8000-000000000201', 'd0000000-0000-4000-8000-000000000001', 'cls-phuong-1', now() + interval '1 day', 'scheduled'),
+  ('f0000000-0000-4000-8000-000000000202', '3c000000-0000-4000-8000-000000000001', 'cls-other-1', now() + interval '2 days', 'scheduled')
+on conflict (id) do nothing;
+
 -- ── RLS: assessment_sessions / assessment_responses — per-role visibility ────
 -- The COMPLETE-gating loaders (src/lib/2k/journey-data.ts) resolve
 -- org_can_view_student BEFORE querying. These assertions impersonate each
@@ -358,6 +368,19 @@ begin
   perform set_config('request.jwt.claim.sub', p_sub, true);
   set local role authenticated;
   select count(*) into n from public.teacher_notes;
+  reset role;
+  return n;
+end;
+$$;
+
+-- Count the classin_sessions a user can SEE through RLS (0049 org_can_view gate).
+create or replace function pg_temp.visible_classin_count(p_sub text)
+returns bigint language plpgsql as $$
+declare n bigint;
+begin
+  perform set_config('request.jwt.claim.sub', p_sub, true);
+  set local role authenticated;
+  select count(*) into n from public.classin_sessions;
   reset role;
   return n;
 end;
@@ -478,6 +501,18 @@ begin;
 select pg_temp.assert_eq(
   pg_temp.visible_session_count('d0000000-0000-4000-8000-000000000001'),
   2, 'learner sees their own two sessions (self via auth.uid)');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_classin_count('d0000000-0000-4000-8000-000000000001'),
+  1, 'learner sees their own classin session (self via auth.uid)');
+commit;
+
+begin;
+select pg_temp.assert_eq(
+  pg_temp.visible_note_count('d0000000-0000-4000-8000-000000000001'),
+  1, 'learner sees the coach note on their own lesson (self via auth.uid)');
 commit;
 
 begin;
@@ -654,6 +689,7 @@ select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-80
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000001'), 2, 'grid owner sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner responses');
 select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000001'), 1, 'grid owner classin');
 commit;
 
 -- hr
@@ -664,6 +700,8 @@ select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-
 select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr onboarding');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000002'), 2, 'grid hr sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr responses');
+select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000002'), 1, 'grid hr classin');
 commit;
 
 -- assigned teacher
@@ -674,6 +712,7 @@ select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000003'), 2, 'grid teacher sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher responses');
 select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000003'), 1, 'grid teacher classin');
 commit;
 
 -- staff
@@ -684,6 +723,7 @@ select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff responses');
 select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000004'), 0, 'grid staff classin');
 commit;
 
 -- student (a...05 in Celadon)
@@ -693,6 +733,7 @@ select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-80
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student responses');
 select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000005'), 0, 'grid student classin (no own sessions)');
 commit;
 
 -- cross-org outsider (OtherCo staff)
@@ -702,6 +743,7 @@ select pg_temp.assert_eq(pg_temp.visible_membership_count('a0000000-0000-4000-80
 select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider subs');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider responses');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000006'), 0, 'grid outsider classin');
 commit;
 
 -- teacherB — assigned to the OtherCo student (cross-org teacher gate via assignment)
@@ -709,6 +751,7 @@ begin;
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB sessions');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB responses');
 select pg_temp.assert_eq(pg_temp.visible_note_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB notes');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000007'), 1, 'grid teacherB classin');
 commit;
 
 -- platform admin (a...08, member of no org)
@@ -719,6 +762,7 @@ select pg_temp.assert_eq(pg_temp.visible_subscription_count('a0000000-0000-4000-
 select pg_temp.assert_eq(pg_temp.visible_onboarding_count('a0000000-0000-4000-8000-000000000008'), 1, 'grid platform-admin onboarding');
 select pg_temp.assert_eq(pg_temp.visible_session_count('a0000000-0000-4000-8000-000000000008'), 0, 'grid platform-admin sessions (org-view only, no membership)');
 select pg_temp.assert_eq(pg_temp.visible_response_count('a0000000-0000-4000-8000-000000000008'), 0, 'grid platform-admin responses');
+select pg_temp.assert_eq(pg_temp.visible_classin_count('a0000000-0000-4000-8000-000000000008'), 0, 'grid platform-admin classin (no org membership)');
 commit;
 
 -- ── dept_can_view_student gate (current behaviour == org gate) ───────────────
