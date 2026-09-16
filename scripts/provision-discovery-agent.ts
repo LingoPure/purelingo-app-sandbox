@@ -17,7 +17,7 @@
  * URL already exists it is reused and the secret is unchanged.
  */
 
-import { provisionVoiceAgent, standardAllowlist } from "@caistech/elevenlabs-convai";
+import { provisionVoiceAgent, standardAllowlist, createConversationTools } from "@caistech/elevenlabs-convai";
 import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt";
 
 async function main() {
@@ -43,6 +43,10 @@ async function main() {
     // LingoPure's post-call route is /api/convai/webhook (not the package default path).
     postCallWebhookPath: "/api/convai/webhook",
     allowedOrigins: standardAllowlist(host),
+    // Bake the secret into agent tools so the memory-loop webhook routes accept the header.
+    tools: createConversationTools(appUrl, '/api/onboarding/discovery/webhooks', {
+      secret: process.env.CONVAI_TOOL_SECRET,
+    }),
     // Update the existing agent in place when its id is known (no duplicate).
     existingAgentId: process.env.ELEVENLABS_AGENT_ID,
   });
