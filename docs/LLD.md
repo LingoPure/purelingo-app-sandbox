@@ -2,7 +2,7 @@
 
 > **Document type:** Implementation reference (living document)
 > **Repo:** `caistech/LingoPureAI`
-> **Status:** `PARTIALLY VERIFIED — 2026-07-10` (§1 scoring + §2 content-admin verified; others outlined)
+> **Status:** `PARTIALLY VERIFIED — 2026-09-16` (§1 scoring + §2 content-admin verified; C0–C7 blocks verified below vs their schemas/loaders)
 > **Owner:** Dennis McMahon · **Audience:** Minh (ongoing dev), Dennis (review)
 > **Companion doc:** `docs/HLD.md` (architecture overview)
 
@@ -164,3 +164,115 @@ Allows the application to run on any Anthropic-compatible gateway (e.g., OmniRou
 ### Verify
 - Ensure `ANTHROPIC_BASE_URL` is set in `.env.development.local` to the local OmniRoute endpoint.
 - Verify structured-scoring logs: `PARSED OK:` confirms the fallback flow works.
+
+---
+
+## 4. Org model — canonical multi-tenant layer (additive, C1 + C7)
+
+**Module:** Org admin / cross-cutting gate layer
+**Status:** `[V]` — verified against schema `0038`–`0050` and the org-RLS DB-verify harness (`npm run test:org:db`, PASSES).
+
+### Purpose
+Turn the single-tenant demo into a canonical **organisations → memberships → departments** model *without renaming* the legacy `employers`/`students` rows. All org-scoped visibility is enforced **in the database** (SECURITY DEFINER gates), not by the UI — the C7 build made that boundary provable by re-running a DB harness that impersonates every role against the real tables.
+
+### Data model `[V]` (`0038`, `0041`–`0044`)
+- `organisations` — id, name, slug (Kira-standard).
+- `organisation_memberships` — `(organisation_id, auth_user_id, role owner|hr|staff|student, status, valid_from/to)`. **The canonical identity anchor** — auth users, not `persons`.
+- `organisation_departments` — org-owned departments (fixed nominated set from the onboarding packages); `0038`.
+- `platform_admins` — canonical platform-operator allowlist; synced first-time from `ADMIN_EMAILS` (`src/lib/platform-admin.ts` canonical gate + `scripts/seed-platform-admins.ts`), table rows own afterwards. `0044` adds `platform_is_admin()` read-all.
+- `subscriptions` — **synthetic** (display-only) tier/price/status/next-billing, `0041`.
+- `org_onboarding` — onboarding wizard state machine rows, `0042`.
+- `learner_notes` (`0039`) + `teacher_notes` (`0045`) — note surfaces; RLS org/teacher-gated.
+
+### Gate layer (SECURITY DEFINER, pinned `search_path = public`, `stable`) `[V]`
+`0038` creates the DB function gate: `current_org_role()`, `org_is_owner_or_hr()`, `org_employer_id()`, `org_can_view_student(student_id)`, `dept_can_view_student(student_id)`; `0044` adds `platform_is_admin()`. Decider: owns membership in that org, or holds owner/hr/staff role; a teacher sees assigned students via `student_teacher_assignments` (`0014`). RLS policies on every org table use these functions so row counts are filtered server-side.
+
+### The C7 security finding (documents a real leak)
+`0040` added `teacher_report_context(student_id)` — a SECURITY DEFINER RPC returning the target student's identity (name, level, language, employer, organisation, primary coach) to the report page. It returned **everything** to any caller who knew a student uuid. The C7 harness (now runnable — first Docker pass in the repo) caught `FAIL: outsider primary_teacher leaked`. Fix `0050`: resolve `can_view` once up-front, gate every target-derived field on it, and `jsonb_strip_nulls` the payload so a denied caller sees `can_view:false` plus **zero** target/org/coach keys. Caller-relative fields (`viewer_user_id`, `viewer_org_role`, …) remain — they describe the caller. App-side `normalize()` in `src/lib/org/report-context.ts` tolerates the stripped keys.
+
+### Entry points `[V]`
+`/org/[slug]/*` portal pages; `src/lib/org/{auth,service,portal-data,onboarding,report-context}.ts`; org-RLS verify at `tests/org/org-rls-verify.sql` + harness `scripts/org-db-verify.sh`.
+
+### Verify (Claude Code)
+- [x] `npm run test:org:db` — spins a throwaway Postgres 17, applies shim + `0001`→`0050`, re-applies each org migration for idempotency, then asserts role budgets for every role + the 0050 fail-closed RPC. PASSES.
+- [x] `0049` grants `classin_sessions` org/teacher read via `org_can_view_student` (was student self-only) so teacher class-loaders work client-side.
+
+---
+
+## 5. Curriculum engine (C0)
+
+**Module:** Curriculum
+**Status:** `[V]` — verified against `0037` and `src/lib/curriculum/curriculum-engine.ts`.
+
+### Purpose
+The product spine: a **deterministic** skill-gap → plan → reset engine (CUR-ENGINE-v1.0.0) that turns canonical gap scores into a curriculum and tracks lesson completion — no AI in the path, so plans are reproducible per profile.
+
+### Data model `[V]` (`0037`)
+`curricula` (per-student plan header) · `curriculum_lessons` (planned lessons with order/status) · `lesson_completions` (append-only) · `tutor_feedback` · `curriculum_resets` (append-only, provenance).
+
+### Core logic `[V]`
+- `buildPlan(studentId)` — deterministic from the six canonical `gap_scores`; emits gap-ordered lesson plan.
+- `advance(lesson, …)` — marks completion, appends `lesson_completions`.
+- `reset(plan, reason)` — writes `curriculum_resets`, regenerates deterministically.
+- RLS + append-only triggers on completions/resets; provenance chain enforced.
+
+### Tests `[V]`
+`tests/curriculum/curriculum-engine.test.ts` (10/10 via `npm run test:curriculum`).
+
+---
+
+## 6. Org onboarding wizard (C3)
+
+**Module:** Org admin
+**Status:** `[V]` — verified against `src/lib/org/onboarding.ts` + `src/components/org/onboarding/wizard.tsx` + `api/org/[orgId]/onboarding`.
+
+### Purpose
+7-step guided onboarding: **Package → Departments → Staff → Teachers → Baseline → Curriculum → Done**. Package selection feeds fixed department sets; teacher assignment and baseline advance trigger real `2K` pipeline + curriculum generation (C0).
+
+### State machine `[V]`
+`src/lib/org/onboarding.ts` — `SERVICE_PACKAGES` + `PACKAGE_DEPARTMENTS` constants; step-order + gating; advance only at defined transitions. Server actions go through `api/org/[orgId]/onboarding/route.ts` (GET bundle + POST 6 actions: createOrganisation, selectPackage, setDepartments, allocateStaff, assignTeachers, advanceBaseline, advanceCurriculumAndComplete). Baseline + curriculum steps call the 2K assessment pipeline (`0030`–`0033`) + curriculum engine.
+
+### Tests `[V]`
+`tests/org/onboarding-service.test.ts` (3/3 pass).
+
+---
+
+## 7. Platform admin console (C4)
+
+**Module:** Platform admin
+**Status:** `[V]` — verified against `/admin` routes + `src/lib/platform/directory.ts`.
+
+### Purpose
+Operator console: org directory, onboarding loop, billing (live table + MRR on synthetic `subscriptions`), content editor, coverage for demo bookings / audit / editors / testimonials / logos.
+
+### Security `[V]`
+`/admin` gated by `platform_admins` (layout.tsx fail-closed `isPlatformAdmin`). `api/admin/orgs` creates organisations + `org_onboarding` + `subscriptions` (AddClientOrg).
+
+---
+
+## 8. Org admin portal (C5)
+
+**Module:** Org admin
+**Status:** `[V]` — verified against `/org/[slug]/*` + `src/lib/org/portal-data.ts`.
+
+### Purpose
+Client org portal: overview, departments, staff, students, teachers, billing, settings. Rebuilt from JSON dumps to **real gated tables** in the C5 pass; staff/students/teachers are list-only per ROLE_MATRIX for owner/hr/teacher (the DB grid asserts row budgets per role).
+
+### Gates `[V]`
+`getOrgIdentity` (owner/hr/staff/student) → layout nav-branded + role pill + mobile nav; pages render only the role's permitted data; `settings` page (org identity + owners/HR admins + subscription) owner/hr-only.
+
+### Tests `[V]`
+`tests/org/org-portal-gates.test.ts` (7/7 pass).
+
+---
+
+## 9. Teacher portal (C6)
+
+**Module:** Teacher
+**Status:** `[V]` — verified against `/teacher/*` + `src/lib/teacher/portal-data.ts` + migration `0049`.
+
+### Purpose
+Teacher-facing view of assigned students: dashboard (stat cards + roster + upcoming classes + recent notes), student detail (progress + ClassIn history + notes), classes + notes loaders, notes composer + LP-1000 scoring surfaced on student report.
+
+### Security `[V]`
+`/teacher` layout gated by `getTeacherIdentity` (a `teachers` row whose `auth_user_id` matches — `0014`). Teacher data visibility via `student_teacher_assignments`; `classin_sessions` read granted by `0049` via `org_can_view_student` (0045 pattern). Role-matrix e2e (`tests/e2e/06-role-matrix.spec.ts`) denies the test student across `/admin`, `/teacher`, `/org/celadon-portal`, `/employer`.

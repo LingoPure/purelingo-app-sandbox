@@ -1,9 +1,15 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-14
+**Updated:** 2026-09-16
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
-## Session log — 2026-09-16 (C2 completion: evidence packets + responsive text pass)
+## Session log — 2026-09-16 (C7 completion: auth+RLS wiring, report-context security fix, docs snapshot)
+
+- **C7 is DONE** — commit `23236ae` (both remotes): all portals gated (admin/org/teacher/employer), `0049` classin read RLS, **`0050` report-context security fix**, org-RLS harness now runnable + PASSING, role-matrix e2e + ROLE_MATRIX DB grid, responsive pass on C5/C6. Follow-up `c7e2efc`: employer roles table `overflow-hidden` → `overflow-x-auto`.
+- **The C7 harness caught a real cross-org leak**: `teacher_report_context` (`0040`, SECURITY DEFINER) returned the target student's full identity (organisation_name, primary_teacher, name/level/language/employer_id) to ANY caller who knew a student uuid. `0050` gates every target-derived field on `can_view` + `jsonb_strip_nulls`. Root cause of the confusing assert: `jsonb_build_object('key', null)` emits a JSON `null` literal, and `r->'key' IS NOT NULL` is TRUE for a jsonb null — stripping the keys is what actually removes them.
+- **Full QA pass (autonomous)** — one responsive bug found + fixed (`/employer/roles` table clipped mobile; now scrolls). All C0–C7 features live-checked.
+- **Docs snapshot to current state** — `docs/HLD.md` + `docs/LLD.md` both brought to 2026-09-16: 50 migrations (`0001`–`0050`, was 25), role contexts now incl. org memberships + teachers + platform admins, C0–C7 feature blocks added to LLD (curriculum engine, org model, onboarding wizard, platform/org/teacher portals), deployment blocker documented (§7).
+- **Deployment blocker (prodn)**: Thao hasn't created the Vercel team/project yet — production cannot deploy until then. Once live: push `main`, set envs in Vercel dashboard (sensitive-env-var rule: never commit), re-run `test:org:db` against live schema, mint a fresh `VERCEL_OIDC_TOKEN`. Local `nickname` is `lingo-pure-ai` (`vercel.json` has 3 crons: nudges, hr holiday-notice, 2k-retention).
 
 ### Session log — 2026-09-16 (C2 completion: evidence packets + responsive text pass)
 - **Commit `4b4b6dd`** — escape apostrophe in `add-client-org.tsx` success copy (pre-existing JSX lint fix).

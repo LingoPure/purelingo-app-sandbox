@@ -1,8 +1,8 @@
 # High-Level Design (HLD) — LingoPure
 
 > **Document type:** Architecture reference (living document)
-> **Repo:** `caistech/LingoPureAI` (Vercel slug `lingo-pure-ai`)
-> **Status:** `PARTIALLY VERIFIED — 2026-07-10` (verified against deployed code where marked `[V]`; see §11)
+> **Repo:** `caistech/LingoPureAI` (primary) + `LingoPure/purelingo-app-sandbox` (mirror)
+> **Status:** `PARTIALLY VERIFIED — 2026-09-16` (C0–C7 build sequence complete; verified against deployed code where marked `[V]`; see §11)
 > **Owner:** Dennis McMahon (technical lead)
 > **Audience:** Minh (ongoing dev), Dennis (review)
 > **Companion doc:** `docs/LLD.md` (implementation detail)
@@ -58,7 +58,7 @@ flowchart TB
     end
 
     subgraph Data["Supabase — Tokyo (nbvprbaumwmfczsfcyrv, ap-northeast-1)"]
-        PG[(Postgres + RLS · 25 migrations)]
+        PG[(Postgres + RLS · 50 migrations)]
         VEC[(pgvector: dataroom_chunks, HNSW)]
         OBJ[(Storage: dataroom docs, marketing-assets)]
     end
@@ -113,7 +113,7 @@ flowchart TB
 | **Teacher portal** | `/teacher/*` (students, notes) | Teacher-facing view of assigned students and notes | — |
 | **Static/legal** | `/about`, `/contact`, `/pricing`, `/privacy`, `/terms`, `/languages`, `/demo` | Marketing/legal + the original product landing (`/demo`) | — |
 
-`[V]` Auth roles differ by context (§8): **learners** (`students`), **employer admins** (`employer_admins`: owner/hr/viewer), **investor operators** (`ADMIN_EMAILS` allowlist), **content editors** (`content_editors`: admin/marketing/readonly). There is no single global role enum.
+`[V]` Auth roles differ by context (§8): **learners** (`students`), **org-membership roles** (`organisation_memberships`: owner/hr/staff/student — the C1 canonical org model, `0038`), **teachers** (`teachers`, link to students via `student_teacher_assignments`, `0014`), **platform admins** (`platform_admins`, `0044`), **employer-admins** (`employer_admins`: owner/hr/viewer legacy cutover), **investor operators** (`ADMIN_EMAILS` allowlist), **content editors** (`content_editors`: admin/marketing/readonly). The gate layer is DB-side SECURITY DEFINER functions (`current_org_role`, `org_can_view_student`, `dept_can_view_student`, `org_is_owner_or_hr`, `platform_is_admin`) — see LLD §4.
 
 ---
 
@@ -126,7 +126,7 @@ flowchart TB
 | Frontend | Next.js App Router, React, TypeScript | `next 16.2.4`, `react`/`react-dom 19.2.4`, `typescript ^5` |
 | Server | Next.js route handlers / server actions | **Single Next.js app — no separate service, no Inngest/queue.** |
 | Styling | Tailwind CSS v4 | `tailwindcss ^4` (`@theme` tokens in `globals.css`; scoped `.mkt` marketing tokens in `(marketing)/marketing.css`) |
-| Database | Supabase Postgres (**Tokyo `ap-northeast-1`**) | `@supabase/supabase-js ^2.105.1`, `@supabase/ssr ^0.10.2`. Project `nbvprbaumwmfczsfcyrv`. **25 migrations** (`0001`–`0025`) |
+| Database | Supabase Postgres (**Tokyo `ap-northeast-1`**) | `@supabase/supabase-js ^2.105.1`, `@supabase/ssr ^0.10.2`. Project `nbvprbaumwmfczsfcyrv`. **50 migrations** (`0001`–`0050`) |
 | Vector / RAG | pgvector | `dataroom_chunks.embedding vector(1536)`, **HNSW** (`vector_cosine_ops`), RPC `match_dataroom_chunks` (`0020_investor_dataroom.sql:27,57,61,133`) |
 | Object storage | Supabase Storage | dataroom document buckets; `marketing-assets` (public, created on demand by the upload route) |
 | LLM (generation) | Anthropic (provider-agnostic via bridge) | `src/lib/llm/client.ts` centralizes construction. Honors `ANTHROPIC_BASE_URL` (OmniRoute/OpenRouter) and `ANTHROPIC_MODEL` env vars. `parseStructured` falls back to schema-injected prompt for free models. Defaults: **`claude-sonnet-4-6`** (scoring/lessons), **`claude-haiku-4-5-20251001`** (i18n) |
@@ -183,7 +183,8 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 `[V]` Vercel (slug `lingo-pure-ai`, prod `lingo-pure-ai.vercel.app`); Supabase **Tokyo `ap-northeast-1`** (`nbvprbaumwmfczsfcyrv`) for data/auth/storage; **AU/JP residency posture** — derived learner data resides in Japan, not the PRC (contrast the scaffolded ClassIn source). `NEXT_PUBLIC_CANVAS_MODE=true` on the deployed marketing canvas.
 `[V]` Migrations are **CLI-driven** (`supabase db push --linked`); the shell `SUPABASE_ACCESS_TOKEN` holds a Vercel token — use the `sbp_` token at `~/.supabase-token` (memory `project_lingopure_deploy_gate`).
-`[?]` Environment list (prod/preview/local) and prod-access ownership are operational facts not determinable from the repo.
+`[V]` **Two git remotes:** `origin` = `caistech/LingoPureAI` (primary), `lingopure` = `LingoPure/purelingo-app-sandbox` (mirror). Commits push to both.
+`[V]` **Deployment blocker (2026-09-16):** the Vercel project is linked locally (`.vercel/project.json` → project `lingo-pure-ai`, org `corporate-ai-solutions`, team `team_hwN7IFtd2Fo3DCj9C67ZwI1t`) but **not live**. Thao must create the Vercel team + project so Dennis can set up the deployment; only then does production deploy. Once live: push `main` to whichever remote Vercel's git integration watches, set the full env set in the dashboard (the `@caistech` Vercel sensitive-env-var rule — no env file committed), and re-run the `test:org:db` harness against the live schema before first smoke. `VERCEL_OIDC_TOKEN` in `.env.local` is dev-scoped + expired — mint a fresh token for production.
 
 ### Local Development (Dry-Run)
 `[V]` To run the full platform (including admin and portal surfaces) without touching hosted Supabase/Vercel:
@@ -206,8 +207,8 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 ## 8. Cross-cutting concerns
 
-- **Auth & RBAC** `[V]` — Supabase Auth (`@supabase/ssr`); `getUser()` gate on every data route. **Four separate role contexts** (no single enum): `students` (learners), `employer_admins` (owner/hr/viewer, mig `0012`), investor operators (`ADMIN_EMAILS` allowlist, `lib/investor/operator-auth.ts`), `content_editors` (admin/marketing/readonly, mig `0023`, resolved by `current_content_role()`).
-- **Row-Level Security** `[V]` — RLS enabled across the schema; learner/telemetry tables scoped to `student_id = auth.uid()`; content/investor tables scoped to their role functions. The content-admin boundary ("touch content, not the instrument") is an RLS boundary — content editors have policies only on content tables. `[?]` exact table/policy counts not tallied this pass.
+- **Auth & RBAC** `[V]` — Supabase Auth (`@supabase/ssr`); `getUser()` gate on every data route. **Separate role contexts** (no single enum): `students` (learners),`organisation_memberships` (owner/hr/staff/student — the C1 canonical org model, `0038`), `teachers` (`0014`, assignment-linked to students), `platform_admins` (`0044`, seeded from `ADMIN_EMAILS`), `employer_admins` (owner/hr/viewer, mig `0012`, legacy cutover), investor operators (`ADMIN_EMAILS` allowlist, `lib/investor/operator-auth.ts`), `content_editors` (admin/marketing/readonly, mig `0023`, resolved by `current_content_role()`).
+- **Row-Level Security** `[V]` — RLS enabled across the schema; learner/telemetry tables scoped to `student_id = auth.uid()`; content/investor tables scoped to their role functions. The content-admin boundary ("touch content, not the instrument") is an RLS boundary — content editors have policies only on content tables. The org-model surfaces use DB-side SECURITY DEFINER gates (`org_can_view_student` / `current_org_role` / `dept_can_view_student` from `0038`, `platform_is_admin` from `0044`) so row counts are enforced by the database, not the UI — asserted continuously by the org-RLS DB-verify harness (`npm run test:org:db`, see LLD §4). A cross-org leak in `teacher_report_context` (`0040`) was found by that harness in the C7 pass and fixed by `0050`.
 - **Storage** `[V]` — Supabase Storage for dataroom documents and the public `marketing-assets` bucket (2 MB image cap; created on demand by `api/admin/assets/upload`).
 - **i18n** `[V]` — 11-language UI dictionary (`lib/i18n/dictionary.ts`), cookie/profile-driven active language; render-time Claude-Haiku translation for dynamic student-facing content (`lib/i18n/translate.ts`); marketing site is EN-only today (VI stored via the content admin for later).
 - **Voice memory / security** `[V]` — ConvAI webhook verifies HMAC; identity is server-derived at connect (`conversation_id`), per the portfolio Voice Memory Standard.
@@ -218,30 +219,32 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 ## 9. Open items linked to this design
 
-- `[V]` **ClassIn integration is scaffolded, not live** — needs EEO SDK credentials + confirmation of the embed shape, analytics granularity, and per-speaker recording (`docs/AUDIT_REPORT.md` §A5; `docs/CLASSIN_INTEGRATION_SPEC.md` is the intended next artifact).
+- `[V]` **ClassIn integration is scaffolded, not live** — needs EEO SDK credentials + confirmation of the embed shape, analytics granularity, and per-speaker recording (`docs/AUDIT_REPORT.md` §A5; `docs/CLASSIN_INTEGRATION_SPEC.md` is the intended next artifact). `classin_sessions` now has org/teacher read RLS (`0049`).
 - `[V]` **Score-row provenance gap** — `gap_scores`/`gap_score_history` carry `source` but **no `model_id`/`rubric_version`/`prompt_hash`/`extraction_method`** (`AUDIT_REPORT.md` §A6).
 - `[V]` **Audio retention** — discovery keeps the transcript only; **no audio persisted** (§A7).
-- `[?]` Observability (Sentry/analytics) unwired; billing/multi-tenant (lane-1) not built (demo scope).
+- `[?]` Observability (Sentry/analytics) unwired; billing/multi-tenant Stripe not built (demo scope — synthetic `subscriptions`, `0041`); **production deployment blocked on Thao creating the Vercel team/project** (§7).
 - `[A]` Content admin: live editor round-trip not yet exercised headlessly; next/image optimisation for uploaded assets deferred.
+- `[V]` **Live voice path not production-tested** — Aria/Morgan require an ElevenLabs Agent++ binding (orphaned agent `agent_8701m2eyrep6exysepd25r16msst`) + Dennis promoted to workspace Admin; and a live Supabase (current project paused). MOTD target on `npm run dev` isn't the right host — production smoke required.
 
 ---
 
-## 10. Verification checklist (status after the 2026-07-10 pass)
+## 10. Verification checklist (status after the 2026-09-16 pass)
 
 - [x] `[V]` Stack = Next.js 16.2.4 + Supabase (Tokyo) + ElevenLabs + Anthropic/OpenAI; **no Inngest/Stripe/queue** (package.json).
-- [x] `[V]` Modules mapped to routes (§3); four separate auth-role contexts.
+- [x] `[V]` Modules mapped to routes (§3); role contexts: students / org memberships (owner-hr-staff-student) / teachers / platform admins / employer admins / content editors / investor operators.
 - [x] `[V]` Core loop: ConvAI discovery → webhook → Claude Sonnet 4.6 rubric → 6 `gap_scores` (0–1000) + `gap_score_history`.
 - [x] `[V]` Investor RAG: pgvector 1536 + HNSW + `match_dataroom_chunks`; OpenAI embeddings; Claude cited answers.
 - [x] `[V]` ClassIn scaffolded (throws `ClassinUnavailableError`); no audio retained; scores lack provenance columns.
 - [x] `[V]` Content admin: rows overlay `home.ts`; draft/preview/publish; RLS + append-only audit.
-- [ ] `[?]` RLS table/policy counts; observability; environments/prod-access ownership — not code-tallied this pass.
+- [x] `[V]` C0–C7 build sequence complete: curriculum engine (`0037` + `curriculum-engine.ts`), org model + onboarding wizard + platform/org/teacher portals, C7 auth+RLS wiring — org-RLS DB-verify harness PASSES (`npm run test:org:db`, 50 migrations applied, `teacher_report_context` leak closed by `0050`).
+- [ ] `[?]` Live production deployment (blocked on Thao Vercel team); observability wiring; TrackTest integration depth — not code-tallied this pass.
 
 ---
 
 ## 11. Corrections summary (evidence the pass read the code)
 
-**Confirmed (`[A]` → `[V]`):** stack pins; the discovery→scoring loop and its models; the six-skill 0–1000 rubric; investor pgvector RAG (1536/HNSW/`match_dataroom_chunks`) with OpenAI embeddings; four separate role contexts; Tokyo residency; the content-admin rows/overlay/RLS/audit; ClassIn scaffolded-not-live; no job orchestrator.
+**Confirmed (`[A]` → `[V]`):** stack pins; the discovery→scoring loop and its models; the six-skill 0–1000 rubric; investor pgvector RAG (1536/HNSW/`match_dataroom_chunks`) with OpenAI embeddings; role contexts (now incl. org memberships / teachers / platform admins — C1); Tokyo residency; the content-admin rows/overlay/RLS/audit; ClassIn scaffolded-not-live; no job orchestrator; **C0–C7 build sequence complete with the org-RLS gate layer as a DB-verified boundary** (cross-org report-context leak closed by `0050`).
 
-**Differs from the MMC template (by design, not error):** no Inngest (async = ConvAI webhook + nudges cron); no Stripe/billing (demo scope); no central AI routing table (per-call-site models); no Sentry/analytics yet.
+**Differs from the MMC template (by design, not error):** no Inngest (async = ConvAI webhook + nudges cron); no Stripe/billing (demo scope — synthetic `subscriptions` `0041`); no central AI routing table (per-call-site models); no Sentry/analytics yet.
 
-**Still `[?]`:** RLS table/policy counts; observability wiring; environment list + prod-access ownership; TrackTest integration depth (files present, not deep-read this pass).
+**Still `[?]`:** live production deploy (blocked on Thao — Vercel team/project); observability wiring; TrackTest integration depth (files present, not deep-read this pass); exact table/policy count of the C1 RLS layer (asserted behaviourally by the DB-verify harness rather than tallied).

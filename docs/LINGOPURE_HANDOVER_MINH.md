@@ -11,7 +11,7 @@ This document provides the step-by-step operational commands to execute the infr
 
 1. **GitHub** — Mirror copy the application repository to `LingoPure/LingoPureAI` (retaining the original as a rollback backup).
 2. **Vercel** — Reconnect the existing project `lingo-pure-ai` to the new repo.
-3. **Supabase** — **Path A (approved): greenfield rebuild.** LingoPure creates their own project and rebuilds the schema from the repo's 29 migrations via `supabase db push`. Existing CAS production data is NOT carried over (the old project `nbvprbaumwmfczsfcyrv` is currently paused/INACTIVE).
+3. **Supabase** — **Path A (approved): greenfield rebuild.** LingoPure creates their own project and rebuilds the schema from the repo's **50 migrations** (`0001`–`0050` — was 29 at the time of writing) via `supabase db push`. Existing CAS production data is NOT carried over (the old project `nbvprbaumwmfczsfcyrv` is currently paused/INACTIVE).
 
 ### Guidance
 
