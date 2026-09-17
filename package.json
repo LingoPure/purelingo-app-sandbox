@@ -31,7 +31,7 @@
     "@caistech/corporate-components": "^0.3.0",
     "@caistech/dataroom-core": "^0.1.1",
     "@caistech/discovery-agent": "^0.1.0",
-    "@caistech/elevenlabs-convai": "^0.9.0",
+    "@caistech/elevenlabs-convai": "^0.16.0",
     "@caistech/sayfix-embed": "^0.6.0",
     "@caistech/webmcp-kit": "^0.1.0",
     "@elevenlabs/client": "^1.4.0",
@@ -52,7 +52,7 @@
     "zod": "^4.4.1"
   },
   "devDependencies": {
-    "@caistech/portfolio-gate": "^0.10.0",
+    "@caistech/portfolio-gate": "^0.18.0",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

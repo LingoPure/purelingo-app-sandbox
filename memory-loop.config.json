@@ -1,6 +1,7 @@
 {
-  "_doc": "Full canonical memory loop: identity is bound server-side at connect (/api/convai/bind → convai_voice_bindings), the post-call webhook (/api/convai/webhook) persists via handlePostCallWebhook + distils via distillConversationToMemory for BOTH agents (discovery via aria-memory, investor Morgan via voice-morgan), and the mid-call tool routes (start_conversation / recall_memory / save_memory / save_message / update_topic) are mounted at /api/onboarding/discovery/webhooks/[all] and resolve identity from the bind table. Route guards use CONVAI_TOOL_SECRET. Morgan is a clarifier, so its tool routes are intentionally not exposed to the agent.",
+  "_doc": "Full canonical memory loop. Identity is bound server-side at connect (/api/convai/bind → convai_voice_bindings); the tool routes (start_conversation / recall_memory / save_memory / save_message / update_topic) are mounted at /api/onboarding/discovery/webhooks/[all] and resolve identity binding-first, with the server-baked ?uid= query param as the fallback for server-provisioned tools and this gate. The post-call webhook (/api/convai/webhook) persists via handlePostCallWebhook + distils via distillConversationToMemory for BOTH agents (discovery via aria-memory, investor Morgan via voice-morgan). Route guards use CONVAI_TOOL_SECRET. agentId is pinned so the continuity leg can run: the shared discovery agent is seeded under the system user (convai_agents.user_id = 000…0), so the probe's per-user agentsTable lookup cannot find it. Morgan is a clarifier, so its tool routes are intentionally not exposed to the agent.",
   "memoryLoop": true,
   "webhookPath": "/api/onboarding/discovery/webhooks",
-  "postCallPath": "/api/convai/webhook"
+  "postCallPath": "/api/convai/webhook",
+  "agentId": "agent_8701m2eyrep6exysepd25r16msst"
 }
