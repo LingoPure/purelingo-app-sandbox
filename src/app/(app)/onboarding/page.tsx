@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDict } from "@/lib/i18n";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
 import { RoleConfirmAndStart } from "./role-confirm";
+import { SelfSetup } from "./self-setup";
 import { MeetAriaIntro } from "./meet-aria-intro";
 
 export default async function OnboardingPage() {
@@ -117,19 +118,23 @@ export default async function OnboardingPage() {
       </section>
 
       {agentId && userId ? (
-        <RoleConfirmAndStart
-          roles={roles}
-          initialRoleId={initialRoleId}
-          initialNativeLanguage={ariaLang}
-          copy={{
-            languageLabel: t("onboarding.languagePickerLabel"),
-            languageExplain: t("onboarding.langExplain"),
-            readyHeading: t("onboarding.readyHeading"),
-            readyLead: t("onboarding.readyLead"),
-            startButton: t("onboarding.startButton"),
-            headphonesNote: t("onboarding.headphonesNote"),
-          }}
-        />
+        employerId ? (
+          <RoleConfirmAndStart
+            roles={roles}
+            initialRoleId={initialRoleId}
+            initialNativeLanguage={ariaLang}
+            copy={{
+              languageLabel: t("onboarding.languagePickerLabel"),
+              languageExplain: t("onboarding.langExplain"),
+              readyHeading: t("onboarding.readyHeading"),
+              readyLead: t("onboarding.readyLead"),
+              startButton: t("onboarding.startButton"),
+              headphonesNote: t("onboarding.headphonesNote"),
+            }}
+          />
+        ) : (
+          <SelfSetup />
+        )
       ) : (
         <section className="rounded-lg border border-cream bg-paper p-8 text-center">
           <p className="mb-2 font-mono text-xs uppercase tracking-[0.25em] text-gold">
