@@ -20,17 +20,35 @@ const routes = createConvaiWebhookRoutes({
   supabase: adminSupabase(),
   requireToolSecret: true,
 
-  // Identity for start_conversation: look up the server-trusted bind at connect time.
-  resolveSession: async (_req, body) => {
+  // Identity for start_conversation, binding-first: a real conversation
+  // carries a server-trusted convai_voice_bindings row. The ?uid= query
+  // param is the documented "server-baked owner identity" mode — the URL is
+  // assembled by the provisioning layer (never by the client) and the whole
+  // route set is behind requireToolSecret. Binding wins; uid is the fallback
+  // the gate and server-baked tools rely on.
+  resolveSession: async (req, body) => {
     const conversationId = String(body.elevenlabs_conversation_id || "");
-    if (!conversationId) return null;
-    const sb = adminSupabase();
-    const { data } = await sb
-      .from("convai_voice_bindings")
-      .select("user_id")
-      .eq("elevenlabs_conversation_id", conversationId)
-      .maybeSingle();
-    return data ? { userId: data.user_id } : null;
+    if (conversationId) {
+      const sb = adminSupabase();
+      const { data } = await sb
+        .from("convai_voice_bindings")
+        .select("user_id")
+        .eq("elevenlabs_conversation_id", conversationId)
+        .maybeSingle();
+      if (data) return { userId: data.user_id };
+    }
+    const uid = new URL(req.url).searchParams.get("uid");
+    if (uid) return { userId: uid };
+    return null;
+  },
+
+  // Tool routes (recall/save/start) resolve identity from the same place.
+  // ElevenLabs does not pass conversation_id to tool webhooks, so the baked
+  // ?uid= query param is the reliable path for server-provisioned agents.
+  resolveToolIdentity: async (req) => {
+    const uid = new URL(req.url).searchParams.get("uid");
+    if (!uid) return null;
+    return { userId: uid };
   },
 });
 
