@@ -18,7 +18,7 @@ async function appBaseUrl(): Promise<string> {
       ? `https://${xfh}`
       : process.env.NEXT_PUBLIC_SITE_URL
         ? process.env.NEXT_PUBLIC_SITE_URL
-        : "http://localhost:3000";
+        : "https://purelingo-app-sandbox.vercel.app";
   return base.replace(/\/$/, "");
 }
 

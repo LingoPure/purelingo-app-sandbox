@@ -61,7 +61,7 @@ export async function inviteCandidate(input: {
     ? await loadRoleName(supabase, roleId)
     : null;
 
-  const origin = process.env.APP_URL ?? "http://localhost:3000";
+  const origin = process.env.APP_URL ?? "https://purelingo-app-sandbox.vercel.app";
   const actionLink = `${origin}/screen/${token}`;
 
   const mailResult = await sendCandidateScreenEmail({

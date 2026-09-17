@@ -1,26 +1,48 @@
-import { ariaDiscovery } from "@/lib/onboarding/aria-discovery";
-import { CONVAI_TOOL_SECRET_HEADER } from "@caistech/elevenlabs-convai";
+import { createConvaiWebhookRoutes } from "@caistech/elevenlabs-convai";
+import { createClient } from "@supabase/supabase-js";
 
-// The discovery-agent provides all routes via webhookRoutes()
-const routes = ariaDiscovery.webhookRoutes();
+// Canonical memory-loop tool routes for the shared discovery agent.
+//
+// Identity model (VOICE_MEMORY_STANDARD rule 9): the conversation→user binding
+// is established server-side at connect via /api/convai/bind (writes
+// convai_voice_bindings). start_conversation resolves identity from that table;
+// recall/save resolve from the convai_conversations row written by start.
+// The client never asserts a bare user_id.
+
+function adminSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error("Supabase env not configured");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
+const routes = createConvaiWebhookRoutes({
+  supabase: adminSupabase(),
+  requireToolSecret: true,
+
+  // Identity for start_conversation: look up the server-trusted bind at connect time.
+  resolveSession: async (_req, body) => {
+    const conversationId = String(body.elevenlabs_conversation_id || "");
+    if (!conversationId) return null;
+    const sb = adminSupabase();
+    const { data } = await sb
+      .from("convai_voice_bindings")
+      .select("user_id")
+      .eq("elevenlabs_conversation_id", conversationId)
+      .maybeSingle();
+    return data ? { userId: data.user_id } : null;
+  },
+});
 
 // Map the catch-all [all] slug to the corresponding route handler.
 //
-// SECURITY — memory-loop endpoints (recall/save/topic) are unauthenticated at the
-// library level (identity derives from the public agent id). When CONVAI_TOOL_SECRET
-// is set we guard here: ONLY requests carrying the matching `x-convai-tool-secret`
-// header (baked into provisioned agents' tools) pass. The post-call route is exempt —
-// it is independently HMAC-verified via the post-call webhook secret.
-const TOOL_SECRET = process.env.CONVAI_TOOL_SECRET || undefined;
-
-function guard(handler: (req: Request) => Promise<Response>) {
-  return async (req: Request): Promise<Response> => {
-    if (TOOL_SECRET && req.headers.get(CONVAI_TOOL_SECRET_HEADER) !== TOOL_SECRET) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-    return handler(req);
-  };
-}
+// SECURITY — memory-loop endpoints (recall/save/topic) require the
+// x-convai-tool-secret header (baked into provisioned agents' tools) via
+// requireToolSecret: true on the routes above. The post-call route is bound
+// to /api/convai/webhook (not here) and independently HMAC-verified.
+//
+// NOTE — tool URLs from createConversationTools use snake_case slugs
+// (save_message, recall_memory, etc.), NOT camelCase.
 
 export const POST = async (
   req: Request,
@@ -30,16 +52,16 @@ export const POST = async (
   const slug = all.split("/").pop();
 
   switch (slug) {
-    case "postCall":
-      return routes.postCall(req);
-    case "saveMessage":
-      return guard(routes.saveMessage)(req);
-    case "recallMemory":
-      return guard(routes.recallMemory)(req);
-    case "saveMemory":
-      return guard(routes.saveMemory)(req);
-    case "updateTopic":
-      return guard(routes.updateTopic)(req);
+    case "start_conversation":
+      return routes.startConversation(req);
+    case "save_message":
+      return routes.saveMessage(req);
+    case "recall_memory":
+      return routes.recallMemory(req);
+    case "save_memory":
+      return routes.saveMemory(req);
+    case "update_topic":
+      return routes.updateTopic(req);
     default:
       return new Response("Not Found", { status: 404 });
   }

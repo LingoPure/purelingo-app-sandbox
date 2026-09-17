@@ -1,5 +1,5 @@
 {
-  "_doc": "Post-call leg ONLY: /api/convai/webhook calls handlePostCallWebhook + distillConversationToMemory into the canonical convai_* tables. There are no recall_memory / save_memory / start_conversation tool routes, so the canonical mid-call round-trip the runtime probe asserts does not exist here and probing it would report a false failure. The distil wiring is covered by the STATIC audit (portfolio-gate-audit-voice-memory). Revisit if the agent gains mid-call memory tools.",
-  "memoryLoop": false,
+  "_doc": "Full canonical memory loop: identity is bound server-side at connect (/api/convai/bind → convai_voice_bindings), the post-call webhook (/api/convai/webhook) persists via handlePostCallWebhook + distils via distillConversationToMemory for BOTH agents (discovery via aria-memory, investor Morgan via voice-morgan), and the mid-call tool routes (start_conversation / recall_memory / save_memory / save_message / update_topic) are mounted at /api/onboarding/discovery/webhooks/[all] and resolve identity from the bind table. Route guards use CONVAI_TOOL_SECRET. Morgan is a clarifier, so its tool routes are intentionally not exposed to the agent.",
+  "memoryLoop": true,
   "webhookPath": "/api/convai/webhook"
 }

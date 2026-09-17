@@ -35,8 +35,8 @@ export const agentConfig: AgentReadinessConfig = {
     }
   ],
   "provider": {
-    "name": "Global Buildtech Australia Pty Ltd",
-    "url": "https://corporateaisolutions.com",
+    "name": "LingoPure",
+    "url": "https://lingopure.com",
     "legalId": "ABN 54 672 395 685"
   },
   "contactEmail": "dennis@corporateaisolutions.com"

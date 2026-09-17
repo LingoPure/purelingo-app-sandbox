@@ -27,8 +27,7 @@
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 /**
- * The only Resend-verified sending subdomain. The bare apex is NOT verified;
- * using it means mail silently goes nowhere.
+ * Resend-verified sending domain (lingopure.com is verified in Resend).
  *
  * Overridable so the destination environment can point at the client's own
  * verified domain without touching code.

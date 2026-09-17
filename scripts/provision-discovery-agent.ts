@@ -5,20 +5,53 @@
  *   set -a; source .env.local; set +a; npx tsx scripts/provision-discovery-agent.ts
  *
  * Idempotent: with ELEVENLABS_AGENT_ID set it UPDATES the existing agent in place
- * (no duplicate created). Uses the 0.3.x workspace-scoped webhook binding — the
+ * (no duplicate created). Uses the workspace-scoped webhook binding — the
  * post-call webhook is created/bound at the workspace level via post_call_webhook_id,
  * NOT the deprecated per-agent platform_settings.webhook (the shape behind the
  * cross-product transcript leak).
  *
- * IMPORTANT — webhook secret: a workspace webhook has its OWN signing secret. If this
- * run CREATES a new workspace webhook (no existing one matches the URL), update
- * ELEVENLABS_WEBHOOK_SECRET (ElevenLabs dashboard -> Webhooks) to the new secret, or
- * the /api/convai/webhook route's signature check will 401. If a webhook with the same
- * URL already exists it is reused and the secret is unchanged.
+ * CANONICAL AUTO-CONFIGURATION — this script WRITES the values the app needs back
+ * into .env.local itself (agent id always; webhook secret only when a NEW workspace
+ * webhook was created — ElevenLabs shows the secret just once). No dashboard copy-
+ * paste. It also seeds the convai_agents row so the post-call webhook can persist +
+ * distil memory (the persistent-memory loop floor).
+ *
+ * IMPORTANT — webhook secret: a workspace webhook has its OWN signing secret, shown
+ * only at creation. If this run CREATES one, we write .env.local with the returned
+ * secret. If an existing webhook with the URL is reused, the secret is unchanged
+ * (the stored value stays valid). You still must push new env to Vercel.
  */
 
 import { provisionVoiceAgent, standardAllowlist, createConversationTools } from "@caistech/elevenlabs-convai";
+import { createClient } from "@supabase/supabase-js";
 import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt";
+import { upsertEnvLocal } from "./update-env-local.mjs";
+
+async function seedConvaiAgent(agentId: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.log("= skipped convai_agents seed (no SUPABASE_SERVICE_ROLE_KEY) — memory persistence will report 'Agent not found' until seeded.");
+    return;
+  }
+  const sb = createClient(url, key, { auth: { persistSession: false } });
+  const { error } = await sb.from("convai_agents").upsert(
+    {
+      // convai_agents.user_id is just ownership; conversations carry their own
+      // per-student user_id. A sentinel keeps the shared agent row single.
+      user_id: "00000000-0000-0000-0000-000000000000",
+      agent_name: "LingoPure Discovery Agent",
+      elevenlabs_agent_id: agentId,
+      system_prompt: SYSTEM_PROMPT,
+      first_message: FIRST_MESSAGE,
+      voice_id: "21m00Tcm4TlvDq8ikWAM",
+      status: "active",
+    },
+    { onConflict: "elevenlabs_agent_id" }
+  );
+  if (error) console.error(`! convai_agents seed failed: ${error.message}`);
+  else console.log("+ convai_agents row seeded (memory persistence enabled)");
+}
 
 async function main() {
   const apiKey = process.env.ELEVENLABS_API_KEY;
@@ -54,13 +87,32 @@ async function main() {
   console.log("\n✓ Agent provisioned (workspace-scoped webhook)\n");
   console.log(`  agentId   : ${result.agentId}`);
   console.log(`  created   : ${result.created}`);
-  console.log(`  webhookId : ${result.webhookId}\n`);
-  console.log("Next steps:");
-  console.log(`  1. If ELEVENLABS_AGENT_ID was unset, append it to .env.local:`);
-  console.log(`       ELEVENLABS_AGENT_ID=${result.agentId}`);
-  console.log(`  2. If a NEW workspace webhook was created, set ELEVENLABS_WEBHOOK_SECRET`);
-  console.log(`     to its secret (ElevenLabs -> Webhooks), then push to Vercel.`);
-  console.log(`  3. Redeploy.\n`);
+  console.log(`  webhookId : ${result.webhookId}`);
+
+  // Canonical auto-configuration: write the agent id + (newly created) webhook
+  // secret into .env.local so nothing needs manual copy-paste from a dashboard.
+  const envEntries: { key: string; value: string }[] = [
+    { key: "ELEVENLABS_AGENT_ID", value: result.agentId },
+  ];
+  const createdWebhook = Boolean(result.webhookSecret);
+  if (result.webhookSecret) {
+    envEntries.push({ key: "ELEVENLABS_WEBHOOK_SECRET", value: result.webhookSecret });
+  }
+  const writes = upsertEnvLocal(envEntries);
+  for (const w of writes) {
+    if (w.written) console.log(`+ .env.local updated: ${w.key}`);
+    else console.log(`! .env.local skipped ${w.key} (${w.reason})`);
+  }
+
+  // Seed convai_agents so the post-call webhook persists + distils memory.
+  await seedConvaiAgent(result.agentId);
+
+  if (createdWebhook) {
+    console.log("  (webhook was NEW — secret written to .env.local, not printed here)");
+  } else {
+    console.log("= reused existing workspace webhook; ELEVENLABS_WEBHOOK_SECRET unchanged");
+  }
+  console.log("\nNext step: push updated .env.local to Vercel (production + preview), then redeploy.\n");
 }
 
 main().catch((err) => {

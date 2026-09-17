@@ -109,8 +109,6 @@ export default async function DiscoverySessionPage() {
     ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
 
   return (
-    <DiscoverySession
-      userId={user.id}
-    />
+    <DiscoverySession />
   );
 }

@@ -66,7 +66,7 @@ function htmlTemplate(subject: string, body: string): string {
           <a href="${APP_URL}/dashboard" style="display:inline-block;background:#0a2540;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:500;">Open LingoPure →</a>
         </td></tr>
         <tr><td style="padding:14px 28px;background:#f3f6fb;border-top:1px solid #ede8dc;color:#8fa3b1;font-size:11px;line-height:1.5;">
-          You're receiving this because you have an active LingoPure account. This is a strategic platform demo — not the production lingopure.com service.
+          You're receiving this because you have an active LingoPure account. Nudges help you keep your lesson streak on track.
         </td></tr>
       </table>
     </td></tr>

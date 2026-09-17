@@ -7,11 +7,11 @@ export const RETURN_TO_COOKIE = "lp_return_to";
 export const RETURN_TO_TTL_SECONDS = 24 * 60 * 60;
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://aiftis-demo.vercel.app",
+  "https://purelingo-app-sandbox.vercel.app",
   "http://localhost:3000",
 ];
 
-const PREVIEW_HOSTNAME = /^aiftis-demo[a-z0-9-]*\.vercel\.app$/;
+const PREVIEW_HOSTNAME = /^purelingo-app-sandbox[a-z0-9-]*\.vercel\.app$/;
 
 function allowedOrigins(): string[] {
   const fromEnv = process.env.RETURN_TO_ALLOWED_ORIGINS;

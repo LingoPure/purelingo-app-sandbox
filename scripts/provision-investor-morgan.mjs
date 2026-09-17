@@ -17,8 +17,9 @@
 //   3. Seeds a convai_agents row so the post-call webhook can persist + distil
 //      Morgan's calls into convai_memory (without a row it returns "Agent not
 //      found", exactly the discovery-agent gotcha).
-//   4. Prints the NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID to add to .env.local +
-//      Vercel (plain, production+preview).
+//   4. CANONICAL AUTO-CONFIG: writes NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID (+
+//      ELEVENLABS_WEBHOOK_SECRET when this run created the shared workspace
+//      webhook) back into .env.local — no dashboard copy-paste. Then push to Vercel.
 //
 //   node scripts/provision-investor-morgan.mjs
 //
@@ -40,6 +41,7 @@ import {
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { upsertEnvLocal } from "./update-env-local.mjs";
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 for (const raw of existsSync(path.join(REPO, ".env.local"))
@@ -140,10 +142,21 @@ async function main() {
     );
   }
 
+  // Canonical auto-configuration: write the Morgan agent id (+ a newly-created
+  // shared webhook secret) into .env.local — no dashboard copy-paste.
+  const envEntries = [{ key: "NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID", value: result.agentId }];
+  if (result.webhookSecret) {
+    envEntries.push({ key: "ELEVENLABS_WEBHOOK_SECRET", value: result.webhookSecret });
+  }
+  const writes = upsertEnvLocal(envEntries);
+  for (const w of writes) {
+    if (w.written) console.log(`+ .env.local updated: ${w.key}`);
+    else console.log(`! .env.local skipped ${w.key} (${w.reason})`);
+  }
+
   console.log(
-    `\n✔ Done. Add this to .env.local AND Vercel (plain, production+preview):\n\n` +
-      `  NEXT_PUBLIC_INVESTOR_MORGAN_AGENT_ID=${result.agentId}\n\n` +
-      `Then redeploy. The "Talk to Morgan" choice on /investor/ask goes live once the env var is present.`
+    `\n✔ Done. Push .env.local to Vercel (plain, production+preview), then redeploy. ` +
+      `The "Talk to Morgan" choice on /investor/ask goes live once the env var is present.`
   );
 }
 

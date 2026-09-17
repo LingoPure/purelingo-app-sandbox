@@ -36,6 +36,6 @@ export const ariaDiscovery = defineDiscovery(
       process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       process.env.SUPABASE_SERVICE_ROLE_KEY || ""
     ),
-    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    baseUrl: process.env.NEXT_PUBLIC_APP_URL || "https://purelingo-app-sandbox.vercel.app",
   }
 );

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createClientOrganisation } from "@/lib/org/service";
 
 const ACTOR = "actor-admin-001";
-const ORIGIN = "https://app.lingopure.com";
+const ORIGIN = "https://purelingo-app-sandbox.vercel.app";
 
 type TableName =
   | "organisations"
@@ -157,7 +157,7 @@ test("invite path: provisions the owner account, owns the org, returns a landing
   assert.match(result.invite.actionLink, /token_hash=tok123/);
   assert.match(
     result.invite.actionLink,
-    /next=https%3A%2F%2Fapp\.lingopure\.com%2Forg%2Facme-pacific-bpo/
+    /next=https%3A%2F%2Fpurelingo-app-sandbox\.vercel\.app%2Forg%2Facme-pacific-bpo/
   );
   assert.equal(result.invite.mailOk, false); // no RESEND_API_KEY in tests → copy-paste fallback
 });

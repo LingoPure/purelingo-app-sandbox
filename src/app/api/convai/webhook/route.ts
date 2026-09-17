@@ -4,11 +4,13 @@ import {
   parsePostCallPayload,
   handlePostCallWebhook,
   distillConversationToMemory,
+  verifyAnonSessionToken,
   type TableNames,
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
 import { awardXp } from "@/lib/gamification/award";
+import { ariaMemoryExtractor } from "@/lib/onboarding/aria-memory";
 import {
   INVESTOR_MORGAN_AGENT_ID,
   morganMemoryExtractor,
@@ -171,14 +173,41 @@ export async function POST(request: NextRequest) {
     return handleInvestorMorganPostCall(payload);
   }
 
-  const userId =
-    payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+  const conversationId = payload.data.conversation_id;
+
+  // Identity is SERVER-derived, never client-asserted (VOICE_MEMORY_STANDARD
+  // rule 9). The bind table (written at connect by /api/convai/bind from the
+  // authenticated session) wins; fall back to verifying the discovery session
+  // token minted by startSession() — the discovery widget passes it as the
+  // user_id dynamic variable, but we VERIFY it here rather than trusting a
+  // bare client string. A tampered client hitting neither path is ignored.
+  let userId: string | null = null;
+  const svc = adminSupabase();
+  const { data: binding } = await svc
+    .from("convai_voice_bindings")
+    .select("user_id")
+    .eq("elevenlabs_conversation_id", conversationId)
+    .maybeSingle();
+  if (binding?.user_id) {
+    userId = binding.user_id;
+  } else {
+    const token =
+      payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+    if (token) {
+      const sessionSecret = process.env.DISCOVERY_SESSION_SECRET;
+      if (sessionSecret) {
+        const claims = verifyAnonSessionToken(sessionSecret, token);
+        if (claims?.sid) userId = claims.sid;
+      }
+    }
+  }
+
   if (!userId) {
     console.warn(
-      "[convai/webhook] missing user_id dynamic variable — ignoring conversation",
-      payload.data.conversation_id
+      "[convai/webhook] no server-derived identity — ignoring conversation",
+      conversationId
     );
-    return NextResponse.json({ ok: true, ignored: "missing_user_id" });
+    return NextResponse.json({ ok: true, ignored: "missing_identity" });
   }
 
   const supabase = adminSupabase();
@@ -212,17 +241,34 @@ export async function POST(request: NextRequest) {
       summary: payload.data.analysis?.transcript_summary,
       messages,
     },
-    TABLES
+    TABLES,
+    // The distill leg of the persistent-memory loop: after the conversation +
+    // messages commit, distil the interview into convai_memory so a returning
+    // learner is remembered next session (cross logout/login — keyed to the
+    // server-trusted user_id, not a browser token). Runs once per finished
+    // conversation (processed_at gate inside handlePostCallWebhook).
+    async ({ userId: distillUserId, id: convaiConversationId }) => {
+      const { saved, error } = await distillConversationToMemory(supabase, {
+        elevenlabsConversationId: payload.data.conversation_id,
+        conversationId: convaiConversationId,
+        extract: ariaMemoryExtractor(),
+        tables: TABLES,
+      });
+      if (error) {
+        console.warn(`[convai/webhook] discovery distill skipped for ${distillUserId}:`, error);
+      } else {
+        console.log(
+          `[convai/webhook] discovery distill saved ${saved} memory item(s) for ${distillUserId}`
+        );
+      }
+    }
   );
 
   if (!result.success) {
-    // The @caistech/elevenlabs-convai package can't persist into convai_* here: there is no
-    // convai_agents row for the shared discovery agent (it's provisioned in ElevenLabs but
-    // never mirrored into the DB), so the package returns "Agent not found". That persistence
-    // is redundant for LingoPure anyway — discovery scoring below works off
-    // payload.data.transcript and writes discovery_sessions + gap_scores. So LOG and CONTINUE
-    // rather than 500: returning 500 here skipped scoring entirely (discovery never completed),
-    // and ElevenLabs auto-disables a webhook that keeps returning 5xx.
+    // handlePostCallWebhook may skip persistence when there is no convai_agents
+    // row for this agent (e.g. not yet seeded by the provision script). That is
+    // NOT a failure of discovery — scoring below works directly off the
+    // transcript. Log and continue so scoring still runs.
     console.warn("[convai/webhook] convai persist skipped, continuing to scoring:", {
       error: result.error,
       agentId: payload.data.agent_id,
