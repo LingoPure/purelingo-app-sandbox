@@ -77,6 +77,16 @@ jobs:
 
       - name: Build
         run: npm run build --if-present
+        env:
+          # Module-scope createClient() throws on empty strings when Next
+          # collects page data, so a build with no env fails in CI (local
+          # builds pass because Next auto-loads .env.local). Placeholders
+          # satisfy the constructor; runtime uses the real Vercel values.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.invalid
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          NEXT_PUBLIC_APP_URL: https://purelingo-app-sandbox.vercel.app
+          CONVAI_TOOL_SECRET: ci-placeholder
 
       - name: Verify preview URL is set
         run: |
