@@ -122,6 +122,8 @@ export function DiscoverySession() {
         overrides={overrides}
         title={config.persona.name}
         coachName={config.persona.name}
+        avatarUrl="/kira-avatar.jpg"
+        transcript
         onReady={(controls) => {
           controlsRef.current = controls;
           if (introStage) {
@@ -144,7 +146,9 @@ export function DiscoverySession() {
           });
         }}
         onDisconnect={() => {
-          window.location.href = "/onboarding/battery";
+          // Post-call screen explains what happens next and polls the webhook
+          // before advancing to the battery (which gates on discovery_status).
+          window.location.href = "/onboarding/post-call";
         }}
       />
     </div>

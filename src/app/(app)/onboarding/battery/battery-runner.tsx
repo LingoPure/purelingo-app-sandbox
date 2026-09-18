@@ -8,6 +8,9 @@ import type {
 } from "@/lib/onboarding/battery/types";
 import type { SelectedTask } from "@/lib/onboarding/battery/select-tasks";
 
+import { BilingualText } from "@/components/i18n/bilingual-text";
+import type { Bilingual } from "@/lib/i18n/translate";
+
 export type LoadedTask = {
   prompt_id: string;
   variant_bucket: string;
@@ -20,6 +23,7 @@ type Props = {
    *  used to surface "why this task" in the intro screen. Optional;
    *  if missing the intro renders a generic blurb. */
   selected?: SelectedTask[];
+  bIntro?: Bilingual[];
 };
 
 const TASK_LABELS: Record<
@@ -68,7 +72,7 @@ type StoredResponse = {
   payload: unknown;
 };
 
-export function BatteryRunner({ tasks, selected }: Props) {
+export function BatteryRunner({ tasks, selected, bIntro }: Props) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("intro");
   const [activeIdx, setActiveIdx] = useState(0);
@@ -160,11 +164,11 @@ export function BatteryRunner({ tasks, selected }: Props) {
     }
 
     setPhase("done");
-    router.push("/dashboard?just-finished=battery");
+    router.push("/lessons?from=battery");
   }
 
   if (phase === "intro") {
-    return <BatteryIntro tasks={tasks} selected={selected} onStart={() => setPhase("tasks")} />;
+    return <BatteryIntro tasks={tasks} selected={selected} bIntro={bIntro} onStart={() => setPhase("tasks")} />;
   }
 
   if (phase === "review") {
@@ -194,7 +198,8 @@ export function BatteryRunner({ tasks, selected }: Props) {
         </h2>
         <p className="mt-2 text-sm text-mute">
           Your responses are being scored in parallel. You&apos;ll land on the
-          dashboard in a moment — the gap profile updates as each score lands.
+          lessons tab in a moment — the gap profile updates as each score
+          lands.
         </p>
       </div>
     );
@@ -207,7 +212,7 @@ export function BatteryRunner({ tasks, selected }: Props) {
           Battery complete
         </p>
         <h2 className="mt-1 font-serif text-2xl text-navy">
-          Heading to your dashboard…
+          Heading to your lessons…
         </h2>
       </div>
     );
@@ -289,32 +294,35 @@ export function BatteryRunner({ tasks, selected }: Props) {
 function BatteryIntro({
   tasks,
   selected,
+  bIntro,
   onStart,
 }: {
   tasks: LoadedTask[];
   selected?: SelectedTask[];
+  bIntro?: Bilingual[];
   onStart: () => void;
 }) {
   const totalMinutes = tasks.reduce(
     (sum, t) => sum + TASK_LABELS[t.prompt.task_type].minutes,
     0
   );
+  const bKicker = bIntro?.[0] ?? { en: "Voice discovery complete", native: "Voice discovery complete", translated: false };
+  const bTitle = bIntro?.[1] ?? { en: "Now we measure the rest — directly", native: "Now we measure the rest — directly", translated: false };
+  const bBody = bIntro?.[2] ?? { en: "Aria heard you speak. The voice conversation is great for fluency, comprehension, and learning style — but it can't directly measure how you write business emails, how you read for subtext, or how precisely you pick words. These short tasks fill those gaps. Together they produce the full profile your employer sees.", native: "", translated: false };
+  const bStartCta = bIntro?.[5] ?? { en: "Start the assessment →", native: "Start the assessment →", translated: false };
+
   return (
     <section className="flex flex-col gap-6 rounded-lg border border-cream bg-paper p-6 sm:p-8">
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-          Voice discovery complete
-        </p>
-        <h2 className="mt-1 font-serif text-2xl text-navy">
-          Now we measure the rest — directly
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-mute">
-          Aria heard you speak. The voice conversation is great for fluency,
-          comprehension, and learning style — but it can&apos;t directly
-          measure how you write business emails, how you read for subtext, or
-          how precisely you pick words. These short tasks fill those gaps.
-          Together they produce the full profile your employer sees.
-        </p>
+        <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          <BilingualText text={bKicker} />
+        </div>
+        <div className="mt-1 font-serif text-2xl text-navy">
+          <BilingualText text={bTitle} />
+        </div>
+        <div className="mt-3 max-w-2xl text-sm leading-relaxed text-mute">
+          <BilingualText text={bBody} />
+        </div>
       </div>
 
       <ol className="flex flex-col gap-3">
@@ -358,7 +366,7 @@ function BatteryIntro({
           onClick={onStart}
           className="rounded-md bg-navy px-6 py-3 text-sm font-medium text-paper hover:bg-navy-deep"
         >
-          Start the assessment →
+          {bStartCta?.translated ? <BilingualText text={bStartCta} /> : "Start the assessment →"}
         </button>
       </div>
     </section>

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StartLessonButton } from "./start-lesson-button";
+import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
+import { resolveNativeLanguage } from "@/lib/i18n/native-language";
+import { BilingualText } from "@/components/i18n/bilingual-text";
 
 type LessonRow = {
   id: string;
@@ -12,7 +15,12 @@ type LessonRow = {
   created_at: string;
 };
 
-export default async function LessonsPage() {
+export default async function LessonsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const { from } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,8 +47,57 @@ export default async function LessonsPage() {
   const activeEmailSprint = activeByType.get("email_sprint") ?? null;
   const activeSpeakScore = activeByType.get("speak_score") ?? null;
 
+  // Bilingual banner for students arriving from the assessment flow
+  const showBanner = from === "battery" || from === "discovery";
+  let bannerCopy: { kicker: Bilingual; title: Bilingual; body: Bilingual; step1: Bilingual; step2: Bilingual; step3: Bilingual } | null = null;
+  if (showBanner) {
+    const nativeLang = await resolveNativeLanguage();
+    const [bKicker, bTitle, bBody, bStep1, bStep2, bStep3] = await bilingualize(
+      [
+        "Self-assessment — final step",
+        "These lessons finish your baseline",
+        "Your voice discovery and written assessment are done. Every email sprint and speak-and-score you complete here updates the same profile your employer sees — each one re-scores the relevant skills and earns XP. Start with either; your results will shape what we recommend next.",
+        "Voice discovery",
+        "Written assessment",
+        "Micro-lessons",
+      ],
+      nativeLang
+    );
+    bannerCopy = { kicker: bKicker, title: bTitle, body: bBody, step1: bStep1, step2: bStep2, step3: bStep3 };
+  }
+
   return (
     <div className="flex flex-col gap-8">
+      {(showBanner && bannerCopy) && (
+        <section className="rounded-lg border border-gold/30 bg-gold/5 p-6">
+          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+            <BilingualText text={bannerCopy.kicker} />
+          </div>
+          <div className="mt-1 font-serif text-2xl text-navy">
+            <BilingualText text={bannerCopy.title} />
+          </div>
+          <div className="mt-2 max-w-2xl text-sm leading-relaxed text-mute">
+            <BilingualText text={bannerCopy.body} />
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="flex items-center gap-2 text-xs text-mute">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] text-white">✓</span>
+              <BilingualText text={bannerCopy.step1} />
+            </span>
+            <span className="text-mute">→</span>
+            <span className="flex items-center gap-2 text-xs text-mute">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal text-[10px] text-white">✓</span>
+              <BilingualText text={bannerCopy.step2} />
+            </span>
+            <span className="text-mute">→</span>
+            <span className="flex items-center gap-2 text-xs font-medium text-navy">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gold text-[10px] text-navy">3</span>
+              <BilingualText text={bannerCopy.step3} />
+            </span>
+          </div>
+        </section>
+      )}
+
       <div>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
           Micro-lessons

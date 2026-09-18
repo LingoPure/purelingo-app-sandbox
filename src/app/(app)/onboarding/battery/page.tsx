@@ -1,6 +1,8 @@
 // @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveLanguage } from "@/lib/i18n";
+import { bilingualize } from "@/lib/i18n/translate";
 import {
   parseTaskPromptPublic,
   type TaskType,
@@ -13,21 +15,6 @@ import {
 import type { CefrBand } from "@/lib/scoring/rubric";
 import { BatteryRunner, type LoadedTask } from "./battery-runner";
 
-/**
- * Phase 0b assessment-battery — entry point.
- *
- *   1. Read the student's voice-discovery profile + role baselines, and
- *      ask src/lib/onboarding/battery/select-tasks.ts which subset of the
- *      four task types to run, at what difficulty band each.
- *   2. Pull one prompt per selected task type at the chosen difficulty,
- *      preferring role-scoped → falling back to generic.
- *   3. Hydrate the runner that walks the student through the chosen
- *      tasks in priority order, then redirects to /dashboard once done.
- *
- * Row-level security: discovery_task_prompts allows authenticated read on
- * prompt_public; prompt_private is column-revoked. Server-side fetching
- * uses the user's RLS-scoped client deliberately.
- */
 export const dynamic = "force-dynamic";
 
 export default async function BatteryPage() {
@@ -58,8 +45,9 @@ export default async function BatteryPage() {
   }
 
   const selected = await selectTasksForStudent(supabase, user.id);
-
+  const lang = await getActiveLanguage();
   const tasks: LoadedTask[] = [];
+
   for (const sel of selected) {
     const loaded = await pickPrompt(supabase, sel, roleId);
     if (!loaded) {
@@ -88,17 +76,27 @@ export default async function BatteryPage() {
     tasks.push(loaded);
   }
 
+  const introTexts = [
+    "Voice discovery complete",
+    "Now we measure the rest — directly",
+    "Aria heard you speak. The voice conversation is great for fluency, comprehension, and learning style — but it can't directly measure how you write business emails, how you read for subtext, or how precisely you pick words. These short tasks fill those gaps. Together they produce the full profile your employer sees.",
+    "Total time: ~",
+    "min · One submission at the end triggers the full gap analysis",
+    "Start the assessment →",
+  ];
+  const bIntro = await bilingualize(introTexts, lang);
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <p className="mb-1 font-mono text-xs uppercase tracking-[0.25em] text-gold">
-          Step 2 — Assessment battery
+          {bIntro[0].native}
         </p>
         <h1 className="font-serif text-3xl text-navy">
-          Voice complete — let&apos;s measure the rest
+          {bIntro[1].native}
         </h1>
       </div>
-      <BatteryRunner tasks={tasks} selected={selected} />
+      <BatteryRunner tasks={tasks} selected={selected} bIntro={bIntro} />
     </div>
   );
 }

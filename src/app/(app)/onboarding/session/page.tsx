@@ -15,8 +15,9 @@ import {
  *
  * /onboarding (intro + Six Dimensions explainer + role confirm) → click
  * "Start" → /onboarding/session (this page, auto-fires the SDK) → click
- * "End" → /dashboard?just-finished=1 (banner polls until scoring
- * completes).
+ * "End" → /onboarding/post-call (explains next steps, polls the webhook)
+ * → /onboarding/battery (written assessment) → /lessons (micro-lessons
+ * that keep scoring the same baseline).
  *
  * Server-side prep:
  *   - validate agent + auth
