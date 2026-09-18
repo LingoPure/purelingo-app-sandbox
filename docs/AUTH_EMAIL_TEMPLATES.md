@@ -24,6 +24,21 @@ client-side state and therefore works on any device / browser / domain:
 > emits `{{ .ConfirmationURL }}` (PKCE-oriented) and must **not** be used for
 > LingoPure — under the implicit issuer it produces the broken fragment link.
 
+## Brand tokens
+
+| Token | Value | Use |
+|---|---|---|
+| Navy | `#0a2540` | wordmark, headings, primary button |
+| Gold | `#c8973a` | the dot in the `LingoPure.` wordmark |
+| Ink | `#14171c` | headings |
+| Body | `#52565f` | paragraph text |
+| Muted | `#8a8f99` | fallback link label, footer |
+| Border | `#e6e8ee` | card border, rules |
+| Page bg | `#f6f7f9` | behind the card |
+| Button text | `#ffffff` | on navy |
+
+The wordmark is `LingoPure` + a gold `.` — never a blue/navy two-tone.
+
 ## Preconditions (already satisfied in this project)
 
 - `auth.site_url` = `https://purelingo-app-sandbox.vercel.app` (dashboard-only).
@@ -35,7 +50,11 @@ client-side state and therefore works on any device / browser / domain:
 ## How to apply
 
 Supabase Dashboard → **Authentication → Email Templates**, set each of the five
-below (Subject + Message body), then Save. Then re-test a *fresh* signup.
+below (Subject + Message body), then Save. Re-test a *fresh* signup.
+
+Every body is the same card; only the **headline, intro, CTA label, footer note,
+`type` and `next`** change. Replace the two `LINK` occurrences per template —
+the button `href` **and** the plain-text fallback — with the template's URL.
 
 ---
 
@@ -47,29 +66,59 @@ below (Subject + Message body), then Save. Then re-test a *fresh* signup.
 Confirm your email address — LingoPure
 ```
 
+**URL (both occurrences)**
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/onboarding
+```
+
 **Message body**
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f3f6fb; margin:0; padding:32px 16px; color:#0a2540;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;border:1px solid #ede8dc;">
-      <tr>
-        <td style="padding:32px 32px 24px;">
-          <div style="font-size:20px;font-weight:600;line-height:1;margin:0 0 4px;color:#0a2540;">LingoPure</div>
-          <div style="font-size:11px;color:#8a94a6;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 28px;">AI language learning</div>
-          <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#0a2540;line-height:1.3;">Confirm your email address</h1>
-          <p style="font-size:15px;line-height:1.6;color:#4a5568;margin:0 0 24px;">Tap the button to confirm your email address and finish creating your LingoPure account.</p>
-          <p style="margin:0 0 28px;">
-            <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/onboarding" style="display:inline-block;padding:12px 24px;background:#0a2540;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;">Confirm email address</a>
-          </p>
-          <p style="font-size:13px;color:#8a94a6;line-height:1.5;margin:0 0 24px;">If the button doesn't work, copy and paste this link into your browser:<br><span style="word-break:break-all;color:#4a5568;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/onboarding</span></p>
-          <hr style="border:none;border-top:1px solid #ede8dc;margin:0 0 20px;">
-          <p style="font-size:12px;color:#8a94a6;line-height:1.5;margin:0;">You're receiving this because someone signed up for a LingoPure account with this email address. If that wasn't you, you can safely ignore this message.</p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm your LingoPure account</title>
+</head>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f7f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;width:100%;background-color:#ffffff;border:1px solid #e6e8ee;border-radius:12px;">
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.4px;color:#0a2540;">LingoPure<span style="color:#c8973a;">.</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 0 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#14171c;">Confirm your email address</h1>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#52565f;">Tap the button to confirm your email address and finish creating your LingoPure account.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                <tr>
+                  <td style="border-radius:8px;background:#0a2540;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/onboarding" style="display:inline-block;padding:13px 34px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Confirm email address</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:13px;line-height:1.5;color:#8a8f99;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 28px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#52565f;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup&next=/onboarding</p>
+              <hr style="border:none;border-top:1px solid #e6e8ee;margin:0 0 20px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">You're receiving this because someone signed up for a LingoPure account with this email address. If that wasn't you, you can safely ignore this message.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8f9fb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">Powered by LingoPure — the AI language learning partner your team deserves.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 ```
 
@@ -83,29 +132,59 @@ Confirm your email address — LingoPure
 Your LingoPure sign-in link
 ```
 
+**URL (both occurrences)**
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard
+```
+
 **Message body**
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f3f6fb; margin:0; padding:32px 16px; color:#0a2540;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;border:1px solid #ede8dc;">
-      <tr>
-        <td style="padding:32px 32px 24px;">
-          <div style="font-size:20px;font-weight:600;line-height:1;margin:0 0 4px;color:#0a2540;">LingoPure</div>
-          <div style="font-size:11px;color:#8a94a6;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 28px;">AI language learning</div>
-          <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#0a2540;line-height:1.3;">Sign in to LingoPure</h1>
-          <p style="font-size:15px;line-height:1.6;color:#4a5568;margin:0 0 24px;">Tap the button below to sign in. This link works on any device and expires shortly, so use it now.</p>
-          <p style="margin:0 0 28px;">
-            <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard" style="display:inline-block;padding:12px 24px;background:#0a2540;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;">Sign in to LingoPure</a>
-          </p>
-          <p style="font-size:13px;color:#8a94a6;line-height:1.5;margin:0 0 24px;">If the button doesn't work, copy and paste this link into your browser:<br><span style="word-break:break-all;color:#4a5568;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard</span></p>
-          <hr style="border:none;border-top:1px solid #ede8dc;margin:0 0 20px;">
-          <p style="font-size:12px;color:#8a94a6;line-height:1.5;margin:0;">You're receiving this because someone requested a sign-in link for this email address. If that wasn't you, you can safely ignore this message.</p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your LingoPure sign-in link</title>
+</head>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f7f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;width:100%;background-color:#ffffff;border:1px solid #e6e8ee;border-radius:12px;">
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.4px;color:#0a2540;">LingoPure<span style="color:#c8973a;">.</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 0 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#14171c;">Sign in to LingoPure</h1>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#52565f;">Tap the button below to sign in. This link works on any device and expires shortly, so use it now.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                <tr>
+                  <td style="border-radius:8px;background:#0a2540;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard" style="display:inline-block;padding:13px 34px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Sign in to LingoPure</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:13px;line-height:1.5;color:#8a8f99;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 28px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#52565f;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink&next=/dashboard</p>
+              <hr style="border:none;border-top:1px solid #e6e8ee;margin:0 0 20px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">You're receiving this because someone requested a sign-in link for this email address. If that wasn't you, you can safely ignore this message.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8f9fb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">Powered by LingoPure — the AI language learning partner your team deserves.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 ```
 
@@ -119,29 +198,59 @@ Your LingoPure sign-in link
 Reset your LingoPure password
 ```
 
+**URL (both occurrences)**
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password
+```
+
 **Message body**
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f3f6fb; margin:0; padding:32px 16px; color:#0a2540;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;border:1px solid #ede8dc;">
-      <tr>
-        <td style="padding:32px 32px 24px;">
-          <div style="font-size:20px;font-weight:600;line-height:1;margin:0 0 4px;color:#0a2540;">LingoPure</div>
-          <div style="font-size:11px;color:#8a94a6;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 28px;">AI language learning</div>
-          <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#0a2540;line-height:1.3;">Reset your password</h1>
-          <p style="font-size:15px;line-height:1.6;color:#4a5568;margin:0 0 24px;">Tap the button below to choose a new password. If you didn't request this, you can ignore this email and your password will stay the same.</p>
-          <p style="margin:0 0 28px;">
-            <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password" style="display:inline-block;padding:12px 24px;background:#0a2540;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;">Reset password</a>
-          </p>
-          <p style="font-size:13px;color:#8a94a6;line-height:1.5;margin:0 0 24px;">If the button doesn't work, copy and paste this link into your browser:<br><span style="word-break:break-all;color:#4a5568;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password</span></p>
-          <hr style="border:none;border-top:1px solid #ede8dc;margin:0 0 20px;">
-          <p style="font-size:12px;color:#8a94a6;line-height:1.5;margin:0;">You're receiving this because someone requested a password reset for this email address. If that wasn't you, you can safely ignore this message.</p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset your LingoPure password</title>
+</head>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f7f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;width:100%;background-color:#ffffff;border:1px solid #e6e8ee;border-radius:12px;">
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.4px;color:#0a2540;">LingoPure<span style="color:#c8973a;">.</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 0 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#14171c;">Reset your password</h1>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#52565f;">Tap the button below to choose a new password. If you didn't request this, you can ignore this email and your password will stay the same.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                <tr>
+                  <td style="border-radius:8px;background:#0a2540;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password" style="display:inline-block;padding:13px 34px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Reset password</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:13px;line-height:1.5;color:#8a8f99;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 28px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#52565f;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password</p>
+              <hr style="border:none;border-top:1px solid #e6e8ee;margin:0 0 20px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">You're receiving this because someone requested a password reset for this email address. If that wasn't you, you can safely ignore this message.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8f9fb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">Powered by LingoPure — the AI language learning partner your team deserves.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 ```
 
@@ -160,29 +269,59 @@ Reset your LingoPure password
 You've been invited to LingoPure
 ```
 
+**URL (both occurrences)**
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/onboarding
+```
+
 **Message body**
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f3f6fb; margin:0; padding:32px 16px; color:#0a2540;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;border:1px solid #ede8dc;">
-      <tr>
-        <td style="padding:32px 32px 24px;">
-          <div style="font-size:20px;font-weight:600;line-height:1;margin:0 0 4px;color:#0a2540;">LingoPure</div>
-          <div style="font-size:11px;color:#8a94a6;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 28px;">AI language learning</div>
-          <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#0a2540;line-height:1.3;">You've been invited</h1>
-          <p style="font-size:15px;line-height:1.6;color:#4a5568;margin:0 0 24px;">You've been invited to join LingoPure. Accept the invitation to set up your account and get started.</p>
-          <p style="margin:0 0 28px;">
-            <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/onboarding" style="display:inline-block;padding:12px 24px;background:#0a2540;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;">Accept invitation</a>
-          </p>
-          <p style="font-size:13px;color:#8a94a6;line-height:1.5;margin:0 0 24px;">If the button doesn't work, copy and paste this link into your browser:<br><span style="word-break:break-all;color:#4a5568;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/onboarding</span></p>
-          <hr style="border:none;border-top:1px solid #ede8dc;margin:0 0 20px;">
-          <p style="font-size:12px;color:#8a94a6;line-height:1.5;margin:0;">You're receiving this because someone invited this email address to LingoPure. If that wasn't you, you can safely ignore this message.</p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>You've been invited to LingoPure</title>
+</head>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f7f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;width:100%;background-color:#ffffff;border:1px solid #e6e8ee;border-radius:12px;">
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.4px;color:#0a2540;">LingoPure<span style="color:#c8973a;">.</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 0 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#14171c;">You've been invited</h1>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#52565f;">You've been invited to join LingoPure. Accept the invitation to set up your account and get started.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                <tr>
+                  <td style="border-radius:8px;background:#0a2540;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/onboarding" style="display:inline-block;padding:13px 34px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Accept invitation</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:13px;line-height:1.5;color:#8a8f99;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 28px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#52565f;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=invite&next=/onboarding</p>
+              <hr style="border:none;border-top:1px solid #e6e8ee;margin:0 0 20px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">You're receiving this because someone invited this email address to LingoPure. If that wasn't you, you can safely ignore this message.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8f9fb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">Powered by LingoPure — the AI language learning partner your team deserves.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 ```
 
@@ -199,29 +338,59 @@ You've been invited to LingoPure
 Confirm your new email — LingoPure
 ```
 
+**URL (both occurrences)**
+
+```
+{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/settings
+```
+
 **Message body**
 
 ```html
 <!DOCTYPE html>
 <html lang="en">
-  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#f3f6fb; margin:0; padding:32px 16px; color:#0a2540;">
-    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;border:1px solid #ede8dc;">
-      <tr>
-        <td style="padding:32px 32px 24px;">
-          <div style="font-size:20px;font-weight:600;line-height:1;margin:0 0 4px;color:#0a2540;">LingoPure</div>
-          <div style="font-size:11px;color:#8a94a6;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 28px;">AI language learning</div>
-          <h1 style="font-size:22px;font-weight:600;margin:0 0 12px;color:#0a2540;line-height:1.3;">Confirm your new email</h1>
-          <p style="font-size:15px;line-height:1.6;color:#4a5568;margin:0 0 24px;">Tap the button below to confirm this as your new LingoPure email address.</p>
-          <p style="margin:0 0 28px;">
-            <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/settings" style="display:inline-block;padding:12px 24px;background:#0a2540;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:500;font-size:14px;">Confirm new email</a>
-          </p>
-          <p style="font-size:13px;color:#8a94a6;line-height:1.5;margin:0 0 24px;">If the button doesn't work, copy and paste this link into your browser:<br><span style="word-break:break-all;color:#4a5568;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/settings</span></p>
-          <hr style="border:none;border-top:1px solid #ede8dc;margin:0 0 20px;">
-          <p style="font-size:12px;color:#8a94a6;line-height:1.5;margin:0;">You're receiving this because someone requested an email change for this address. If that wasn't you, you can safely ignore this message.</p>
-        </td>
-      </tr>
-    </table>
-  </body>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm your new email — LingoPure</title>
+</head>
+<body style="margin:0;padding:0;-webkit-text-size-adjust:100%;background-color:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#f6f7f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;width:100%;background-color:#ffffff;border:1px solid #e6e8ee;border-radius:12px;">
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0;font-size:22px;font-weight:700;letter-spacing:-0.4px;color:#0a2540;">LingoPure<span style="color:#c8973a;">.</span></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 0 32px;">
+              <h1 style="margin:0 0 12px 0;font-size:20px;font-weight:700;color:#14171c;">Confirm your new email</h1>
+              <p style="margin:0 0 28px 0;font-size:15px;line-height:1.55;color:#52565f;">Tap the button below to confirm this as your new LingoPure email address.</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                <tr>
+                  <td style="border-radius:8px;background:#0a2540;">
+                    <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/settings" style="display:inline-block;padding:13px 34px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">Confirm new email</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 20px 0;font-size:13px;line-height:1.5;color:#8a8f99;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="margin:0 0 28px 0;font-size:12px;line-height:1.5;word-break:break-all;color:#52565f;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/settings</p>
+              <hr style="border:none;border-top:1px solid #e6e8ee;margin:0 0 20px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">You're receiving this because someone requested an email change for this address. If that wasn't you, you can safely ignore this message.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:#f8f9fb;border-bottom-left-radius:12px;border-bottom-right-radius:12px;">
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8a8f99;">Powered by LingoPure — the AI language learning partner your team deserves.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
 </html>
 ```
 
