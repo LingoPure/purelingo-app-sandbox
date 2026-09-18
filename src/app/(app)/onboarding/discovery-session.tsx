@@ -29,11 +29,13 @@ export function DiscoverySession({
   roleDescription,
   studentName,
   firstName,
+  employerName,
 }: {
   roleName?: string | null;
   roleDescription?: string | null;
   studentName?: string | null;
   firstName?: string | null;
+  employerName?: string | null;
 }) {
   const [session, setSession] = useState<DiscoverySessionState | null>(null);
   const [error, setError] = useState<string | null>(null);

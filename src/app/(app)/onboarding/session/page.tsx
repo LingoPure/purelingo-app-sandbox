@@ -114,8 +114,8 @@ export default async function DiscoverySessionPage() {
       roleName={roleName}
       roleDescription={roleDescription}
       studentName={studentName}
-      firstName={studentFirstName}
-      employeeName={employerName}
+      firstName={studentName}
+      employerName={employerName}
     />
   );
 }

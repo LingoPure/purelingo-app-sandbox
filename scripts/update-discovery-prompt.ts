@@ -11,7 +11,7 @@
 
 import { updateAgent } from "@caistech/elevenlabs-convai";
 import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt";
-import type { Bilingual } from "./src/lib/i18n/translate";
+import type { Bilingual } from "../src/lib/i18n/translate";
 
 /**
  * DANGER — this file ships the SYSTEM PROMPT + FIRST MESSAGE to the LIVE agent.
