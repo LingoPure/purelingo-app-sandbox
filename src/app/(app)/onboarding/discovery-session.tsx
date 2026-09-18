@@ -120,25 +120,24 @@ export function DiscoverySession({
     ...(employerName ? { employer_name: employerName } : {}),
   };
 
-  // Layered identity: the widget's own label + the prompt dynamic variables.
-  const widgetOverrides = {
-    ...(identityVariables
+  // Only include `prompt` when promptOverride actually exists — sending
+  // `prompt: undefined` explicitly clobbers the agent's dashboard prompt
+  // and kills the conversation instantly. dynamic_variables can be passed
+  // independently so the agent receives identity context via its declared
+  // variable slots without replacing the prompt itself.
+  const hasDynamicVars = Object.keys(identityVariables).length > 0;
+
+  const overrides =
+    session.promptOverride || hasDynamicVars
       ? {
           agent: {
             prompt: {
-              prompt: session.promptOverride,
-              dynamic_variables: identityVariables,
+              ...(session.promptOverride ? { prompt: session.promptOverride } : {}),
+              ...(hasDynamicVars ? { dynamic_variables: identityVariables } : {}),
             },
           },
         }
-      : session.promptOverride
-        ? { agent: { prompt: { prompt: session.promptOverride } } }
-        : {}),
-  };
-
-  const overrides = session.promptOverride || Object.keys(identityVariables).length
-    ? widgetOverrides
-    : undefined;
+      : undefined;
 
   return (
     <div className="h-full w-full" data-discovery-agent={config.slug} data-stage={introStage?.id}>
