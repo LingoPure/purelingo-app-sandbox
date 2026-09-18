@@ -89,32 +89,63 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(TTS_VOICE_ID)}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": apiKey,
-          "content-type": "application/json",
-          accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: transcript,
-          model_id: "eleven_turbo_v2_5",
-          voice_settings: {
-            stability: 0.4,
-            similarity_boost: 0.75,
-            style: 0.2,
-            use_speaker_boost: true,
+  // Rachel (21m00Tcm4TlvDq8ikWAM) is a free-plan-eligible default voice.
+  // If ELEVENLABS_TTS_VOICE_ID points at a library voice, the free plan
+  // rejects it with 402 paid_plan_required — retry once with Rachel so
+  // Listen & Paraphrase always has audio.
+  const FREE_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+  const voiceCandidates = [TTS_VOICE_ID, FREE_VOICE_ID].filter(
+    (voiceId, index, all) => voiceId && all.indexOf(voiceId) === index
+  );
+
+  let upstream: Response | null = null;
+  let upstreamError: Error | string | null = null;
+  for (const voiceId of voiceCandidates) {
+    try {
+      const attempt = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}`,
+        {
+          method: "POST",
+          headers: {
+            "xi-api-key": apiKey,
+            "content-type": "application/json",
+            accept: "audio/mpeg",
           },
-        }),
-        signal: AbortSignal.timeout(30_000),
+          body: JSON.stringify({
+            text: transcript,
+            model_id: "eleven_turbo_v2_5",
+            voice_settings: {
+              stability: 0.4,
+              similarity_boost: 0.75,
+              style: 0.2,
+              use_speaker_boost: true,
+            },
+          }),
+          signal: AbortSignal.timeout(30_000),
+        }
+      );
+      if (attempt.status !== 402) {
+        upstream = attempt;
+        break;
       }
-    );
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
+      const forcedPlan = await attempt.text().catch(() => "").then((t) =>
+        t.includes("paid_plan_required")
+      );
+      if (forcedPlan && voiceId !== FREE_VOICE_ID) {
+        console.error(
+          `[battery/audio] 402 paid_plan_required on voice ${voiceId} — retrying with free voice`
+        );
+        continue;
+      }
+      upstream = attempt;
+      break;
+    } catch (err) {
+      upstreamError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  if (!upstream) {
+    const detail = upstreamError ?? "TTS upstream failed";
     console.error(`[battery/audio] TTS upstream failed: ${detail}`);
     return NextResponse.json(
       { error: `TTS upstream unreachable: ${detail}` },
