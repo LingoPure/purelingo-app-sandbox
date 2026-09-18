@@ -24,7 +24,17 @@ type DiscoverySessionState = {
   promptOverride?: string;
 };
 
-export function DiscoverySession() {
+export function DiscoverySession({
+  roleName,
+  roleDescription,
+  studentName,
+  firstName,
+}: {
+  roleName?: string | null;
+  roleDescription?: string | null;
+  studentName?: string | null;
+  firstName?: string | null;
+}) {
   const [session, setSession] = useState<DiscoverySessionState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wrapUpVisible, setWrapUpVisible] = useState(false);
@@ -96,8 +106,36 @@ export function DiscoverySession() {
 
   if (!session) return <p>Connecting to Aria...</p>;
 
-  const overrides = session.promptOverride
-    ? { agent: { prompt: { prompt: session.promptOverride } } }
+  // Build the full identity context for the agent once identity + role are
+  // resolved. The role is the load-bearing variable: the agent tailors the
+  // discovery conversation to the learner's confirmed role, and greets them
+  // by first name — no more "Anonymous".
+  const identityVariables: Record<string, string> = {
+    ...(firstName ? { student_first_name: firstName } : {}),
+    ...(studentName ? { student_name: studentName } : {}),
+    ...(roleName ? { role_name: roleName } : {}),
+    ...(roleDescription ? { role_description: roleDescription } : {}),
+    ...(employerName ? { employer_name: employerName } : {}),
+  };
+
+  // Layered identity: the widget's own label + the prompt dynamic variables.
+  const widgetOverrides = {
+    ...(identityVariables
+      ? {
+          agent: {
+            prompt: {
+              prompt: session.promptOverride,
+              dynamic_variables: identityVariables,
+            },
+          },
+        }
+      : session.promptOverride
+        ? { agent: { prompt: { prompt: session.promptOverride } } }
+        : {}),
+  };
+
+  const overrides = session.promptOverride || Object.keys(identityVariables).length
+    ? widgetOverrides
     : undefined;
 
   return (

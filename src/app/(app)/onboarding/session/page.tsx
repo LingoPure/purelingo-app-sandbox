@@ -110,6 +110,12 @@ export default async function DiscoverySessionPage() {
     ariaDict["discovery.firstMessage"] ?? t("discovery.firstMessage");
 
   return (
-    <DiscoverySession />
+    <DiscoverySession
+      roleName={roleName}
+      roleDescription={roleDescription}
+      studentName={studentName}
+      firstName={studentFirstName}
+      employeeName={employerName}
+    />
   );
 }
