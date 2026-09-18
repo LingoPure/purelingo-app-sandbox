@@ -120,24 +120,13 @@ export function DiscoverySession({
     ...(employerName ? { employer_name: employerName } : {}),
   };
 
-  // Only include `prompt` when promptOverride actually exists — sending
-  // `prompt: undefined` explicitly clobbers the agent's dashboard prompt
-  // and kills the conversation instantly. dynamic_variables can be passed
-  // independently so the agent receives identity context via its declared
-  // variable slots without replacing the prompt itself.
-  const hasDynamicVars = Object.keys(identityVariables).length > 0;
-
-  const overrides =
-    session.promptOverride || hasDynamicVars
-      ? {
-          agent: {
-            prompt: {
-              ...(session.promptOverride ? { prompt: session.promptOverride } : {}),
-              ...(hasDynamicVars ? { dynamic_variables: identityVariables } : {}),
-            },
-          },
-        }
-      : undefined;
+  // The widget overrides prop only accepts { prompt: string } — dynamic_variables
+  // are NOT supported here (type-level constraint from @caistech/elevenlabs-convai).
+  // Sending prompt: undefined clobbers the dashboard prompt and kills the call.
+  // Identity is threaded via server-side bind (/api/convai/bind) instead.
+  const overrides = session.promptOverride
+    ? { agent: { prompt: { prompt: session.promptOverride } } }
+    : undefined;
 
   return (
     <div className="h-full w-full" data-discovery-agent={config.slug} data-stage={introStage?.id}>
