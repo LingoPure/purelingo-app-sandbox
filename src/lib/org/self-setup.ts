@@ -1,0 +1,152 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// Canonical skill set every self-setup role seeds.
+// The exact names match the shared gap-analysis engine columns.
+export const SELF_SETUP_SKILLS = [
+  "speaking_fluency",
+  "presentation_delivery",
+  "writing_formal",
+  "business_vocabulary",
+  "listening_comprehension",
+  "reading_intent",
+] as const;
+
+export type SelfSetupSkill = (typeof SELF_SETUP_SKILLS)[number];
+
+export type SelfSetupBaselines = Record<SelfSetupSkill, number>;
+
+export type SelfSetupInput = {
+  userId: string;
+  orgName: string;
+  role: string;
+  nativeLanguage: string;
+  baselines: SelfSetupBaselines;
+};
+
+export type SelfSetupStep =
+  | "organisation"
+  | "employer"
+  | "role"
+  | "baselines"
+  | "student"
+  | "membership";
+
+type SelfSetupFailure = {
+  ok: false;
+  step: SelfSetupStep;
+  error: string;
+};
+
+type SelfSetupSuccess = {
+  ok: true;
+  organisationId: string;
+  employerId: string;
+  roleId: string;
+};
+
+export type SelfSetupResult = SelfSetupFailure | SelfSetupSuccess;
+
+/**
+ * Execute the self-setup write path (steps 1–6).
+ *
+ * Called by the POST handler after auth + zod validation are done.
+ * Returns a discriminated result so the route can map the step to the
+ * right HTTP status without duplicating the write logic.
+ */
+export async function runSelfSetup(
+  admin: SupabaseClient,
+  input: SelfSetupInput,
+): Promise<SelfSetupResult> {
+  const { userId, orgName, role, nativeLanguage, baselines } = input;
+
+  const slugBase = orgName
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  // 1. Organisation (self-created — no owner membership).
+  const { data: org, error: orgError } = await admin
+    .from("organisations")
+    .insert({ name: orgName, slug: slugBase || "org" })
+    .select("id")
+    .single();
+  if (orgError) {
+    return { ok: false, step: "organisation", error: orgError.message };
+  }
+
+  // 2. Employer linked to the organisation.
+  const { data: employer, error: employerError } = await admin
+    .from("employers")
+    .insert({
+      name: orgName,
+      organisation_id: org.id,
+      default_native_language: nativeLanguage,
+    })
+    .select("id, organisation_id")
+    .single();
+  if (employerError) {
+    return { ok: false, step: "employer", error: employerError.message };
+  }
+
+  // 3. Role with the user-selected name.
+  const { data: roleRow, error: roleError } = await admin
+    .from("roles")
+    .insert({
+      name: role,
+      employer_id: employer.id,
+      description: `Baseline for ${role} in ${orgName}`,
+    })
+    .select("id")
+    .single();
+  if (roleError) {
+    return { ok: false, step: "role", error: roleError.message };
+  }
+
+  // 4. Six baseline skill floors (the gap-analysis calibration targets).
+  const { error: baselineError } = await admin
+    .from("role_baselines")
+    .insert(
+      SELF_SETUP_SKILLS.map((skill) => ({
+        role_id: roleRow.id,
+        skill,
+        min_score: baselines[skill],
+      })),
+    );
+  if (baselineError) {
+    return { ok: false, step: "baselines", error: baselineError.message };
+  }
+
+  // 5. Link student → employer + role, stamp native language.
+  const { error: studentError } = await admin
+    .from("students")
+    .update({
+      employer_id: employer.id,
+      role_id: roleRow.id,
+      native_language: nativeLanguage,
+    })
+    .eq("id", userId);
+  if (studentError) {
+    return { ok: false, step: "student", error: studentError.message };
+  }
+
+  // 6. Organisation membership as student only (never owner).
+  const { error: membershipError } = await admin
+    .from("organisation_memberships")
+    .insert({
+      user_id: userId,
+      organisation_id: org.id,
+      role: "student",
+      status: "active",
+    });
+  if (membershipError) {
+    return { ok: false, step: "membership", error: membershipError.message };
+  }
+
+  return {
+    ok: true,
+    organisationId: org.id,
+    employerId: employer.id,
+    roleId: roleRow.id,
+  };
+}

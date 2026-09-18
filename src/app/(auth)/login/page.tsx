@@ -33,9 +33,15 @@ export default async function LoginPage({
         </div>
       )}
 
-      <form action={login} className="flex flex-col gap-4">
+      <form action={login} aria-label="Sign in with password" className="flex flex-col gap-4">
         <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
-        <Field label={t("login.fieldEmail")} name="email" type="email" required />
+        <Field
+          id="login-email"
+          label={t("login.fieldEmail")}
+          name="email"
+          type="email"
+          required
+        />
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-ink">{t("login.fieldPassword")}</span>
           <PasswordInput name="password" required minLength={6} autoComplete="current-password" />
@@ -65,9 +71,19 @@ export default async function LoginPage({
           If you arrived via an invite link from your employer, you can sign in
           again by getting a fresh link in your email.
         </p>
-        <form action={requestMagicLink} className="flex flex-col gap-3">
+        <form
+          action={requestMagicLink}
+          aria-label="Email me a sign-in link"
+          className="flex flex-col gap-3"
+        >
           <input type="hidden" name="redirectTo" value={redirectTo ?? ""} />
-          <Field label="Email" name="email" type="email" required />
+          <Field
+            id="magic-link-email"
+            label="Email for sign-in link"
+            name="email"
+            type="email"
+            required
+          />
           <SubmitButton
             pendingLabel="Sending link…"
             className="rounded-md border border-navy/30 bg-paper px-4 py-2.5 text-sm font-medium text-navy hover:bg-mist disabled:opacity-70"
@@ -88,12 +104,14 @@ export default async function LoginPage({
 }
 
 function Field({
+  id,
   label,
   name,
   type,
   required,
   minLength,
 }: {
+  id?: string;
   label: string;
   name: string;
   type: string;
@@ -101,9 +119,10 @@ function Field({
   minLength?: number;
 }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm">
+    <label htmlFor={id} className="flex flex-col gap-1.5 text-sm">
       <span className="font-medium text-ink">{label}</span>
       <input
+        id={id}
         name={name}
         type={type}
         required={required}

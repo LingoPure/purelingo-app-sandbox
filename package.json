@@ -12,6 +12,7 @@
     "test:hr": "tsx --test tests/hr/*.test.ts",
     "test:curriculum": "tsx --test tests/curriculum/*.test.ts",
     "test:hr:db": "bash scripts/hr-db-verify.sh",
+    "test:org": "tsx --test tests/org/*.test.ts",
     "test:org:db": "bash scripts/org-db-verify.sh",
     "test:hr:integration": "bash scripts/hr-integration-test.sh",
     "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",
