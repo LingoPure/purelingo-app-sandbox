@@ -146,10 +146,14 @@ Any of these may be empty for a given call (older accounts, ad-hoc invites). Tre
 /**
  * The literal first thing Aria says on a call.
  *
- * The {{first_message_localized}} template is replaced at runtime by a
- * dynamic variable (see src/lib/i18n/dictionary.ts → discovery.firstMessage)
- * so Aria opens in the student's native language and ends with the switch
- * sentence to English. The English fallback content lives in the dictionary
- * — never duplicated here.
+ * CONCRETE BY DESIGN — do NOT make this a {{variable}} template. Nothing in
+ * the runtime resolves a first-message template: the widget only forwards
+ * `user_id`, and the agent declares no dynamic variables. An unresolvable
+ * `{{...}}` first message kills the conversation at start (observed on the
+ * live agent). The system prompt already instructs Aria to open in the
+ * student's native language when {{native_language}} is resolvable, and to
+ * fall back to English otherwise — so a concrete English opener is always
+ * the safe degraded path.
  */
-export const FIRST_MESSAGE = `{{first_message_localized}}`;
+export const FIRST_MESSAGE =
+  "Hi! I'm Aria, your discovery coach from Lingo Pyoor. Over the next twenty minutes or so we'll have a relaxed conversation about how English shows up in your work — there are no right or wrong answers, so just speak as naturally as you can. To start, tell me a little about what a typical day in your role looks like.";
