@@ -14,13 +14,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mintAnonSessionToken } from "@caistech/elevenlabs-convai";
+import { resolvePlanAgentId } from "@/lib/plan/resolve-plan-agent";
 import {
   buildPlan,
   compilePlanPrompt,
   compilePlanFirstMessage,
 } from "@/lib/plan/plan-delivery";
-
-const PLAN_AGENT_SEED_NAME = "LingoPure Plan Agent";
 
 export async function POST() {
   const supabase = await createClient();
@@ -29,19 +28,7 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Canonical auto-config: prefer the env var, fall back to the
-  // provisioned+seeded convai_agents row (provision script writes both).
-  let agentId = process.env.ELEVENLABS_PLAN_AGENT_ID;
-  if (!agentId) {
-    const { data: agentRow } = await supabase
-      .from("convai_agents")
-      .select("elevenlabs_agent_id")
-      .eq("agent_name", PLAN_AGENT_SEED_NAME)
-      .eq("status", "active")
-      .maybeSingle();
-    agentId = (agentRow as { elevenlabs_agent_id?: string } | null)
-      ?.elevenlabs_agent_id;
-  }
+  const agentId = await resolvePlanAgentId();
   if (!agentId) {
     return NextResponse.json(
       { error: "Plan agent not configured (ELEVENLABS_PLAN_AGENT_ID missing)" },

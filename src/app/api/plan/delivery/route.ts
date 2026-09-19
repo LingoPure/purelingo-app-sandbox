@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { resolvePlanAgentId } from "@/lib/plan/resolve-plan-agent";
 import {
   buildPlan,
   compilePlanPrompt,
@@ -33,7 +34,7 @@ export async function GET() {
       plan,
       promptOverride: prompt,
       firstMessage,
-      agentId: process.env.ELEVENLABS_AGENT_ID,
+      agentId: await resolvePlanAgentId(),
     });
   } catch (err) {
     console.error("[plan/delivery] generation failed:", err);
