@@ -436,6 +436,28 @@ export default async function DashboardPage() {
 
       {hasScores && <RecommendedPlan recommendations={planWithBilingual} />}
 
+      {hasScores && (
+        <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-emerald-900">
+                Your improvement programme is ready
+              </h2>
+              <p className="mt-1 max-w-prose text-sm text-emerald-800">
+                Sit down with Aria to walk through your scores, the rationale,
+                and the 16-week plan — then commit to it.
+              </p>
+            </div>
+            <Link
+              href="/plan"
+              className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              View &amp; commit
+            </Link>
+          </div>
+        </section>
+      )}
+
       <CertificationCard
         eligibility={eligibility}
         latestCert={latestCert}

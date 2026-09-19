@@ -43,6 +43,116 @@ type PostCallPayload = NonNullable<ReturnType<typeof parsePostCallPayload>>;
  * The client-supplied user_id dynamic variable is only a fallback; the binding
  * wins so a tampered client can't write into another investor's memory.
  */
+const ELEVENLABS_PLAN_AGENT_ID = process.env.ELEVENLABS_PLAN_AGENT_ID ?? "";
+
+/**
+ * Resolve the plan agent's ElevenLabs id: env var first, then the
+ * provisioned+seeded convai_agents row (provision script writes both).
+ * Memoized per cold-start so the webhook hot path does one table lookup.
+ */
+async function resolvePlanAgentId(
+  supabase: ReturnType<typeof adminSupabase>
+): Promise<string | null> {
+  if (ELEVENLABS_PLAN_AGENT_ID) return ELEVENLABS_PLAN_AGENT_ID;
+  try {
+    const { data } = await supabase
+      .from("convai_agents")
+      .select("elevenlabs_agent_id")
+      .eq("agent_name", "LingoPure Plan Agent")
+      .eq("status", "active")
+      .maybeSingle();
+    return (data as { elevenlabs_agent_id?: string } | null)
+      ?.elevenlabs_agent_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Handle a plan-delivery conversation end. The plan agent shares this
+ * workspace webhook; its calls must be persisted for memory/transcript but
+ * must NOT run the discovery scoring pipeline (a plan chat would otherwise
+ * rewrite gap_scores from a non-discovery transcript).
+ *
+ * The student's engagement is already captured live: the /plan delivery route
+ * sets plan_status based on the commitment tool response. Here we only record
+ * that the programme was presented.
+ */
+async function handlePlanAgentPostCall(payload: PostCallPayload) {
+  const supabase = adminSupabase();
+  const conversationId = payload.data.conversation_id;
+
+  // Resolve the same server-trusted user (bind table → discovery token).
+  const { data: binding } = await supabase
+    .from("convai_voice_bindings")
+    .select("user_id")
+    .eq("elevenlabs_conversation_id", conversationId)
+    .maybeSingle();
+  const fallbackUserId =
+    payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+  const userId = binding?.user_id ?? fallbackUserId;
+
+  if (!userId) {
+    console.warn(
+      "[convai/webhook:plan] no binding or user_id - ignoring",
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "no_user" });
+  }
+
+  // Persist the conversation for the transcript/memory surfaces (the same
+  // generic persistence discovery uses). Scoring is intentionally skipped.
+  const startMs = payload.data.metadata.start_time_unix_secs * 1000;
+  const endMs =
+    (payload.data.metadata.end_time_unix_secs ??
+      payload.data.metadata.start_time_unix_secs +
+        payload.data.metadata.call_duration_secs) * 1000;
+  const messages = payload.data.transcript.map((t) => ({
+    role: (t.role === "agent" ? "assistant" : "user") as "user" | "assistant",
+    content: t.message,
+    timestamp: new Date(startMs + t.time_in_call_secs * 1000).toISOString(),
+  }));
+
+  const result = await handlePostCallWebhook(
+    supabase,
+    {
+      elevenlabsAgentId: payload.data.agent_id,
+      conversationId,
+      userId,
+      topic:
+        payload.data.analysis?.transcript_summary?.slice(0, 80) ??
+        "Plan delivery",
+      status: payload.data.status === "done" ? "completed" : "abandoned",
+      startedAt: new Date(startMs).toISOString(),
+      endedAt: new Date(endMs).toISOString(),
+      durationSecs: payload.data.metadata.call_duration_secs,
+      terminationReason: payload.data.metadata.termination_reason,
+      summary: payload.data.analysis?.transcript_summary,
+      messages,
+    },
+    TABLES
+  );
+  if (!result.success) {
+    console.warn("[convai/webhook:plan] persist skipped:", {
+      error: result.error,
+      conversationId,
+    });
+  }
+
+  // The programme was delivered — flip the student's plan_status if it was
+  // still 'awaited'. (Committed/declined is captured by the /plan page.)
+  const { error: rowErr } = await supabase
+    .from("students")
+    .update({ plan_status: "viewed" })
+    .eq("id", userId)
+    .in("plan_status", ["awaited", "viewed"]);
+  if (rowErr) {
+    console.warn("[convai/webhook:plan] plan_status update failed:", rowErr.message);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 async function handleInvestorMorganPostCall(payload: PostCallPayload) {
   const supabase = adminSupabase();
   const conversationId = payload.data.conversation_id;
@@ -171,6 +281,14 @@ export async function POST(request: NextRequest) {
     payload.data.agent_id === INVESTOR_MORGAN_AGENT_ID
   ) {
     return handleInvestorMorganPostCall(payload);
+  }
+
+  // Plan-delivery agent: persist + mark viewed, never discovery-score.
+  if (
+    payload.data.agent_id ===
+    (await resolvePlanAgentId(adminSupabase()))
+  ) {
+    return handlePlanAgentPostCall(payload);
   }
 
   const conversationId = payload.data.conversation_id;

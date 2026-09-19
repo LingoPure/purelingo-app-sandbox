@@ -32,6 +32,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navItems: MobileNavItem[] = [
     { href: "/dashboard", label: t("nav.dashboard") },
     { href: "/onboarding", label: "Voice discovery" },
+    { href: "/plan", label: "My programme" },
     { href: "/lessons", label: t("nav.lessons") },
     { href: "/settings", label: "Settings" },
     ...(isEmployerAdmin
