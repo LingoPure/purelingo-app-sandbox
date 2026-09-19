@@ -1,7 +1,20 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-16
+**Updated:** 2026-09-19
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-19 (plan voice delivery + baseline scale fix + discovery agent hardening)
+
+- **Plan programme shipped** (commits `1c767f3`–`0a4492e`): `buildPlan` generates 3-phase 16-week programme; `/plan` page = on-screen scores + Aria voice walkthrough + commitment capture; `/api/plan/delivery` + `/api/plan/session` routes; dashboard CTA; battery auto-redirects to `/plan` after submit.
+- **Aria discovery prompt rewrite** (commit `125beb7`): internal reasoning moved into `<instruction>` blocks (never spoken); Dimension 2 = 3 true turns (consent → email+question → acknowledge); one message per turn; `end_call` tool enabled on live agent; runtime 1200s → 7200s. LIVE on ElevenLabs agent `agent_8701m2eyrep6exysepd25r16msst`.
+- **Baseline scale bug fixed** (commits `e859814`/`02bb027`/`b93386d`): `role_baselines` + `gap_scores.target` + `self-setup.tsx` seeds were 0-100 scale, violated LP18 0-1000. Rescaled all ×10 (66 role_baselines rows, 19 gap_scores rows live). This was the "Gap vs role baseline: 0" bug.
+  - ⚠️ **BREAKAGE CAUSED + FIXED this session**: the ×10 rescale broke self-setup submit (API validation was `max(100)` → now `max(1000)`) AND BaselineRow bar width (`width: ${score}%` → 600% overflow → now `score/10`). Both fixed, pushed `02bb027`/`b93386d`.
+- **Plan webhook JWT-as-UUID fix** (`e859814`): `handlePlanAgentPostCall` used raw anon-session JWT as `student_id` → `invalid input syntax for type uuid`. Now `verifyAnonSessionToken` first, mirroring discovery path.
+- **Battery scorer evidence truncation** (`68aa566`): `evidence z.string().max(600)` → `max(2000).transform(s => s.slice(0,600))`. Score 614 was computed but dropped when LLM evidence exceeded 600.
+- **Script ESM/CJS fix** (`d99f3c9`): `@caistech/elevenlabs-convai` only exports `import` condition. Scripts stay `.ts`; `update-discovery-prompt.ts` imports via direct `dist/index.js` path; run with `node --import tsx`.
+- **Live data**: transcript for discovery conv `conv_5901m2vww36wf7kt6pypkhwrtd6j` replayed (43 msgs) — was transient cold-start persist failure, not schema. Marked `processed_at`.
+- **STILL OPEN — user flagged, not yet root-caused**: "email test reverted to 8 words (target 120–220)". Live DB `discovery_task_prompts` email_writing rows have `target_word_count: {min:120, max:220}` (correct, 2 rows). Battery submit gate = `wordCount < 30`. The "8 words" may be from the email-sprint lesson generator (`email-sprint-runner.tsx` shows `{wordCount}/{expected_word_count}`) — expected_word_count schema is `min(40).max(250)`. NOT RESOLVED — needs user clarification on which screen shows 8.
+  - ✅ **RESOLVED 2026-09-19**: NOT a bug. `battery-runner.tsx:615` renders `{wordCount} words (target {min}–{max})` — the "8" was the user's LIVE tally (8 words typed); the target range 120–220 was correct. Submit stays disabled until `wordCount >= 30`. No code change needed.
 
 ## Session log — 2026-09-16 (env cleanup → CONVAI_TOOL_SECRET → auth redirects → Vercel env)
 

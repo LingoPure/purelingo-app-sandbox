@@ -14,9 +14,10 @@ of a vague one.
 | HeyGen "Meet Aria" intro | **Real, pre-rendered** | One-time render plays before the live call. ~$1 to render once, infinite plays. |
 | Supabase RLS + employer scoping | **Real, live** | Employer admins see only their own cohort; students see only their own data |
 | Anthropic Claude (scoring + nudges) | **Real, live** | Real LLM evaluation of the discovery transcript and lesson submissions |
+| **Plan programme (build + voice delivery)** | **Real, live** | 3-phase 16-week programme from canonical gap scores; `/plan` on-screen + second voice agent walkthrough + commitment capture (`e859814`+ deployed 2026-09-19) |
 | **ClassIn live classroom** | **Stubbed** | Embed surface renders, sync doesn't run (waiting on EEO SDK creds) |
 | **TrackTest CEFR certification** | **Stubbed (simulate path)** | Student can take a mock exam and see a fake-but-realistic result |
-| Phase 0b assessment battery | **Schema only** | Spec + DB tables exist; UI/scorer is next sprint |
+| Phase 0b assessment battery | **Real, live** | 4 scored tasks (email/write, listen, read, vocab) → canonical 4-of-6 skill replacement → auto-redirect to `/plan` |
 
 Everything in the table marked "Real, live" actually does the thing. The
 two that are stubbed are stubbed for **deliberate, external reasons** —
@@ -27,26 +28,27 @@ us, only the adapter file changes.
 
 ## What's stubbed and why
 
-### 0. Aria voice discovery — live path pending prod config
+### 0. Aria voice discovery — LIVE (2026-09-19)
 
 **Files:** `src/lib/onboarding/aria-discovery.ts`, `src/lib/onboarding/aria-discovery-config.ts`,
-`src/app/api/onboarding/discovery/session/route.ts`, `scripts/provision-discovery-agent.ts`
+`src/app/api/onboarding/discovery/session/route.ts`, `scripts/provision-discovery-agent.ts`,
+`scripts/update-discovery-prompt.ts`
 
-**What works:**
+**What works (live):**
 - The discovery session endpoint mints + returns a signed LiveKit token
 - The client widget connects to ElevenLabs LiveKit for real
-- The agent is provisioned (`ELEVENLABS_AGENT_ID` set locally)
+- The agent is provisioned + **live** (`agent_8701m2eyrep6exysepd25r16msst`) — a full
+  discovery call ran against `purelingo-app-sandbox.vercel.app` (2026-09-19); transcript
+  replayed (43 msgs), gap scores written.
+- Prompt iterated in-place via `update-discovery-prompt.ts` (no re-provision): internal
+  reasoning lives in `<instruction>` blocks, Dimension 2 is three true turns, `end_call`
+  tool enabled, runtime 7200s.
 
-**What's blocked (localhost vs prod host):**
-- The agent was provisioned against the **production app URL + allowlist**, so the
-  live voice call is only testable from the deployed site — at `localhost:3000` the
-  agent joins then immediately errors (vendor SDK `error_type undefined` crash).
-- Full live smoke test therefore waits on: **live Supabase** (current project paused),
-  **Vercel reconnect**, and **`ELEVENLABS_WEBHOOK_SECRET`** (only set if a new
-  workspace webhook was created at provision time).
+**Remaining:** plan-agent webhook flip of `plan_status` not yet re-confirmed live;
+ELEVENLABS_WEBHOOK_SECRET only needed if a NEW workspace webhook was created.
 
-**Not blocked:** scoring, gap profiles, lessons, class scheduling, employer console —
-the voice transcript input is the only live dependency.
+**Not blocked:** scoring, gap profiles, lessons, class scheduling, employer console,
+plan programme.
 
 ### 1. ClassIn live classroom (Vietnamese live-class platform)
 
@@ -147,9 +149,7 @@ These all do the thing for real, in production, today:
   on `/onboarding`; Aria opens the call in that language for ~30s, then
   switches to English (per the system prompt's NATIVE LANGUAGE block).
 
-- **Brand pronunciation** — Aria says "Lingo Pyoor" (engineered respelling
-  forces TTS through English /pjʊɹ/) regardless of carrier-sentence
-  language. UI text stays "LingoPure".
+- **Brand naming** — the brand is always written **`LingoPure`** in every message and transcript (2026-09-19: removed the old "Lingo Pyoor" TTS respelling from all written output). Aria pronounces it "LIN-go PYOOR" per the prompt's pronunciation instruction; UI/message text stays `LingoPure`.
 
 - **Demo banner** — every page, sticky, large gold band that says
   "STRATEGIC DEMO · This is a strategic platform demo — not the real

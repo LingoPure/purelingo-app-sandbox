@@ -229,7 +229,7 @@ Advanced view for the 2K assessment engine:
 2. **Session** (`/onboarding/session`): Full-page ElevenLabs voice session with Aria (~20-35 min)
 3. **Post-session**: Redirected to battery or dashboard
 
-Aria covers: rapport building, role probing, target "why", learning style framing, skill measurement across 6 dimensions.
+Aria covers: rapport building, role probing, target "why", learning style framing, skill measurement across 6 dimensions. The live prompt (2026-09-19) keeps all internal reasoning in `<instruction>` blocks (never spoken), splits Dimension 2 into three true turns, and calls `end_call` on the closing phrase.
 
 #### Battery (`/onboarding/battery`)
 
@@ -237,12 +237,16 @@ Four assessment tasks run in priority order:
 
 | Task | What the student does | What it measures |
 |---|---|---|
-| Email Writing | Write a business email (250-400 words) | Writing formal |
+| Email Writing | Write a business email (target 120-220 words, shown live as "N words (target min–max)") | Writing formal |
 | Listen & Paraphrase | Play audio once, type 3 key points | Listening comprehension |
 | Read & Summarise | Read email, write 3-4 sentence summary | Reading intent |
 | Vocabulary Cloze | Fill blanks / pick correct word (8-10 items) | Business vocabulary |
 
-Battery scores **replace** voice scores for 4 of 6 skills (canonical reconciliation). Voice remains canonical for speaking + presenting.
+Battery scores **replace** voice scores for 4 of 6 skills (canonical reconciliation). Voice remains canonical for speaking + presenting. On submit the student is **redirected to `/plan`** (not `/lessons`).
+
+#### Plan Programme (`/onboarding/battery` → `/plan`)
+
+A 3-phase 16-week programme derived from the canonical gap profile (LP-18 0–1000 baseline scale, uniform across `role_baselines` / `gap_scores.target` / self-setup). Delivered on-screen (score bars + "Gap vs role baseline") **and by voice** — a second ElevenLabs plan agent walks the student through phases and captures their commitment. Buttons: **In** (committed), **Not now** (declined), later becomes their learning spine. Commitments recorded via `/api/plan/delivery`.
 
 #### Lessons (`/lessons` → `/lessons/[id]`)
 

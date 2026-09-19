@@ -2,7 +2,7 @@
 
 > **Document type:** Implementation reference (living document)
 > **Repo:** `caistech/LingoPureAI`
-> **Status:** `PARTIALLY VERIFIED — 2026-09-16` (§1 scoring + §2 content-admin verified; C0–C7 blocks verified below vs their schemas/loaders)
+> **Status:** `PARTIALLY VERIFIED — 2026-09-19` (§1 scoring + §2 content-admin verified; C0–C7 blocks verified below vs their schemas/loaders; §9 plan delivery added)
 > **Owner:** Dennis McMahon · **Audience:** Minh (ongoing dev), Dennis (review)
 > **Companion doc:** `docs/HLD.md` (architecture overview)
 
@@ -79,6 +79,8 @@ Describes **how each feature is actually implemented** — schemas, endpoints, j
 - [x] `[V]` 6 canonical skills = DB `CHECK` (`0001`) == `rubric.ts SKILL_KEYS`.
 - [x] `[V]` 0–1000 scale (`0011`); `gap_score_history` append-only (`0019`).
 - [x] `[V]` Webhook persists `transcript_json` + triggers scoring (`api/convai/webhook`).
+- [x] `[V]` **Baseline scale unified on LP-18 0–1000 (2026-09-19)** — `role_baselines.min_score`, `gap_scores.target`, the self-setup seed (`self-setup.tsx` ROLES) and the self-setup API validation (`api/onboarding/self-setup/route.ts`, max 1000) now all agree. A prior 0–100 vs 0–1000 mismatch made every `gap = max(0, target−score) = 0`.
+- [x] `[V]` **Webhook identity is server-derived** — `handlePlanAgentPostCall` verifies the anon token via `verifyAnonSessionToken` before using it as `student_id` (fixes `invalid input syntax for type uuid` when no `convai_voice_bindings` row exists).
 - [ ] `[?]` Battery reconciliation edge cases (`reconcile.ts`) — not exhaustively traced.
 
 ---
@@ -276,3 +278,36 @@ Teacher-facing view of assigned students: dashboard (stat cards + roster + upcom
 
 ### Security `[V]`
 `/teacher` layout gated by `getTeacherIdentity` (a `teachers` row whose `auth_user_id` matches — `0014`). Teacher data visibility via `student_teacher_assignments`; `classin_sessions` read granted by `0049` via `org_can_view_student` (0045 pattern). Role-matrix e2e (`tests/e2e/06-role-matrix.spec.ts`) denies the test student across `/admin`, `/teacher`, `/org/celadon-portal`, `/employer`.
+
+---
+
+## 10. Plan delivery programme
+
+**Module:** Learner
+**Status:** `[V]` — built + deployed 2026-09-19 (commits `1c767f3`–`0a4492e`); live-smoked through discovery → battery → plan.
+
+### Purpose
+Turn the post-assessment gap profile into a **3-phase, 16-week improvement programme**, delivered both on-screen and by voice (a second ElevenLabs "plan agent"), ending in an explicit commitment capture — the WOW-demo payoff after scoring.
+
+### Entry points
+- `GET/POST /api/plan/session` — starts the plan-agent voice session (mints an anon token, `lib/plan/resolve-plan-agent.ts` resolves the agent id from env `ELEVENLABS_PLAN_AGENT_ID`, falling back to the seeded `convai_agents` row via service-role client). Guest (no employer) forms use the plan agent.
+- `POST /api/plan/delivery` — records the student's commitment from the plan page (`plan_status: 'committed'|'declined'|'viewed'`) and the `conversation_id` booking.
+- `/plan` (page) — renders the on-screen programme (score bars + "Gap vs role baseline" per skill, phases) and embeds the voice widget + commitment buttons.
+- Webhook branch — `api/convai/webhook/route.ts` → `handlePlanAgentPostCall`: persists the conversation via `handlePostCallWebhook`, marks `students.plan_status='viewed'` from `'awaited'`/`'viewed'`. Plan-agent calls are **explicitly excluded** from the discovery scoring pipeline.
+
+### Data model
+- `students.plan_status` (`'awaited'|'viewed'|'committed'|'declined'`) set across the flow; `plan_sessions` (or the commitment endpoint) stores the `conversation_id` booking.
+
+### Core logic
+- `buildPlan` (`lib/plan/plan-delivery.ts`) derives the 3 phases from the canonical `gap_scores` row: **Ahead–Maintain** (≥85% target), **Develop–Consolidate** (50–84%), **Build–Close** (<50%) per phase bucket; base week count from `gap_scores.target ≈ 800`; modality mix (lessons/classes/coaching) is rolled per phase.
+- Baseline scale is LP-18 0–1000 uniformly (see §1 fix) so "Gap vs role baseline" and the phase buckets mean what they show.
+- Battery submit (`battery-runner.tsx:167`) now redirects to `/plan` instead of `/lessons`.
+
+### External calls
+- ElevenLabs plan agent (conversational), Anthropic (`buildPlan` text derivation), Supabase.
+
+### Verify (Claude Code)
+- [x] `/plan`, `/api/plan/{session,delivery}` exist (`src/app/(app)/plan/*`, `src/app/api/plan/*`).
+- [x] Battery redirect target is `/plan` (`battery-runner.tsx:167`).
+- [x] Webhook excludes plan-agent calls from discovery scoring; verifies anon token (JWT-as-UUID fix).
+- [ ] `[?]` Live re-confirmation that the plan-agent webhook flips `plan_status` end-to-end (fix deployed 2026-09-19, not yet re-smoked).

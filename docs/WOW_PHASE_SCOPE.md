@@ -47,6 +47,8 @@ ALL STUDENTS (same flow)
   └── 4. REPEAT until target achieved
 ```
 
+> **BUILT (2026-09-19):** steps 1–2 are now a shipped demo flow. Discovery + battery produce the canonical LP-18 0–1000 profile; `buildPlan` (`lib/plan/plan-delivery.ts`) derives a 3-phase 16-week programme from the gap profile; the battery auto-redirects to `/plan`, where the plan is shown on-screen and delivered by a second voice agent with commitment capture. Baseline scale is uniformly LP-18 0–1000 (role_baselines / gap_scores.target / self-setup agree — fixed 2026-09-19).
+
 ### Service packages (data-source toggles, not feature gates)
 
 | Package | Data sources feeding the curriculum | Notes |
@@ -302,6 +304,7 @@ Separate portal at `/teacher`:
 | **C5. Org admin portal** | Week 4–5 | `/org/[slug]`: departments, staff, students, teachers, settings, billing |
 | **C6. Teacher portal** | Week 5 | `/teacher`: my students, progress, classes, notes; report page |
 | **C7. Wire auth + RLS + responsive + tests** | Week 5–6 | All portals gated; RLS per org/dept; responsive pass; portfolio-gate route smoke; role-matrix spec + RLS DB-verify |
+| **D0. Plan delivery (demo payoff, SHIPPED 2026-09-19)** | — | `buildPlan` (`lib/plan/plan-delivery.ts`) → 3-phase 16-week programme from canonical `gap_scores`; `/plan` on-screen programme + voice walkthrough (second ElevenLabs plan agent) + commitment capture; battery auto-redirects to `/plan`; baseline scale unified on LP-18 0–1000 (role_baselines / gap_scores.target / self-setup) |
 
 **Tests (built alongside C0–C7):**
 - `tests/e2e/06-role-matrix.spec.ts` — same URL hit as four roles (P0/P1/P2/P3),

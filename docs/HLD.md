@@ -2,7 +2,7 @@
 
 > **Document type:** Architecture reference (living document)
 > **Repo:** `caistech/LingoPureAI` (primary) + `LingoPure/purelingo-app-sandbox` (mirror)
-> **Status:** `PARTIALLY VERIFIED — 2026-09-16` (C0–C7 build sequence complete; verified against deployed code where marked `[V]`; see §11)
+> **Status:** `PARTIALLY VERIFIED — 2026-09-19` (C0–C7 build sequence complete; plan delivery programme shipped; verified against deployed code where marked `[V]`; see §11)
 > **Owner:** Dennis McMahon (technical lead)
 > **Audience:** Minh (ongoing dev), Dennis (review)
 > **Companion doc:** `docs/LLD.md` (implementation detail)
@@ -102,7 +102,7 @@ flowchart TB
 |---|---|---|---|
 | **Marketing + content admin** | `(marketing)/` (`/`, `/for-companies`, `/for-individuals`, `/method`, `/book-a-demo`, `/company`, `/preview`); `/admin/*` | Public sales-flow site (canvas-reviewable) + row-backed content editing | — (see LLD §2) |
 | **Voice discovery + scoring** | `(app)/onboarding/*` (`/`, `/session`, `/battery`); `api/convai/*` | Spoken AI assessment → LP-18/LP-1000 profile | ConvAI + Claude scoring |
-| **Learner app** | `(app)/dashboard`, `/lessons`, `/lessons/[id]`, `/settings` | Gap radar, micro-lessons, plan, certifications | Claude (lesson eval) |
+| **Learner app** | `(app)/dashboard`, `/lessons`, `/lessons/[id]`, `/plan`, `/settings` | Gap radar, micro-lessons, AI plan programme, certifications | Claude (lesson eval + plan build) |
 | **Live classroom** | `/classroom/[sessionId]` (+ `/transcribe`), `/exam/[id]` | Live class (ClassIn embed — scaffolded) + transcript/exam | Whisper (planned) |
 | **Employer console** | `/employer/*` (login + `(authed)` overview/departments/roles/staff/students/teachers) | Cohort admin over a company's learners | — |
 | **Investor dataroom** | `/investor` + `/investor/(authed)/*`; **admin** `/investor/admin/(console)/*` | Cited RAG Q&A, documents, reports, NDA-gated deep-dive, voice (Morgan) | OpenAI embeddings + Claude answers |
@@ -126,7 +126,7 @@ flowchart TB
 | Frontend | Next.js App Router, React, TypeScript | `next 16.2.4`, `react`/`react-dom 19.2.4`, `typescript ^5` |
 | Server | Next.js route handlers / server actions | **Single Next.js app — no separate service, no Inngest/queue.** |
 | Styling | Tailwind CSS v4 | `tailwindcss ^4` (`@theme` tokens in `globals.css`; scoped `.mkt` marketing tokens in `(marketing)/marketing.css`) |
-| Database | Supabase Postgres (**Tokyo `ap-northeast-1`**) | `@supabase/supabase-js ^2.105.1`, `@supabase/ssr ^0.10.2`. Project `nbvprbaumwmfczsfcyrv`. **50 migrations** (`0001`–`0050`) |
+| Database | Supabase Postgres (**`uovbwccvxgdghqvlpuql` — see §7**) | `@supabase/supabase-js ^2.105.1`, `@supabase/ssr ^0.10.2`. **50 migrations** (`0001`–`0050`) |
 | Vector / RAG | pgvector | `dataroom_chunks.embedding vector(1536)`, **HNSW** (`vector_cosine_ops`), RPC `match_dataroom_chunks` (`0020_investor_dataroom.sql:27,57,61,133`) |
 | Object storage | Supabase Storage | dataroom document buckets; `marketing-assets` (public, created on demand by the upload route) |
 | LLM (generation) | Anthropic (provider-agnostic via bridge) | `src/lib/llm/client.ts` centralizes construction. Honors `ANTHROPIC_BASE_URL` (OmniRoute/OpenRouter) and `ANTHROPIC_MODEL` env vars. `parseStructured` falls back to schema-injected prompt for free models. Defaults: **`claude-sonnet-4-6`** (scoring/lessons), **`claude-haiku-4-5-20251001`** (i18n) |
@@ -139,7 +139,7 @@ flowchart TB
 | Bug reporting | SayFix | `@caistech/sayfix-embed ^0.4.0` (suppressed on marketing routes) |
 | Validation | Zod | `zod ^4.4.1` |
 | Testing | Playwright | `@playwright/test ^1.59.1` (`tests/e2e/`) |
-| Hosting | Vercel | slug `lingo-pure-ai`; `NEXT_PUBLIC_CANVAS_MODE` gates the marketing review canvas |
+| Hosting | Vercel | project **`purelingo-app-sandbox`** (live; the old `lingo-pure-ai` project is stale — §7); `NEXT_PUBLIC_CANVAS_MODE` gates the marketing review canvas |
 
 > `[V]` **AI routing.** LLM traffic is now centralized through `src/lib/llm/client.ts`. Production routes to Anthropic (`claude-sonnet-4-6`), but setting `ANTHROPIC_BASE_URL` (e.g. to OmniRoute or LiteLLM) and `ANTHROPIC_MODEL` instantly switches the entire scoring/lesson/translation stack to a free-model bridge. `parseStructured` handles the fallback from native structured output to schema-injected prompt generation for gateways that don't support Anthropic's `output_config`.
 
@@ -151,7 +151,9 @@ flowchart TB
 1. Learner starts a spoken discovery session over **ElevenLabs ConvAI** (`onboarding/discovery-session.tsx`, token via `api/convai/token`).
 2. On call end, the **post-call webhook** (`api/convai/webhook`) upserts `discovery_sessions` with `convai_conversation_id` + full `transcript_json` (per-turn `time_in_call_secs`) + `completed_at`.
 3. `score-discovery.ts` sends the transcript to **Claude Sonnet 4.6** against `rubric.ts` (strict Zod schema) → **6 `gap_scores` rows** (`source='discovery'`, 0–1000 scale) + `profile_json`; also re-scorable idempotently via `POST /api/scoring/discovery`.
-4. A structured **task battery** (`onboarding/battery`, mig `0016/0017`) refines canonical skill rows; `gap_score_history` (mig `0019`) logs the longitudinal series.
+4. A structured **task battery** (`onboarding/battery`, mig `0016/0017`) refines canonical skill rows; `gap_score_history` (mig `0019`) logs the longitudinal series. Battery completes → redirects to `/plan` (not `/lessons`), so the scored output feeds the programme delivery next.
+5. **Plan delivery** (`lib/plan/plan-delivery.ts` + `plan-generator.ts`): `buildPlan` derives a 3-phase 16-week programme from the canonical `gap_scores` row (85–119% target attainment = "Ahead–Maintain", etc.); `/api/plan/session` + `/plan` render it on screen and hand it to a second ElevenLabs agent ("plan agent", `lib/plan/resolve-plan-agent.ts`) for a **voice walkthrough + commitment capture**; `/api/plan/delivery` records the commitment and sets `students.plan_status`. The plan webhook (`api/convai/webhook` → `handlePlanAgentPostCall`) verifies the anon token (not raw JWT) before flipping `plan_status`.
+6. **Baseline scale is uniformly LP-18 0–1000.** `role_baselines.min_score`, `gap_scores.target`, the self-setup seed (`self-setup.tsx`), the employer role form, and the self-setup API validation all share one scale — a 2026-09-19 fix corrected a 0–100 vs 0–1000 mismatch that had rendered "Gap vs role baseline: 0" on every skill.
 
 ### 5.2 Live classroom (ClassIn) `[V] — SCAFFOLDED, not live`
 `classroom/[sessionId]` builds a ClassIn SSO embed via `lib/classin/{token,embed}.ts`, but the analytics/recording adapter (`lib/classin/api.ts`) **throws `ClassinUnavailableError`** pending EEO credentials, and the session page shows a **sandbox notice** when `CLASSIN_APP_ID` is unset. Scheduling inserts a demo `classin_sessions` row. **No ClassIn data enters the scoring path yet.** *(See `docs/AUDIT_REPORT.md` §A5.)*
@@ -181,10 +183,10 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 ## 7. Deployment & environments
 
-`[V]` Vercel (slug `lingo-pure-ai`, prod `lingo-pure-ai.vercel.app`); Supabase **Tokyo `ap-northeast-1`** (`nbvprbaumwmfczsfcyrv`) for data/auth/storage; **AU/JP residency posture** — derived learner data resides in Japan, not the PRC (contrast the scaffolded ClassIn source). `NEXT_PUBLIC_CANVAS_MODE=true` on the deployed marketing canvas.
+`[V]` Vercel project `purelingo-app-sandbox` (team `dev-lingo-pure`, https://purelingo-app-sandbox.vercel.app) **is the live app**. `[V]` (state `project_lingopure_deploy_gate`; Vercel git integration watches `LingoPure/purelingo-app-sandbox` — commits pushed to `lingopure/main` deploy). Supabase project **`uovbwccvxgdghqvlpuql`** (LingoPure Sandbox) with `sb_publishable_*` → `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `sb_secret_*` → `SUPABASE_SERVICE_ROLE_KEY` in the Vercel env. `NEXT_PUBLIC_CANVAS_MODE=true` gates the marketing review canvas.
 `[V]` Migrations are **CLI-driven** (`supabase db push --linked`); the shell `SUPABASE_ACCESS_TOKEN` holds a Vercel token — use the `sbp_` token at `~/.supabase-token` (memory `project_lingopure_deploy_gate`).
 `[V]` **Two git remotes:** `origin` = `caistech/LingoPureAI` (primary), `lingopure` = `LingoPure/purelingo-app-sandbox` (mirror). Commits push to both.
-`[V]` **Deployment blocker (2026-09-16):** the Vercel project is linked locally (`.vercel/project.json` → project `lingo-pure-ai`, org `corporate-ai-solutions`, team `team_hwN7IFtd2Fo3DCj9C67ZwI1t`) but **not live**. Thao must create the Vercel team + project so Dennis can set up the deployment; only then does production deploy. Once live: push `main` to whichever remote Vercel's git integration watches, set the full env set in the dashboard (the `@caistech` Vercel sensitive-env-var rule — no env file committed), and re-run the `test:org:db` harness against the live schema before first smoke. `VERCEL_OIDC_TOKEN` in `.env.local` is dev-scoped + expired — mint a fresh token for production.
+`[V]` **Live deploy status (2026-09-19):** the `lingopure` mirror is live on Vercel and both remotes receive every push. The old Vercel project `lingo-pure-ai` (corporate-ai-solutions) is **STALE** — do not use `lingo-pure-ai.vercel.app`.
 
 ### Local Development (Dry-Run)
 `[V]` To run the full platform (including admin and portal surfaces) without touching hosted Supabase/Vercel:
@@ -205,6 +207,8 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 ---
 
+**AU/JP residency posture** `[A]` — derived learner data intended to reside in the Asia-Pacific region, not the PRC (contrast the scaffolded ClassIn source); confirm the live region of `uovbwccvxgdghqvlpuql` before asserting (see §9).
+
 ## 8. Cross-cutting concerns
 
 - **Auth & RBAC** `[V]` — Supabase Auth (`@supabase/ssr`); `getUser()` gate on every data route. **Separate role contexts** (no single enum): `students` (learners),`organisation_memberships` (owner/hr/staff/student — the C1 canonical org model, `0038`), `teachers` (`0014`, assignment-linked to students), `platform_admins` (`0044`, seeded from `ADMIN_EMAILS`), `employer_admins` (owner/hr/viewer, mig `0012`, legacy cutover), investor operators (`ADMIN_EMAILS` allowlist, `lib/investor/operator-auth.ts`), `content_editors` (admin/marketing/readonly, mig `0023`, resolved by `current_content_role()`).
@@ -222,13 +226,13 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 - `[V]` **ClassIn integration is scaffolded, not live** — needs EEO SDK credentials + confirmation of the embed shape, analytics granularity, and per-speaker recording (`docs/AUDIT_REPORT.md` §A5; `docs/CLASSIN_INTEGRATION_SPEC.md` is the intended next artifact). `classin_sessions` now has org/teacher read RLS (`0049`).
 - `[V]` **Score-row provenance gap** — `gap_scores`/`gap_score_history` carry `source` but **no `model_id`/`rubric_version`/`prompt_hash`/`extraction_method`** (`AUDIT_REPORT.md` §A6).
 - `[V]` **Audio retention** — discovery keeps the transcript only; **no audio persisted** (§A7).
-- `[?]` Observability (Sentry/analytics) unwired; billing/multi-tenant Stripe not built (demo scope — synthetic `subscriptions`, `0041`); **production deployment blocked on Thao creating the Vercel team/project** (§7).
+- `[?]` Observability (Sentry/analytics) unwired; billing/multi-tenant Stripe not built (demo scope — synthetic `subscriptions`, `0041`); the live demo deploy is the `purelingo-app-sandbox` Vercel project (§7).
 - `[A]` Content admin: live editor round-trip not yet exercised headlessly; next/image optimisation for uploaded assets deferred.
-- `[V]` **Live voice path not production-tested** — Aria/Morgan require an ElevenLabs Agent++ binding (orphaned agent `agent_8701m2eyrep6exysepd25r16msst`) + Dennis promoted to workspace Admin; and a live Supabase (current project paused). MOTD target on `npm run dev` isn't the right host — production smoke required.
+- `[V]` **Live voice path exercised (2026-09-19)** — a full discovery → battery → plan run completed against the deployed app with Aria (`agent_8701m2eyrep6exysepd25r16msst`). The plan agent shares this workspace webhook (`handlePlanAgentPostCall`); the JWT-as-UUID fix (2026-09-19, `e859814`) is deployed but a live plan call has not yet re-confirmed the plan_status flip end-to-end — smoke against `purelingo-app-sandbox.vercel.app`, not a modded MOTD.
 
 ---
 
-## 10. Verification checklist (status after the 2026-09-16 pass)
+## 10. Verification checklist (status after the 2026-09-19 pass)
 
 - [x] `[V]` Stack = Next.js 16.2.4 + Supabase (Tokyo) + ElevenLabs + Anthropic/OpenAI; **no Inngest/Stripe/queue** (package.json).
 - [x] `[V]` Modules mapped to routes (§3); role contexts: students / org memberships (owner-hr-staff-student) / teachers / platform admins / employer admins / content editors / investor operators.
@@ -237,7 +241,8 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 - [x] `[V]` ClassIn scaffolded (throws `ClassinUnavailableError`); no audio retained; scores lack provenance columns.
 - [x] `[V]` Content admin: rows overlay `home.ts`; draft/preview/publish; RLS + append-only audit.
 - [x] `[V]` C0–C7 build sequence complete: curriculum engine (`0037` + `curriculum-engine.ts`), org model + onboarding wizard + platform/org/teacher portals, C7 auth+RLS wiring — org-RLS DB-verify harness PASSES (`npm run test:org:db`, 50 migrations applied, `teacher_report_context` leak closed by `0050`).
-- [ ] `[?]` Live production deployment (blocked on Thao Vercel team); observability wiring; TrackTest integration depth — not code-tallied this pass.
+- [x] `[V]` **Plan delivery programme (2026-09-19)**: 3-phase 16-week programme derived from canonical `gap_scores`; `/plan` on-screen + voice walkthrough + commitment capture; battery → `/plan` redirect. Baseline scale unified on LP-18 0–1000 everywhere (role_baselines / gap_scores.target / self-setup seed + API validation).
+- [ ] `[?]` Live production deployment (on `purelingo-app-sandbox`; §7); observability wiring; TrackTest integration depth; live re-confirmation of the plan-webhook plan_status flip — not code-tallied this pass.
 
 ---
 
@@ -247,4 +252,4 @@ Documents are ingested (`mammoth`/`pdf-parse`) → chunked + embedded (OpenAI `t
 
 **Differs from the MMC template (by design, not error):** no Inngest (async = ConvAI webhook + nudges cron); no Stripe/billing (demo scope — synthetic `subscriptions` `0041`); no central AI routing table (per-call-site models); no Sentry/analytics yet.
 
-**Still `[?]`:** live production deploy (blocked on Thao — Vercel team/project); observability wiring; TrackTest integration depth (files present, not deep-read this pass); exact table/policy count of the C1 RLS layer (asserted behaviourally by the DB-verify harness rather than tallied).
+**Still `[?]`:** observability wiring; TrackTest integration depth (files present, not deep-read this pass); exact table/policy count of the C1 RLS layer (asserted behaviourally by the DB-verify harness rather than tallied); live re-confirmation of the plan-webhook `plan_status` flip (fix deployed, not re-smoked).

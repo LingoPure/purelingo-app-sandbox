@@ -113,7 +113,7 @@ const en: Dict = {
   // by ConvAI before TTS. Keep it warm and end with an open invitation
   // (NOT a "what's your name" question — we already have that).
   "discovery.firstMessage":
-    "Hi {{student_name}}! I'm Aria from Lingo Pyoor. I've got the basics already — {{role_name}} at {{employer_name}}, aiming for {{target_level}}. We'll spend the next twenty or so minutes getting to know what's behind that — what your week actually looks like, where English shows up. No right or wrong answers. To start: walk me through what a typical day in your role looks like.",
+    "Hi {{student_name}}! I'm Aria from LingoPure. I've got the basics already — {{role_name}} at {{employer_name}}, aiming for {{target_level}}. We'll spend the next twenty or so minutes getting to know what's behind that — what your week actually looks like, where English shows up. No right or wrong answers. To start: walk me through what a typical day in your role looks like.",
 
   // ── Dashboard chrome ───────────────────────────────────────────────────
   "dash.kicker": "Student dashboard",
@@ -342,7 +342,7 @@ const vi: Dict = {
     "Aria sẽ chào bạn bằng ngôn ngữ của bạn trong khoảng 30 giây, sau đó chuyển sang tiếng Anh để đánh giá.",
 
   "discovery.firstMessage":
-    "Xin chào {{student_name}}! Tôi là Aria từ Lingo Pyoor. Tôi đã có thông tin cơ bản — bạn là {{role_name}} tại {{employer_name}}, với mục tiêu {{target_level}}. Chúng ta sẽ dành khoảng hai mươi phút tới để tìm hiểu sâu hơn về công việc của bạn và nơi tiếng Anh xuất hiện. Không có câu trả lời đúng hay sai. Bây giờ chúng ta hãy chuyển sang tiếng Anh — hãy nói tự nhiên và đừng lo lắng về lỗi. To start: walk me through what a typical day in your role looks like.",
+    "Xin chào {{student_name}}! Tôi là Aria từ LingoPure. Tôi đã có thông tin cơ bản — bạn là {{role_name}} tại {{employer_name}}, với mục tiêu {{target_level}}. Chúng ta sẽ dành khoảng hai mươi phút tới để tìm hiểu sâu hơn về công việc của bạn và nơi tiếng Anh xuất hiện. Không có câu trả lời đúng hay sai. Bây giờ chúng ta hãy chuyển sang tiếng Anh — hãy nói tự nhiên và đừng lo lắng về lỗi. To start: walk me through what a typical day in your role looks like.",
 
   "dash.kicker": "Bảng điều khiển học viên",
   "dash.heading": "Hồ sơ khoảng cách của bạn",
@@ -563,7 +563,7 @@ const tl: Dict = {
     "Ba-batiin ka ni Aria sa iyong wika nang ~30 segundo, pagkatapos ay lilipat sa English para sa assessment.",
 
   "discovery.firstMessage":
-    "Kumusta {{student_name}}! Ako si Aria mula sa Lingo Pyoor. Mayroon na akong mga pangunahing detalye — {{role_name}} ka sa {{employer_name}}, layunin mong maabot ang {{target_level}}. Sa susunod na dalawampung minuto, kilalanin natin nang mas malalim ang iyong trabaho at kung saan pumapasok ang English. Walang tama o maling sagot. Ngayon, magsa-shift na tayo sa English — magsalita lang nang natural at huwag mag-alala sa mga pagkakamali. To start: walk me through what a typical day in your role looks like.",
+    "Kumusta {{student_name}}! Ako si Aria mula sa LingoPure. Mayroon na akong mga pangunahing detalye — {{role_name}} ka sa {{employer_name}}, layunin mong maabot ang {{target_level}}. Sa susunod na dalawampung minuto, kilalanin natin nang mas malalim ang iyong trabaho at kung saan pumapasok ang English. Walang tama o maling sagot. Ngayon, magsa-shift na tayo sa English — magsalita lang nang natural at huwag mag-alala sa mga pagkakamali. To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "Employer",
   "emp.navOverview": "Pangkalahatang-ideya",
@@ -642,7 +642,7 @@ const id: Dict = {
     "Aria akan menyapa Anda dalam bahasa Anda selama ~30 detik, lalu beralih ke Bahasa Inggris untuk penilaian.",
 
   "discovery.firstMessage":
-    "Halo {{student_name}}! Saya Aria dari Lingo Pyoor. Saya sudah memiliki informasi dasar — Anda adalah {{role_name}} di {{employer_name}}, dengan target {{target_level}}. Selama dua puluh menit ke depan, mari kita pahami lebih dalam tentang pekerjaan Anda dan di mana bahasa Inggris berperan. Tidak ada jawaban benar atau salah. Sekarang mari kita beralih ke bahasa Inggris — bicaralah secara alami dan jangan khawatir tentang kesalahan. To start: walk me through what a typical day in your role looks like.",
+    "Halo {{student_name}}! Saya Aria dari LingoPure. Saya sudah memiliki informasi dasar — Anda adalah {{role_name}} di {{employer_name}}, dengan target {{target_level}}. Selama dua puluh menit ke depan, mari kita pahami lebih dalam tentang pekerjaan Anda dan di mana bahasa Inggris berperan. Tidak ada jawaban benar atau salah. Sekarang mari kita beralih ke bahasa Inggris — bicaralah secara alami dan jangan khawatir tentang kesalahan. To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "Perusahaan",
   "emp.navOverview": "Ikhtisar",
@@ -721,7 +721,7 @@ const ms: Dict = {
     "Aria akan menyapa anda dalam bahasa anda selama ~30 saat, kemudian bertukar ke Bahasa Inggeris untuk penilaian.",
 
   "discovery.firstMessage":
-    "Helo {{student_name}}! Saya Aria daripada Lingo Pyoor. Saya sudah ada maklumat asas — anda {{role_name}} di {{employer_name}}, dengan sasaran {{target_level}}. Dalam dua puluh minit akan datang, mari kita fahami dengan lebih mendalam tentang kerja anda dan di mana bahasa Inggeris terlibat. Tiada jawapan betul atau salah. Sekarang mari kita beralih kepada bahasa Inggeris — bercakaplah secara semula jadi dan jangan risau tentang kesilapan. To start: walk me through what a typical day in your role looks like.",
+    "Helo {{student_name}}! Saya Aria daripada LingoPure. Saya sudah ada maklumat asas — anda {{role_name}} di {{employer_name}}, dengan sasaran {{target_level}}. Dalam dua puluh minit akan datang, mari kita fahami dengan lebih mendalam tentang kerja anda dan di mana bahasa Inggeris terlibat. Tiada jawapan betul atau salah. Sekarang mari kita beralih kepada bahasa Inggeris — bercakaplah secara semula jadi dan jangan risau tentang kesilapan. To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "Majikan",
   "emp.navOverview": "Gambaran keseluruhan",
@@ -797,7 +797,7 @@ const zh: Dict = {
     "Aria 会用你的语言问候你大约 30 秒,然后切换到英语进行评估。",
 
   "discovery.firstMessage":
-    "你好 {{student_name}}！我是来自 Lingo Pyoor 的 Aria。我已经知道基本信息了 — 你是 {{employer_name}} 的 {{role_name}}，目标是 {{target_level}}。接下来大约二十分钟，我想更深入了解你的工作，以及英语在其中扮演的角色。这里没有对错答案。现在我们切换到英语 — 自然地说话，不用担心犯错。To start: walk me through what a typical day in your role looks like.",
+    "你好 {{student_name}}！我是来自 LingoPure 的 Aria。我已经知道基本信息了 — 你是 {{employer_name}} 的 {{role_name}}，目标是 {{target_level}}。接下来大约二十分钟，我想更深入了解你的工作，以及英语在其中扮演的角色。这里没有对错答案。现在我们切换到英语 — 自然地说话，不用担心犯错。To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "雇主",
   "emp.navOverview": "概览",
@@ -875,7 +875,7 @@ const th: Dict = {
     "Aria จะทักทายคุณในภาษาของคุณประมาณ 30 วินาที จากนั้นเปลี่ยนเป็นภาษาอังกฤษสำหรับการประเมิน",
 
   "discovery.firstMessage":
-    "สวัสดี {{student_name}}! ฉันคือ Aria จาก Lingo Pyoor ฉันมีข้อมูลพื้นฐานแล้ว — คุณเป็น {{role_name}} ที่ {{employer_name}} ตั้งเป้าหมายที่ {{target_level}} ในยี่สิบนาทีถัดไป มาทำความเข้าใจงานของคุณให้ลึกขึ้น และที่ที่ภาษาอังกฤษเข้ามามีบทบาท ไม่มีคำตอบที่ถูกหรือผิด ตอนนี้เราเปลี่ยนไปใช้ภาษาอังกฤษ — พูดอย่างเป็นธรรมชาติ และไม่ต้องกังวลเกี่ยวกับข้อผิดพลาด To start: walk me through what a typical day in your role looks like.",
+    "สวัสดี {{student_name}}! ฉันคือ Aria จาก LingoPure ฉันมีข้อมูลพื้นฐานแล้ว — คุณเป็น {{role_name}} ที่ {{employer_name}} ตั้งเป้าหมายที่ {{target_level}} ในยี่สิบนาทีถัดไป มาทำความเข้าใจงานของคุณให้ลึกขึ้น และที่ที่ภาษาอังกฤษเข้ามามีบทบาท ไม่มีคำตอบที่ถูกหรือผิด ตอนนี้เราเปลี่ยนไปใช้ภาษาอังกฤษ — พูดอย่างเป็นธรรมชาติ และไม่ต้องกังวลเกี่ยวกับข้อผิดพลาด To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "นายจ้าง",
   "emp.navOverview": "ภาพรวม",
@@ -958,7 +958,7 @@ const km: Dict = {
     "Aria នឹងស្វាគមន៍អ្នកជាភាសារបស់អ្នកប្រហែល 30 វិនាទី បន្ទាប់មកប្តូរទៅភាសាអង់គ្លេសសម្រាប់ការវាយតម្លៃ។",
 
   "discovery.firstMessage":
-    "សួស្តី {{student_name}}! ខ្ញុំជា Aria មកពី Lingo Pyoor។ ខ្ញុំមានព័ត៌មានមូលដ្ឋានរួចហើយ — អ្នកជា {{role_name}} នៅ {{employer_name}} មានគោលដៅ {{target_level}}។ ក្នុងម្ភៃនាទីខាងមុខ យើងនឹងស្វែងយល់ឱ្យកាន់តែស៊ីជម្រៅអំពីការងាររបស់អ្នក និងកន្លែងណាដែលភាសាអង់គ្លេសត្រូវបានប្រើ។ គ្មានចម្លើយត្រឹមត្រូវ ឬខុសទេ។ ឥឡូវនេះយើងប្តូរទៅភាសាអង់គ្លេស — និយាយដោយធម្មជាតិ មិនបាច់ព្រួយបារម្ភពីកំហុសទេ។ To start: walk me through what a typical day in your role looks like.",
+    "សួស្តី {{student_name}}! ខ្ញុំជា Aria មកពី LingoPure។ ខ្ញុំមានព័ត៌មានមូលដ្ឋានរួចហើយ — អ្នកជា {{role_name}} នៅ {{employer_name}} មានគោលដៅ {{target_level}}។ ក្នុងម្ភៃនាទីខាងមុខ យើងនឹងស្វែងយល់ឱ្យកាន់តែស៊ីជម្រៅអំពីការងាររបស់អ្នក និងកន្លែងណាដែលភាសាអង់គ្លេសត្រូវបានប្រើ។ គ្មានចម្លើយត្រឹមត្រូវ ឬខុសទេ។ ឥឡូវនេះយើងប្តូរទៅភាសាអង់គ្លេស — និយាយដោយធម្មជាតិ មិនបាច់ព្រួយបារម្ភពីកំហុសទេ។ To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "និយោជក",
   "emp.navOverview": "ទិដ្ឋភាពទូទៅ",
@@ -1037,7 +1037,7 @@ const lo: Dict = {
     "Aria ຈະທັກທາຍເຈົ້າດ້ວຍພາສາຂອງເຈົ້າປະມານ 30 ວິນາທີ ຈາກນັ້ນປ່ຽນເປັນພາສາອັງກິດສຳລັບການປະເມີນ.",
 
   "discovery.firstMessage":
-    "ສະບາຍດີ {{student_name}}! ຂ້ອຍຄື Aria ຈາກ Lingo Pyoor. ຂ້ອຍມີຂໍ້ມູນພື້ນຖານແລ້ວ — ເຈົ້າເປັນ {{role_name}} ຢູ່ {{employer_name}} ຕັ້ງເປົ້າໝາຍທີ່ {{target_level}}. ໃນຊາວນາທີຕໍ່ໄປ ມາທຳຄວາມເຂົ້າໃຈວຽກຂອງເຈົ້າໃຫ້ເລິກຂຶ້ນ ແລະບ່ອນທີ່ພາສາອັງກິດເຂົ້າມາມີບົດບາດ. ບໍ່ມີຄຳຕອບທີ່ຖືກຫຼືຜິດ. ດຽວນີ້ພວກເຮົາປ່ຽນເປັນພາສາອັງກິດ — ເວົ້າແບບທຳມະຊາດ ແລະບໍ່ຕ້ອງເປັນຫ່ວງເລື່ອງຄວາມຜິດ. To start: walk me through what a typical day in your role looks like.",
+    "ສະບາຍດີ {{student_name}}! ຂ້ອຍຄື Aria ຈາກ LingoPure. ຂ້ອຍມີຂໍ້ມູນພື້ນຖານແລ້ວ — ເຈົ້າເປັນ {{role_name}} ຢູ່ {{employer_name}} ຕັ້ງເປົ້າໝາຍທີ່ {{target_level}}. ໃນຊາວນາທີຕໍ່ໄປ ມາທຳຄວາມເຂົ້າໃຈວຽກຂອງເຈົ້າໃຫ້ເລິກຂຶ້ນ ແລະບ່ອນທີ່ພາສາອັງກິດເຂົ້າມາມີບົດບາດ. ບໍ່ມີຄຳຕອບທີ່ຖືກຫຼືຜິດ. ດຽວນີ້ພວກເຮົາປ່ຽນເປັນພາສາອັງກິດ — ເວົ້າແບບທຳມະຊາດ ແລະບໍ່ຕ້ອງເປັນຫ່ວງເລື່ອງຄວາມຜິດ. To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "ນາຍຈ້າງ",
   "emp.navOverview": "ພາບລວມ",
@@ -1117,7 +1117,7 @@ const my: Dict = {
     "Aria က သင့်ကို သင့်ဘာသာစကားဖြင့် 30 စက္ကန့်ခန့် နှုတ်ဆက်မည်၊ ပြီးနောက် အကဲဖြတ်မှုအတွက် အင်္ဂလိပ်ဘာသာသို့ ပြောင်းမည်။",
 
   "discovery.firstMessage":
-    "မင်္ဂလာပါ {{student_name}}! ကျွန်မက Lingo Pyoor မှ Aria ပါ။ ကျွန်မ အခြေခံအချက်အလက်များ ရှိပြီးပြီ — သင်က {{employer_name}} တွင် {{role_name}} ၊ ရည်မှန်းချက် {{target_level}}။ နောက်အချိန်နှစ်ဆယ်မိနစ်အတွင်း သင်၏အလုပ်နှင့် အင်္ဂလိပ်ဘယ်နေရာတွင် ပါဝင်လာသည်ကို ပိုမိုနက်ရှိုင်းစွာ နားလည်ကြရအောင်။ မှန် မမှန် အဖြေ မရှိပါ။ အခု အင်္ဂလိပ်သို့ ပြောင်းကြရအောင် — သဘာဝအတိုင်းပြောပြီး အမှားများကို စိုးရိမ်စရာမလိုပါ။ To start: walk me through what a typical day in your role looks like.",
+    "မင်္ဂလာပါ {{student_name}}! ကျွန်မက LingoPure မှ Aria ပါ။ ကျွန်မ အခြေခံအချက်အလက်များ ရှိပြီးပြီ — သင်က {{employer_name}} တွင် {{role_name}} ၊ ရည်မှန်းချက် {{target_level}}။ နောက်အချိန်နှစ်ဆယ်မိနစ်အတွင်း သင်၏အလုပ်နှင့် အင်္ဂလိပ်ဘယ်နေရာတွင် ပါဝင်လာသည်ကို ပိုမိုနက်ရှိုင်းစွာ နားလည်ကြရအောင်။ မှန် မမှန် အဖြေ မရှိပါ။ အခု အင်္ဂလိပ်သို့ ပြောင်းကြရအောင် — သဘာဝအတိုင်းပြောပြီး အမှားများကို စိုးရိမ်စရာမလိုပါ။ To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "အလုပ်ရှင်",
   "emp.navOverview": "ခြုံငုံသုံးသပ်ချက်",
@@ -1200,7 +1200,7 @@ const ta: Dict = {
     "Aria உங்களை உங்கள் மொழியில் ~30 விநாடிகள் வாழ்த்துவார், பின்னர் மதிப்பீட்டிற்கு ஆங்கிலத்திற்கு மாறும்.",
 
   "discovery.firstMessage":
-    "வணக்கம் {{student_name}}! நான் Lingo Pyoor-இலிருந்து Aria. எனக்கு அடிப்படை விவரங்கள் ஏற்கனவே உள்ளன — நீங்கள் {{employer_name}}-இல் {{role_name}}, இலக்கு {{target_level}}. அடுத்த இருபது நிமிடங்களில், உங்கள் வேலை மற்றும் ஆங்கிலம் எங்கே ஈடுபடுகிறது என்பதைப் பற்றி ஆழமாகப் புரிந்துகொள்வோம். சரியான அல்லது தவறான பதில்கள் இல்லை. இப்போது ஆங்கிலத்திற்கு மாறுவோம் — இயற்கையாகப் பேசவும், தவறுகளைப் பற்றி கவலைப்பட வேண்டாம். To start: walk me through what a typical day in your role looks like.",
+    "வணக்கம் {{student_name}}! நான் LingoPure-இலிருந்து Aria. எனக்கு அடிப்படை விவரங்கள் ஏற்கனவே உள்ளன — நீங்கள் {{employer_name}}-இல் {{role_name}}, இலக்கு {{target_level}}. அடுத்த இருபது நிமிடங்களில், உங்கள் வேலை மற்றும் ஆங்கிலம் எங்கே ஈடுபடுகிறது என்பதைப் பற்றி ஆழமாகப் புரிந்துகொள்வோம். சரியான அல்லது தவறான பதில்கள் இல்லை. இப்போது ஆங்கிலத்திற்கு மாறுவோம் — இயற்கையாகப் பேசவும், தவறுகளைப் பற்றி கவலைப்பட வேண்டாம். To start: walk me through what a typical day in your role looks like.",
 
   "emp.brandTag": "முதலாளி",
   "emp.navOverview": "மேலோட்டம்",

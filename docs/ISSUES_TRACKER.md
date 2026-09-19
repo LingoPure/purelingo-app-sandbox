@@ -85,20 +85,17 @@ Based on: `GAP_ANALYSIS_CURRENT_VS_COMMERCIAL.md`
 - [x] **ISS-041**: Security — auth, media controls, retention, raw audio access — secured signed-URL audio GET with denial logging (G13) + daily retention cron `/api/cron/2k-retention` (0030 RLS + private bucket already in place)
 - [ ] **ISS-042**: Run G1–G14 acceptance gates with real external test users
 
-## Phase 8 — Live-config block (deferred to Minh, 2026-09-13)
+## Phase 8 — Live-config block (mostly DONE on the sandbox — updated 2026-09-19)
 
-These are **environment/config items, not code**. The discovery-agent code is
-committed + working; the live voice path can only be smoke-tested from the
-deployed site (see `docs/integration-status.md` §0).
+These were **environment/config items, not code**. As of 2026-09-19 the demo lives on
+`purelingo-app-sandbox.vercel.app` (Supabase `uovbwccvxgdghqvlpuql`), and a full
+discovery → battery → plan run has completed live. See `docs/integration-status.md` §0.
 
-- [ ] **ISS-043**: Live Aria voice smoke test — agent joins LiveKit then the ElevenLabs
-      agent errors (vendor `error_type undefined` crash) because the agent was
-      provisioned against the prod URL/allowlist, not `localhost:3000`. Fix = re-provision
-      or smoke-test from prod. (`docs/integration-status.md` §0 for scope)
-- [ ] **ISS-044**: Live Supabase reconnect — current project `nbvprbaumwmfczsfcyrv` is
-      paused/INACTIVE; greenfield rebuild per Path A of the handover plan needed before
-      auth/scoring can run anywhere but the local sandbox
-- [ ] **ISS-045**: Vercel reconnect — `lingo-pure-ai` project must be re-pointed at the
-      new `LingoPure/LingoPureAI` repo before the deployed site is demo-able
+- [x] **ISS-043**: Live Aria voice smoke test — DONE 2026-09-19: live discovery call ran on
+      the deployed site + agent `agent_8701m2eyrep6exysepd25r16msst`; transcript replayed (43 msgs).
+- [x] **ISS-044**: Live Supabase reconnect — DONE: live project `uovbwccvxgdghqvlpuql`
+      (LingoPure Sandbox) is the running backend for the sandbox deploy.
+- [x] **ISS-045**: Vercel reconnect — DONE: `purelingo-app-sandbox` Vercel project watches
+      `LingoPure/purelingo-app-sandbox`; both git remotes deploy.
 - [ ] **ISS-046**: `ELEVENLABS_WEBHOOK_SECRET` — only needed if provision created a NEW
       workspace webhook (ElevenLabs → Webhooks); otherwise the existing secret still matches
