@@ -159,7 +159,7 @@ export function SpeakScoreRunner({
         <div className="rounded-lg border border-cream bg-paper p-6">
           <div className="mb-4 flex items-center justify-between">
             <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-              Your response
+              Record your response
             </span>
             <span
               className={
@@ -225,9 +225,10 @@ export function SpeakScoreRunner({
               </p>
             )}
             <p className="text-center text-xs text-mute">
-              {state === "idle" && "Tap the mic to start. Aim for natural pace, not perfection."}
-              {state === "recording" && "Recording — tap the square to stop."}
-              {state === "stopped" && "Listen back, then submit or re-record."}
+              {state === "idle" && "Tap the mic and speak your full response in one take — no one is listening live, aim for natural pace, not perfection."}
+              {state === "recording" && "Recording — keep going until your pitch is done, then stop."}
+              {state === "stopped" && "Listen back, then submit for scoring or re-record."}
+              {state === "submitting" && "Hit stop when you've finished your pitch."}
             </p>
           </div>
 
@@ -280,6 +281,17 @@ function PromptPanel({ prompt }: { prompt: SpeakScorePrompt }) {
           </span>
           <br />
           {prompt.task}
+        </p>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-navy/15 bg-mist/60 p-4">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-navy">
+          One take — no live call
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-ink">
+          There is no one on the other end. Record your full response in one go,
+          like leaving a voicemail — then we transcribe it and score your
+          delivery. The other person does not reply.
         </p>
       </div>
     </div>

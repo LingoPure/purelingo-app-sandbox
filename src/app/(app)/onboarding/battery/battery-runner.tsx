@@ -164,7 +164,7 @@ export function BatteryRunner({ tasks, selected, bIntro }: Props) {
     }
 
     setPhase("done");
-    router.push("/lessons?from=battery");
+    router.push("/plan");
   }
 
   if (phase === "intro") {
@@ -197,9 +197,8 @@ export function BatteryRunner({ tasks, selected, bIntro }: Props) {
           Triggering your full gap analysis…
         </h2>
         <p className="mt-2 text-sm text-mute">
-          Your responses are being scored in parallel. You&apos;ll land on the
-          lessons tab in a moment — the gap profile updates as each score
-          lands.
+          Your responses are being scored in parallel. You&apos;ll land on your
+          personalised programme in a moment — your scores will be ready.
         </p>
       </div>
     );
@@ -209,10 +208,10 @@ export function BatteryRunner({ tasks, selected, bIntro }: Props) {
     return (
       <div className="rounded-lg border border-teal/30 bg-teal/5 p-6">
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-teal">
-          Battery complete
+          Assessment complete
         </p>
         <h2 className="mt-1 font-serif text-2xl text-navy">
-          Heading to your lessons…
+          Taking you to your programme…
         </h2>
       </div>
     );
