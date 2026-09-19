@@ -173,7 +173,7 @@ function BaselineRow({
       <div className="h-2 flex-1 rounded-full bg-mist">
         <div
           className="h-2 rounded-full bg-navy/70"
-          style={{ width: `${score}%` }}
+          style={{ width: `${Math.min(100, score / 10)}%` }}
         />
       </div>
       <span className="w-8 text-right font-mono text-xs text-navy">
