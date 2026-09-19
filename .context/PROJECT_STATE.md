@@ -3,6 +3,13 @@
 **Updated:** 2026-09-19
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
+## Session log — 2026-09-19 (close-out: docs reconciled, brand spelling fixed)
+
+- **Docs reconciled to current state** (commit `7005565`): HLD/LLD/WOW scope/FUNCTIONALITY_WORKFLOWS/integration-status/ISSUES_TRACKER all now reflect the 2026-09-19 reality — plan delivery live, battery→/plan redirect, baseline scale LP-18 0-1000, live deploy = `purelingo-app-sandbox.vercel.app` (Supabase `uovbwccvxgdghqvlpuql`), ISS-043/44/45 closed.
+- **Brand spelling fixed**: all "Lingo Pyoor" (TTS respell workaround) removed from written output — prompt, 11 localized first-message strings, QA sim. Written form is ALWAYS `LingoPure`; speech sound stays "LIN-go PYOOR" via prompt instruction. Live agent re-provisioned, QA sim PASS.
+- **Diag scripts cleaned**: removed 8 throwaway `diag-*`/`fix-scaled.mts`/`replay-batch.mts` scripts from `scripts/`.
+- **OUTSTANDING for next session**: (1) live plan-agent call to re-confirm `plan_status` flip end-to-end (JWT fix deployed but not re-smoked); (2) confirm Supabase region of `uovbwccvxgdghqvlpuql`; (3) optional — TTS re-check if "LingoPure" mispronounces in non-English carrier sentences.
+
 ## Session log — 2026-09-19 (plan voice delivery + baseline scale fix + discovery agent hardening)
 
 - **Plan programme shipped** (commits `1c767f3`–`0a4492e`): `buildPlan` generates 3-phase 16-week programme; `/plan` page = on-screen scores + Aria voice walkthrough + commitment capture; `/api/plan/delivery` + `/api/plan/session` routes; dashboard CTA; battery auto-redirects to `/plan` after submit.
