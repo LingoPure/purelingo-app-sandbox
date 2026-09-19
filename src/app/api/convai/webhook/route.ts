@@ -82,15 +82,28 @@ async function handlePlanAgentPostCall(payload: PostCallPayload) {
   const supabase = adminSupabase();
   const conversationId = payload.data.conversation_id;
 
-  // Resolve the same server-trusted user (bind table → discovery token).
+  // Resolve the same server-trusted user (bind table → verified token).
+  // The plan agent shares this workspace webhook; the binding may not exist
+  // if the plan session didn't call /api/convai/bind, so fall back to
+  // VERIFYING the anon session token (not using it raw — it's a JWT, not a UUID).
   const { data: binding } = await supabase
     .from("convai_voice_bindings")
     .select("user_id")
     .eq("elevenlabs_conversation_id", conversationId)
     .maybeSingle();
-  const fallbackUserId =
-    payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
-  const userId = binding?.user_id ?? fallbackUserId;
+
+  let userId: string | null = binding?.user_id ?? null;
+  if (!userId) {
+    const token =
+      payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+    if (token) {
+      const sessionSecret = process.env.DISCOVERY_SESSION_SECRET;
+      if (sessionSecret) {
+        const claims = verifyAnonSessionToken(sessionSecret, token);
+        if (claims?.sid) userId = claims.sid;
+      }
+    }
+  }
 
   if (!userId) {
     console.warn(

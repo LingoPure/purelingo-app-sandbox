@@ -38,12 +38,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Must decode prospect intent; talking well is useless if you pitch the wrong thing",
     baselines: {
-      speaking_fluency: 65,
-      presentation_delivery: 50,
-      writing_formal: 40,
-      business_vocabulary: 55,
-      listening_comprehension: 70,
-      reading_intent: 45,
+      speaking_fluency: 650,
+      presentation_delivery: 500,
+      writing_formal: 400,
+      business_vocabulary: 550,
+      listening_comprehension: 700,
+      reading_intent: 450,
     },
   },
   {
@@ -52,12 +52,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Cold outreach is persuasion; fluency and confidence determine whether they stay on the line",
     baselines: {
-      speaking_fluency: 75,
-      presentation_delivery: 65,
-      writing_formal: 45,
-      business_vocabulary: 60,
-      listening_comprehension: 55,
-      reading_intent: 40,
+      speaking_fluency: 750,
+      presentation_delivery: 650,
+      writing_formal: 450,
+      business_vocabulary: 600,
+      listening_comprehension: 550,
+      reading_intent: 400,
     },
   },
   {
@@ -66,12 +66,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Customer leads the conversation; misunderstanding the issue = wrong resolution = churn",
     baselines: {
-      speaking_fluency: 60,
-      presentation_delivery: 40,
-      writing_formal: 45,
-      business_vocabulary: 55,
-      listening_comprehension: 75,
-      reading_intent: 50,
+      speaking_fluency: 600,
+      presentation_delivery: 400,
+      writing_formal: 450,
+      business_vocabulary: 550,
+      listening_comprehension: 750,
+      reading_intent: 500,
     },
   },
   {
@@ -80,12 +80,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Must extract precise technical details from non-technical users; vocabulary prevents miscommunication",
     baselines: {
-      speaking_fluency: 55,
-      presentation_delivery: 40,
-      writing_formal: 55,
-      business_vocabulary: 65,
-      listening_comprehension: 70,
-      reading_intent: 60,
+      speaking_fluency: 550,
+      presentation_delivery: 400,
+      writing_formal: 550,
+      business_vocabulary: 650,
+      listening_comprehension: 700,
+      reading_intent: 600,
     },
   },
   {
@@ -94,12 +94,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Document-in, document-out function; spoken English is irrelevant to core output",
     baselines: {
-      speaking_fluency: 35,
-      presentation_delivery: 30,
-      writing_formal: 65,
-      business_vocabulary: 55,
-      listening_comprehension: 40,
-      reading_intent: 65,
+      speaking_fluency: 350,
+      presentation_delivery: 300,
+      writing_formal: 650,
+      business_vocabulary: 550,
+      listening_comprehension: 400,
+      reading_intent: 650,
     },
   },
   {
@@ -108,12 +108,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Evaluates interactions and writes evaluations; analytical documentation function",
     baselines: {
-      speaking_fluency: 45,
-      presentation_delivery: 45,
-      writing_formal: 70,
-      business_vocabulary: 60,
-      listening_comprehension: 65,
-      reading_intent: 70,
+      speaking_fluency: 450,
+      presentation_delivery: 450,
+      writing_formal: 700,
+      business_vocabulary: 600,
+      listening_comprehension: 650,
+      reading_intent: 700,
     },
   },
   {
@@ -122,12 +122,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Shifts between reading resumes, interviewing, writing policies — no single skill dominates",
     baselines: {
-      speaking_fluency: 60,
-      presentation_delivery: 55,
-      writing_formal: 60,
-      business_vocabulary: 55,
-      listening_comprehension: 55,
-      reading_intent: 55,
+      speaking_fluency: 600,
+      presentation_delivery: 550,
+      writing_formal: 600,
+      business_vocabulary: 550,
+      listening_comprehension: 550,
+      reading_intent: 550,
     },
   },
   {
@@ -136,12 +136,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Document-driven function; financial writing precision prevents real risk",
     baselines: {
-      speaking_fluency: 35,
-      presentation_delivery: 30,
-      writing_formal: 70,
-      business_vocabulary: 65,
-      listening_comprehension: 35,
-      reading_intent: 70,
+      speaking_fluency: 350,
+      presentation_delivery: 300,
+      writing_formal: 700,
+      business_vocabulary: 650,
+      listening_comprehension: 350,
+      reading_intent: 700,
     },
   },
   {
@@ -150,12 +150,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Training IS delivery; if they cannot present, nothing else matters",
     baselines: {
-      speaking_fluency: 70,
-      presentation_delivery: 70,
-      writing_formal: 55,
-      business_vocabulary: 55,
-      listening_comprehension: 50,
-      reading_intent: 50,
+      speaking_fluency: 700,
+      presentation_delivery: 700,
+      writing_formal: 550,
+      business_vocabulary: 550,
+      listening_comprehension: 500,
+      reading_intent: 500,
     },
   },
 ];
