@@ -6,11 +6,11 @@
  * Usage:
  *   set -a; source .env.local; set +a; npx tsx scripts/update-discovery-prompt.ts
  *
- * Source of truth for the prompt: ./discovery-system-prompt.mts
+ * Source of truth for the prompt: ./discovery-system-prompt.ts
  */
 
-import { updateAgent } from "@caistech/elevenlabs-convai";
-import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt.mts";
+import { updateAgent } from "../node_modules/@caistech/elevenlabs-convai/dist/index.js";
+import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt";
 import type { Bilingual } from "../src/lib/i18n/translate";
 
 /**

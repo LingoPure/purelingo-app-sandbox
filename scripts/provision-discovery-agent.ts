@@ -24,7 +24,7 @@
 
 import { provisionVoiceAgent, standardAllowlist, createConversationTools } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
-import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt.mts";
+import { SYSTEM_PROMPT, FIRST_MESSAGE } from "./discovery-system-prompt";
 import { upsertEnvLocal } from "./update-env-local.mjs";
 
 async function seedConvaiAgent(agentId: string) {
