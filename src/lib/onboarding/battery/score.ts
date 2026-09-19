@@ -44,7 +44,11 @@ export type BatteryScoreOutput = {
 const RubricOutputSchema = z.object({
   score: z.number().int().min(0).max(1000),
   cefr_band: z.enum(CEFR_BANDS),
-  evidence: z.string().min(1).max(600),
+  evidence: z
+    .string()
+    .min(1)
+    .max(2000)
+    .transform((s) => s.slice(0, 600)),
 });
 
 function client() {
