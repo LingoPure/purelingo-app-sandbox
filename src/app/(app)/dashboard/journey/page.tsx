@@ -46,6 +46,23 @@ function capLabel(address: string): string {
   return CAPABILITY_LABELS[address] ?? address.replace(/_/g, " ");
 }
 
+/**
+ * Confidence -> an honest evidence-status label for a telemetry signal
+ * (ISS-061). `confidence === 0` means resolveTelemetry() found literally no
+ * readings for this dimension (assessed: false) — never render that as a
+ * real 0% score, same "not yet assessed" principle as ISS-060.
+ */
+function evidenceStatus(confidence: number): {
+  label: string;
+  pillClass: string;
+  assessed: boolean;
+} {
+  if (confidence <= 0) return { label: "Not yet assessed", pillClass: "", assessed: false };
+  if (confidence < 0.3) return { label: "Insufficient evidence", pillClass: "t-pill-bad", assessed: true };
+  if (confidence < 0.6) return { label: "Partial evidence", pillClass: "t-pill-warn", assessed: true };
+  return { label: "Strong evidence", pillClass: "t-pill-good", assessed: true };
+}
+
 export default async function LearnerJourneyPage() {
   const supabase = await createClient();
   const {
@@ -391,6 +408,48 @@ export default async function LearnerJourneyPage() {
             </article>
           </div>
         </div>
+      </section>
+
+      {/* ── 12D telemetry signals (ISS-061) ──────────────────────────────────
+          The engine already computes all 12 canonical signals (see
+          TELEMETRY_12D in communication-analysis.ts) — only the bottom 3
+          were ever surfaced (the "This week's focus" copy above). This
+          section exposes every signal individually with an evidence-status
+          label so a reviewer can see the full picture, not just the gaps. */}
+      <section className="mx-auto mt-8 max-w-6xl">
+        <article className="t-card p-6">
+          <p className="t-eyebrow t-eyebrow-purple">Live interaction telemetry</p>
+          <h2 className="t-h2 mt-2">All 12 signals</h2>
+          <p className="t-muted mt-1">
+            The behavioural signals behind your Live Interaction capability — how you
+            actually handled the conversation, not just what you said.
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {dims.length > 0 ? (
+              dims.map((d) => {
+                const status = evidenceStatus(d.confidence);
+                return (
+                  <div key={d.name} className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[13px] text-t-text">{d.name}</span>
+                      <span className={`t-pill ${status.pillClass}`}>{status.label}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <TProgress value={status.assessed ? d.pct : 0} />
+                      </div>
+                      <span className="w-10 text-right text-[12px] text-t-mute">
+                        {status.assessed ? `${d.pct}%` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="t-muted">No telemetry recorded yet — complete an assessment to populate this.</p>
+            )}
+          </div>
+        </article>
       </section>
 
       {/* ── My notes ───────────────────────────────────────────────────────── */}
