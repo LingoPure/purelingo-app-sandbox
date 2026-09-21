@@ -481,7 +481,7 @@ export default async function DashboardPage() {
           />
           <ProfileCard
             heading="How you learn"
-            tag="Learning style"
+            tag="Learning preferences"
             body={profile.learning_style_notes}
           />
         </section>

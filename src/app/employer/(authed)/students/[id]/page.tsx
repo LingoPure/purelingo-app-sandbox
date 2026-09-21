@@ -97,7 +97,7 @@ export default async function StudentDetailPage({
           )}
           {profile?.learning_style_notes && (
             <ProfileBlock
-              heading="Learning style"
+              heading="Learning preferences"
               body={profile.learning_style_notes}
             />
           )}

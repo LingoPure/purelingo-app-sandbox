@@ -88,7 +88,10 @@ export async function buildPlan(
   const firstName = studentName.split(" ")[0];
   const targetLevel = (student?.target_level as CefrBand | undefined) ?? "B2";
 
-  let roleName = "your role";
+  // Not "your role" — every consumer interpolates this as "role as X" /
+  // "Role: X" (plan/page.tsx, compilePlanPrompt), so a default containing
+  // the word "role" produces the doubled "role as your role" Dan flagged.
+  let roleName = "General Business";
   let employerName = "your company";
   if (student?.role_id) {
     const { data: role } = await supabase
