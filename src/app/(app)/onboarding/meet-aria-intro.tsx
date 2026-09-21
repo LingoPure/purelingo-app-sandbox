@@ -19,6 +19,10 @@ export function MeetAriaIntro({
 }) {
   const [hidden, setHidden] = useState(false);
   const [playing, setPlaying] = useState(false);
+  // Read the actual clip length from the video itself rather than a
+  // hardcoded guess (ISS-056: label said "60s", the real HeyGen render was
+  // 26s — a fixed number drifts every time the video is regenerated).
+  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   if (hidden) return null;
@@ -37,7 +41,9 @@ export function MeetAriaIntro({
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
-            60s · Meet your coach
+            {durationSeconds != null
+              ? `${Math.round(durationSeconds)}s · Meet your coach`
+              : "Meet your coach"}
           </p>
           <h2 className="mt-1 font-serif text-xl text-navy">
             A quick hello from Aria
@@ -63,6 +69,10 @@ export function MeetAriaIntro({
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onError={() => setHidden(true)}
+          onLoadedMetadata={(e) => {
+            const d = e.currentTarget.duration;
+            if (Number.isFinite(d) && d > 0) setDurationSeconds(d);
+          }}
           className="block h-auto w-full"
         >
           Your browser doesn&apos;t support HTML5 video.

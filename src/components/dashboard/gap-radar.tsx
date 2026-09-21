@@ -27,7 +27,14 @@ function polarPoint(cx: number, cy: number, radius: number, angleRad: number) {
 
 export function GapRadar({ skills, size = 360 }: Props) {
   const padding = 56;
-  const cx = size / 2;
+  // Extra horizontal room reserved purely for axis-label text. SVG's UA
+  // default is overflow:hidden on the root element, so any label extending
+  // past the viewBox — e.g. "Live Interaction", the longest current label —
+  // was being silently clipped at the edge (ISS-062). The circle geometry
+  // itself is unchanged; it's just centred in a wider box.
+  const labelMargin = 80;
+  const width = size + labelMargin * 2;
+  const cx = width / 2;
   const cy = size / 2;
   const maxRadius = size / 2 - padding;
   const n = skills.length;
@@ -50,8 +57,9 @@ export function GapRadar({ skills, size = 360 }: Props) {
 
   return (
     <svg
-      viewBox={`0 0 ${size} ${size}`}
-      className="h-auto w-full max-w-[360px]"
+      viewBox={`0 0 ${width} ${size}`}
+      className="h-auto w-full"
+      style={{ maxWidth: `${width}px` }}
       role="img"
       aria-label="Gap profile radar — scores across 6 sub-skills against target"
     >

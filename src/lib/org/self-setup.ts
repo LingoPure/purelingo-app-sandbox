@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** Short random alnum suffix for de-duplicating a colliding organisation slug. */
+function randomSlugSuffix(): string {
+  return Math.random().toString(36).slice(2, 7);
+}
+
 // Canonical skill set every self-setup role seeds — the SIX PRIMARY
 // dimensions only (ISS-048). The two supporting measures
 // (business_vocabulary, presentation_delivery) use the flat 800 default
@@ -65,16 +70,39 @@ export async function runSelfSetup(
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    .replace(/(^-|-$)/g, "") || "org";
 
   // 1. Organisation (self-created — no owner membership).
-  const { data: org, error: orgError } = await admin
-    .from("organisations")
-    .insert({ name: orgName, slug: slugBase || "org" })
-    .select("id")
-    .single();
-  if (orgError) {
-    return { ok: false, step: "organisation", error: orgError.message };
+  //
+  // `organisations.slug` is a URL-safe internal identifier, not something
+  // the user ever sees or chooses directly — so a slug collision (e.g. two
+  // people at "Prelabz" both self-setting-up, or a repeat test run) should
+  // never surface as a raw Postgres error (ISS-049). Retry with a short
+  // random suffix instead of failing; only give up if that keeps colliding,
+  // which given the suffix space is effectively unreachable in practice.
+  let org: { id: string } | null = null;
+  let orgError: { message: string; code?: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const slug = attempt === 0 ? slugBase : `${slugBase}-${randomSlugSuffix()}`;
+    const { data, error } = await admin
+      .from("organisations")
+      .insert({ name: orgName, slug })
+      .select("id")
+      .single();
+    if (!error) {
+      org = data;
+      orgError = null;
+      break;
+    }
+    orgError = error;
+    if (error.code !== "23505") break; // not a unique-violation — don't retry blindly
+  }
+  if (!org) {
+    const friendly =
+      orgError?.code === "23505"
+        ? "Couldn't create your organisation right now — please try again."
+        : (orgError?.message ?? "Failed to create organisation.");
+    return { ok: false, step: "organisation", error: friendly };
   }
 
   // 2. Employer linked to the organisation.

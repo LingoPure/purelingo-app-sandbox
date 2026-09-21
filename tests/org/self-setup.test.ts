@@ -14,16 +14,23 @@ type UpdateRecord = { table: string; payload: unknown; eqColumn: string; eqValue
 
 type MockConfig = {
   /** Make a given table's insert return { error } instead of success. */
-  insertError?: { table: string; message: string };
+  insertError?: { table: string; message: string; code?: string };
   /** Make the student update return { error }. */
   updateError?: { message: string };
   /** Injected IDs for the chain of created resources. */
   ids?: { org?: string; employer?: string; role?: string };
+  /**
+   * Number of times the `organisations` insert should fail with a
+   * unique-violation (23505, simulating a colliding slug) before it
+   * succeeds. 0/undefined = never collides.
+   */
+  orgSlugCollisions?: number;
 };
 
 function makeAdmin(config: MockConfig = {}) {
   const inserts: InsertRecord[] = [];
   const updates: UpdateRecord[] = [];
+  let orgInsertAttempts = 0;
 
   const chain = {
     inserts,
@@ -32,8 +39,18 @@ function makeAdmin(config: MockConfig = {}) {
       return {
         insert(payload: unknown) {
           inserts.push({ table, payload });
+
+          if (table === "organisations" && (config.orgSlugCollisions ?? 0) > orgInsertAttempts) {
+            orgInsertAttempts += 1;
+            const err = {
+              message: 'duplicate key value violates unique constraint "organisations_slug_key"',
+              code: "23505",
+            };
+            return { error: err, select: () => ({ single: async () => ({ data: null, error: err }) }) };
+          }
+
           const err = config.insertError?.table === table
-            ? { message: config.insertError!.message }
+            ? { message: config.insertError!.message, code: config.insertError!.code }
             : null;
           // Return .error at the top level (for baselines/membership batch inserts
           // which the service destructures as { error }) plus .select() for the
@@ -197,6 +214,32 @@ test("org insert error → stops at 'organisation', no further writes", async ()
   // Only one write attempted (org insert), nothing else.
   assert.equal(chain.inserts.length, 1);
   assert.equal(chain.updates.length, 0);
+});
+
+// ── Org slug collision (ISS-049) ───────────────────────────────────────────────
+
+test("org slug collision (23505) retries with a suffix and succeeds", async () => {
+  const { chain, admin } = makeAdmin({ orgSlugCollisions: 2 });
+
+  const result = await runSelfSetup(admin, makeInput());
+  assert.equal(result.ok, true);
+
+  const orgInserts = chain.inserts.filter((r) => r.table === "organisations");
+  assert.equal(orgInserts.length, 3, "should retry twice then succeed on the third attempt");
+  const firstSlug = (orgInserts[0].payload as { slug: string }).slug;
+  const thirdSlug = (orgInserts[2].payload as { slug: string }).slug;
+  assert.notEqual(thirdSlug, firstSlug, "the succeeding attempt should use a de-duplicated slug");
+  assert.ok(thirdSlug.startsWith(firstSlug + "-"), "the suffix should be appended to the base slug");
+});
+
+test("org slug collision that never resolves returns a friendly message, not the raw Postgres error", async () => {
+  const { admin } = makeAdmin({ orgSlugCollisions: 10 }); // more than the 5-attempt cap
+
+  const result = await runSelfSetup(admin, makeInput());
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.step, "organisation");
+  assert.doesNotMatch(result.error, /constraint|duplicate key|organisations_slug_key/i);
 });
 
 // ── Employer insert fails ─────────────────────────────────────────────────────
