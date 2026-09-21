@@ -47,10 +47,12 @@ async function main() {
           target_level: "B2",
           target_why: "Professional development",
           summary: "Student shows strong communicative intent but needs register refinement.",
-          speaking_fluency: { score: 750, cefr_band: "B2", evidence: "Confident and articulate." },
-          listening_comprehension: { score: 700, cefr_band: "B1", evidence: "Understands core request." },
-          writing_formal: { score: 650, cefr_band: "B1", evidence: "Formal structure is inconsistent." },
-          reading_intent: { score: 700, cefr_band: "B2", evidence: "Good grasp of nuances." },
+          speaking: { score: 750, cefr_band: "B2", evidence: "Confident and articulate." },
+          listening: { score: 700, cefr_band: "B1", evidence: "Understands core request." },
+          writing: { score: 650, cefr_band: "B1", evidence: "Formal structure is inconsistent." },
+          reading: { score: 700, cefr_band: "B2", evidence: "Good grasp of nuances." },
+          grammar: { score: 680, cefr_band: "B1", evidence: "Occasional tense slips under pressure." },
+          live_interaction: { score: 690, cefr_band: "B1", evidence: "Handles follow-up questions but pace slows." },
           business_vocabulary: { score: 720, cefr_band: "B2", evidence: "Strong technical range." },
           presentation_delivery: { score: 680, cefr_band: "B1", evidence: "Needs structural work." }
         }
@@ -62,8 +64,8 @@ async function main() {
 
     // 2. Gap Scores
     const skills = [
-      "speaking_fluency", "listening_comprehension", "writing_formal", 
-      "reading_intent", "business_vocabulary", "presentation_delivery"
+      "speaking", "listening", "writing", "reading",
+      "grammar", "live_interaction", "business_vocabulary", "presentation_delivery"
     ];
     
     for (const skill of skills) {

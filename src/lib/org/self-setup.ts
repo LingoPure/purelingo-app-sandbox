@@ -1,14 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Canonical skill set every self-setup role seeds.
-// The exact names match the shared gap-analysis engine columns.
+// Canonical skill set every self-setup role seeds — the SIX PRIMARY
+// dimensions only (ISS-048). The two supporting measures
+// (business_vocabulary, presentation_delivery) use the flat 800 default
+// and are never role-customised.
 export const SELF_SETUP_SKILLS = [
-  "speaking_fluency",
-  "presentation_delivery",
-  "writing_formal",
-  "business_vocabulary",
-  "listening_comprehension",
-  "reading_intent",
+  "speaking",
+  "listening",
+  "writing",
+  "reading",
+  "grammar",
+  "live_interaction",
 ] as const;
 
 export type SelfSetupSkill = (typeof SELF_SETUP_SKILLS)[number];

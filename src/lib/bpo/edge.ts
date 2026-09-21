@@ -23,7 +23,7 @@ import {
 } from "@/lib/2k/engines/communication-analysis";
 import { buildEvidencePackets } from "@/lib/2k/engines/evidence-packet-builder";
 import { CAPABILITY_TO_SKILL } from "@/lib/bpo/capability-to-skill";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export interface WorkplaceArtifact {
   artifact_id: string;
@@ -54,7 +54,7 @@ export interface EdgeIntelligencePacket {
 
 export interface CapabilityScore {
   capability: string;   // CapabilityCode (LIS/VOC/GRM/SPK/RDG/INT)
-  skill: SkillKey;      // mapped SkillKey
+  skill: AnySkillKey;   // mapped skill — primary or supporting
   score: number;        // 0–1000
   confidence: number;   // 0–1
   evidence_ids: string[];
@@ -138,7 +138,7 @@ function mapArtifactToAnalysis(artifact: WorkplaceArtifact): CommunicationAnalys
       prompt: "BPO Workplace communication artifact analysis.",
       contract: {
         required: ["professionalism", "clarity", "intent"],
-        constructs: ["speaking_fluency", "listening_comprehension", "writing_formal"],
+        constructs: ["speaking", "listening", "writing"],
       },
     },
     context: {

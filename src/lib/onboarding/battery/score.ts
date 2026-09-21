@@ -4,9 +4,9 @@
  * Per-task scoring entry point. Each task type maps to one of the six
  * gap_scores skills via TASK_SKILL (see types.ts §spec-§8).
  *
- *   email_writing      → Claude rubric scorer  → writing_formal
- *   listen_paraphrase  → Claude rubric scorer  → listening_comprehension
- *   read_summarise     → Claude rubric scorer  → reading_intent
+ *   email_writing      → Claude rubric scorer  → writing
+ *   listen_paraphrase  → Claude rubric scorer  → listening
+ *   read_summarise     → Claude rubric scorer  → reading
  *   vocab_cloze        → deterministic         → business_vocabulary
  *
  * Outputs a uniform { score 0-1000, cefr_band, evidence } shape that

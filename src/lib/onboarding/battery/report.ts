@@ -16,9 +16,9 @@ import { sendBatteryReportEmail } from "@/lib/email/battery-report";
 const BATTERY_SKILLS = Array.from(new Set(Object.values(TASK_SKILL)));
 
 const SKILL_LABELS: Record<string, string> = {
-  writing_formal: "Formal writing",
-  listening_comprehension: "Listening comprehension",
-  reading_intent: "Reading for intent",
+  writing: "Formal writing",
+  listening: "Listening comprehension",
+  reading: "Reading for intent",
   business_vocabulary: "Business vocabulary",
 };
 

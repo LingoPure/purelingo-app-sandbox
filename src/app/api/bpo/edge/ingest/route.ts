@@ -20,16 +20,15 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ingestStructuredPackets } from "@/lib/bpo/ingest";
 import type { EdgeIntelligencePacket } from "@/lib/bpo/edge";
+import {
+  SKILL_KEYS as PRIMARY_SKILL_KEYS,
+  SUPPORTING_SKILL_KEYS,
+} from "@/lib/scoring/rubric";
 
 const CAPABILITY_CODES = ["LIS", "VOC", "GRM", "SPK", "RDG", "INT"] as const;
-const SKILL_KEYS = [
-  "speaking_fluency",
-  "listening_comprehension",
-  "writing_formal",
-  "reading_intent",
-  "business_vocabulary",
-  "presentation_delivery",
-] as const;
+// Canonical taxonomy (ISS-048), not a local duplicate — every scored
+// dimension (6 primary + 2 supporting), matching bpo/intelligence.ts.
+const SKILL_KEYS = [...PRIMARY_SKILL_KEYS, ...SUPPORTING_SKILL_KEYS] as const;
 const EVIDENCE_STATUSES = [
   "OBSERVED",
   "NOT_OBSERVED",

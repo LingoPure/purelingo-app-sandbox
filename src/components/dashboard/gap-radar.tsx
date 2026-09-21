@@ -111,22 +111,37 @@ export function GapRadar({ skills, size = 360 }: Props) {
         />
       )}
 
-      {/* Score dots */}
-      {hasAnyScore &&
-        skills.map((s, i) => {
-          if (s.score == null) return null;
-          const r = (s.score / SCALE_MAX) * maxRadius;
-          const p = polarPoint(cx, cy, r, angles[i]);
+      {/* Score dots — an unassessed skill gets a distinct hollow/dashed
+          marker rather than no marker at all. The filled polygon still
+          passes through 0 for that axis (a true "no data" radar shape needs
+          a redesign beyond this fix), but the marker itself now tells the
+          viewer "not measured" instead of being indistinguishable from a
+          real zero score with no marker shown (ISS-060). */}
+      {skills.map((s, i) => {
+        const r = ((s.score ?? 0) / SCALE_MAX) * maxRadius;
+        const p = polarPoint(cx, cy, r, angles[i]);
+        if (s.score == null) {
           return (
             <circle
               key={s.key}
               cx={p.x}
               cy={p.y}
               r={3.5}
-              fill="var(--color-teal)"
-            />
+              fill="none"
+              stroke="var(--color-mute)"
+              strokeWidth={1.25}
+              strokeDasharray="2 2"
+            >
+              <title>{`${s.label}: not yet assessed`}</title>
+            </circle>
           );
-        })}
+        }
+        return (
+          <circle key={s.key} cx={p.x} cy={p.y} r={3.5} fill="var(--color-teal)">
+            <title>{`${s.label}: ${s.score}`}</title>
+          </circle>
+        );
+      })}
 
       {/* Axis labels */}
       {skills.map((s, i) => {

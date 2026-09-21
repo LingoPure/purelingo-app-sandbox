@@ -18,8 +18,12 @@ import {
   type EmailSprintEvaluation,
   type EmailSprintPrompt,
 } from "./email-sprint-rubric";
-import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
+import {
+  loadBaselinesForStudent,
+  FLAT_FALLBACK_TARGET,
+} from "@/lib/scoring/baselines";
 import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export type SubmitInput = {
   lessonId: string;
@@ -72,10 +76,14 @@ export async function submitEmailSprint(
   // Target per skill is the student's role baseline (or flat 80 if
   // unassigned) — same as the discovery scoring path.
   const baselines = await loadBaselinesForStudent(supabase, input.studentId);
+  // business_vocabulary is a supporting measure — no role-specific baseline
+  // (Baselines only carries the 6 primary keys), so it falls through to the
+  // flat 800 default.
+  const baselinesAny = baselines as Partial<Record<AnySkillKey, number>>;
   const subSkills = [
-    { skill: "writing_formal", sub: evaluation.writing_formal },
+    { skill: "writing", sub: evaluation.writing },
     { skill: "business_vocabulary", sub: evaluation.business_vocabulary },
-    { skill: "reading_intent", sub: evaluation.reading_intent },
+    { skill: "reading", sub: evaluation.reading },
   ] as const;
 
   await setCanonicalGapScores(
@@ -84,16 +92,16 @@ export async function submitEmailSprint(
       studentId: input.studentId,
       skill,
       score: sub.score,
-      target: baselines[skill],
+      target: baselinesAny[skill] ?? FLAT_FALLBACK_TARGET,
       source: "lesson",
     }))
   );
 
   // 4. Compute the post-lesson average for score_after tracking.
   const scoreAfter = Math.round(
-    (evaluation.writing_formal.score +
+    (evaluation.writing.score +
       evaluation.business_vocabulary.score +
-      evaluation.reading_intent.score) /
+      evaluation.reading.score) /
       3
   );
 

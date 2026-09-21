@@ -1,11 +1,12 @@
 /**
  * Live-class scoring rubric.
  *
- * Discovery scores all 6 sub-skills because the protocol is structured to
- * exercise each one. A live class transcript only ever exercises a SUBSET —
- * a vocabulary lesson won't reveal anything about reading_intent. So every
- * sub-score is OPTIONAL here. Claude returns a score only where there's
- * meaningful evidence; the rest stay null and we don't write them.
+ * Discovery scores all 8 dimensions (6 primary + 2 supporting, ISS-048)
+ * because the protocol is structured to exercise each one. A live class
+ * transcript only ever exercises a SUBSET — a vocabulary lesson won't
+ * reveal anything about reading. So every sub-score is OPTIONAL here.
+ * Claude returns a score only where there's meaningful evidence; the rest
+ * stay null and we don't write them.
  *
  * Same 0–1000 → CEFR scale as discovery, same conservative-when-unsure rule.
  */
@@ -14,17 +15,23 @@ import { z } from "zod";
 import { CEFR_BANDS, SubScore } from "./rubric";
 
 export const SessionScoresSchema = z.object({
-  speaking_fluency: SubScore.nullable().describe(
+  speaking: SubScore.nullable().describe(
     "Score only if the student spoke for long enough to judge pace, hesitation, recovery."
   ),
-  listening_comprehension: SubScore.nullable().describe(
+  listening: SubScore.nullable().describe(
     "Score only if the teacher's speech was complex enough that misunderstanding would be visible."
   ),
-  writing_formal: SubScore.nullable().describe(
+  writing: SubScore.nullable().describe(
     "Score only if the lesson involved producing written output (email, report, message)."
   ),
-  reading_intent: SubScore.nullable().describe(
+  reading: SubScore.nullable().describe(
     "Score only if the lesson involved interpreting a written business artefact for meaning beyond the literal."
+  ),
+  grammar: SubScore.nullable().describe(
+    "Score only if enough of the transcript is available to judge a pattern of grammatical accuracy (tense, agreement, articles) — not from a single sentence."
+  ),
+  live_interaction: SubScore.nullable().describe(
+    "Score only if the lesson involved real back-and-forth exchange (turn-taking, repair, responding to what the teacher actually said) rather than a scripted monologue or simple Q&A."
   ),
   business_vocabulary: SubScore.nullable().describe(
     "Score only if the student demonstrated their working B2B vocabulary range."
@@ -65,19 +72,23 @@ Same as discovery. 0–1000 → CEFR:
 
 LingoPure's default target is 800.
 
-## THE 6 SUB-SKILLS — when to score, when to leave null
+## THE 8 DIMENSIONS — when to score, when to leave null
 
-1. **speaking_fluency** — score whenever the student speaks for more than a couple of turns. Look at pace, hesitation, self-correction, recovery when stuck. If the student barely spoke (e.g. a listening-heavy lesson where they mostly answered yes/no), leave null.
+1. **speaking** — score whenever the student speaks for more than a couple of turns. Look at pace, hesitation, self-correction, recovery when stuck. If the student barely spoke (e.g. a listening-heavy lesson where they mostly answered yes/no), leave null.
 
-2. **listening_comprehension** — score when the teacher's speech is complex or fast enough that misunderstanding would be visible. The clearest signal is whether the student answered the question that was asked, or a different one. Leave null if the lesson was simple Q&A at the student's level.
+2. **listening** — score when the teacher's speech is complex or fast enough that misunderstanding would be visible. The clearest signal is whether the student answered the question that was asked, or a different one. Leave null if the lesson was simple Q&A at the student's level.
 
-3. **writing_formal** — score only if the lesson produced WRITTEN output (drafting an email, a message, a report fragment) that ended up in the transcript. Leave null otherwise — speaking fluency does not transfer to written register.
+3. **writing** — score only if the lesson produced WRITTEN output (drafting an email, a message, a report fragment) that ended up in the transcript. Leave null otherwise — speaking fluency does not transfer to written register.
 
-4. **reading_intent** — score only if the lesson involved the student INTERPRETING a written business artefact for meaning beyond the literal (e.g. "what is the customer really saying in this email?"). Leave null otherwise.
+4. **reading** — score only if the lesson involved the student INTERPRETING a written business artefact for meaning beyond the literal (e.g. "what is the customer really saying in this email?"). Leave null otherwise.
 
-5. **business_vocabulary** — score whenever the student's vocabulary range across the lesson is visible. Repeated reach-for of the same simple word drags it down; correctly used domain terms push it up. Leave null only if the lesson was too short to judge.
+5. **grammar** — score only if there's enough transcript to see a PATTERN of grammatical accuracy (tense, agreement, articles, word order), not one sentence. This is separate from speaking's fluency — a hesitant student can have near-perfect grammar, and a fluent one can make consistent tense errors. Self-correction counts as awareness, not a double penalty.
 
-6. **presentation_delivery** — score only if the student delivered an extended monologue or presentation segment (more than 60 seconds of continuous output). Leave null for ordinary back-and-forth dialogue.
+6. **live_interaction** — score only if the lesson involved genuine turn-taking — the student responding to what the teacher actually said, asking for clarification, recovering from a misunderstanding — rather than a scripted monologue or simple Q&A at a fixed pace. This is separate from presentation_delivery's planned, one-directional delivery.
+
+7. **business_vocabulary** (supporting) — score whenever the student's vocabulary range across the lesson is visible. Repeated reach-for of the same simple word drags it down; correctly used domain terms push it up. Leave null only if the lesson was too short to judge.
+
+8. **presentation_delivery** (supporting) — score only if the student delivered an extended monologue or presentation segment (more than 60 seconds of continuous output). Leave null for ordinary back-and-forth dialogue.
 
 ## RULES
 

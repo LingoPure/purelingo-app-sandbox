@@ -15,7 +15,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 import { randomBytes } from "node:crypto";
 
 type DemoLesson = {
@@ -61,12 +61,12 @@ type DemoStudent = {
   // Role assignment within the demo employer. The role's baselines
   // become the per-skill targets on this student's gap_scores rows.
   roleKey: RoleKey;
-  scores: Record<SkillKey, number>;
+  scores: Record<AnySkillKey, number>;
   overallCefr: "A2" | "B1" | "B2" | "C1" | "C2";
   summary: string;
   targetWhy: string;
   learningStyle: string;
-  evidence: Record<SkillKey, string>;
+  evidence: Record<AnySkillKey, string>;
   daysSinceDiscovery: number;
   lessons: DemoLesson[];
   classes: DemoClass[];
@@ -93,7 +93,7 @@ type DemoRole = {
   key: RoleKey;
   name: string;
   description: string;
-  baselines: Record<SkillKey, number>;
+  baselines: Record<AnySkillKey, number>;
 };
 
 // Three role archetypes spanning the buyer story. Baselines were chosen
@@ -106,10 +106,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "Voice + chat support for English-speaking clients. Listening- and speaking-heavy; writing register is functional rather than formal.",
     baselines: {
-      speaking_fluency: 650,
-      listening_comprehension: 700,
-      writing_formal: 550,
-      reading_intent: 650,
+      speaking: 650,
+      listening: 700,
+      writing: 550,
+      reading: 650,
+      grammar: 550,
+      live_interaction: 700,
       business_vocabulary: 600,
       presentation_delivery: 500,
     },
@@ -120,10 +122,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "B2B sales into export markets — negotiation, proposal writing, customer presentations. Even balance across skills, with emphasis on speaking and reading-intent.",
     baselines: {
-      speaking_fluency: 750,
-      listening_comprehension: 700,
-      writing_formal: 700,
-      reading_intent: 750,
+      speaking: 750,
+      listening: 700,
+      writing: 700,
+      reading: 750,
+      grammar: 700,
+      live_interaction: 700,
       business_vocabulary: 750,
       presentation_delivery: 700,
     },
@@ -134,10 +138,12 @@ const DEMO_ROLES: DemoRole[] = [
     description:
       "Engineering, documentation, technical support. Writing-formal and reading-intent dominate; speaking is for internal calls more than client-facing presentations.",
     baselines: {
-      speaking_fluency: 700,
-      listening_comprehension: 700,
-      writing_formal: 800,
-      reading_intent: 800,
+      speaking: 700,
+      listening: 700,
+      writing: 800,
+      reading: 800,
+      grammar: 800,
+      live_interaction: 650,
       business_vocabulary: 750,
       presentation_delivery: 650,
     },
@@ -152,10 +158,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "sales_rep",
     overallCefr: "B1",
     scores: {
-      speaking_fluency: 580,
-      listening_comprehension: 550,
-      writing_formal: 480,
-      reading_intent: 620,
+      speaking: 580,
+      listening: 550,
+      writing: 480,
+      reading: 620,
+      grammar: 500,
+      live_interaction: 560,
       business_vocabulary: 520,
       presentation_delivery: 450,
     },
@@ -166,14 +174,18 @@ const DEMO_COHORT: DemoStudent[] = [
     learningStyle:
       "Prefers 15–25 min sessions late evening (kids asleep around 9pm). Competitive — wants leaderboards. Vietnamese literacy excellent; university educated.",
     evidence: {
-      speaking_fluency:
+      speaking:
         "Said \"I am working there since 4 years\" — fluent but with persistent for/since errors.",
-      listening_comprehension:
+      listening:
         "Asked Aria to repeat the British-accented portion of the email twice; clear sign listening is below speaking.",
-      writing_formal:
+      writing:
         "Described her own emails as \"I just say hi, ask the question, sign off\" — limited register variety.",
-      reading_intent:
+      reading:
         "Identified Sarah was \"asking to renegotiate without saying it\" — strong B2-level signal.",
+      grammar:
+        "Consistent for/since tense confusion is the recurring pattern, not a one-off slip.",
+      live_interaction:
+        "Recovered smoothly when Aria rephrased a question — good repair, moderate turn-taking pace.",
       business_vocabulary:
         "Repeatedly defaulted to \"good\" and \"interesting\" when describing client interactions.",
       presentation_delivery:
@@ -215,10 +227,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "tech_specialist",
     overallCefr: "B2",
     scores: {
-      speaking_fluency: 700,
-      listening_comprehension: 680,
-      writing_formal: 620,
-      reading_intent: 720,
+      speaking: 700,
+      listening: 680,
+      writing: 620,
+      reading: 720,
+      grammar: 660,
+      live_interaction: 690,
       business_vocabulary: 650,
       presentation_delivery: 600,
     },
@@ -229,12 +243,14 @@ const DEMO_COHORT: DemoStudent[] = [
     learningStyle:
       "Methodical, prefers deep-dive 30-min sessions on weekend mornings. Direct feedback over coaching tone. Strong native literacy.",
     evidence: {
-      speaking_fluency:
+      speaking:
         "Held an unbroken 90-second answer about supply chain disruptions; pace natural.",
-      listening_comprehension: "Got the first ask each time without clarification.",
-      writing_formal:
+      listening: "Got the first ask each time without clarification.",
+      writing:
         "Described his weekly report as \"three pages, mostly bullet points\" — register is functional but flat.",
-      reading_intent: "Caught Sarah's renegotiation hint immediately.",
+      reading: "Caught Sarah's renegotiation hint immediately.",
+      grammar: "Occasional article drops on technical nouns, otherwise consistent tense and agreement.",
+      live_interaction: "Built directly on Aria's follow-up questions rather than restarting his answer.",
       business_vocabulary: "Used \"bottleneck\" and \"escalate\" naturally and correctly.",
       presentation_delivery: "Comfortable in monthly ops review, less so in cross-functional formats.",
     },
@@ -270,10 +286,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "bpo_operator",
     overallCefr: "B1",
     scores: {
-      speaking_fluency: 500,
-      listening_comprehension: 480,
-      writing_formal: 420,
-      reading_intent: 550,
+      speaking: 500,
+      listening: 480,
+      writing: 420,
+      reading: 550,
+      grammar: 440,
+      live_interaction: 470,
       business_vocabulary: 450,
       presentation_delivery: 400,
     },
@@ -284,10 +302,12 @@ const DEMO_COHORT: DemoStudent[] = [
     learningStyle:
       "High-frequency short bursts (10–15 min) on the morning commute. Fast-paced, low patience for theory — wants drills. Confident in written Vietnamese.",
     evidence: {
-      speaking_fluency: "Frequent self-correction loops — restarts the same sentence two or three times.",
-      listening_comprehension: "Confused \"price elasticity\" with \"price flexibility\" mid-question.",
-      writing_formal: "Email register reads like a chat message — no opening, mid-sentence sign-off.",
-      reading_intent: "Got the gist of Sarah's email but said \"she wants another meeting\" — missed the renegotiation hint.",
+      speaking: "Frequent self-correction loops — restarts the same sentence two or three times.",
+      listening: "Confused \"price elasticity\" with \"price flexibility\" mid-question.",
+      writing: "Email register reads like a chat message — no opening, mid-sentence sign-off.",
+      reading: "Got the gist of Sarah's email but said \"she wants another meeting\" — missed the renegotiation hint.",
+      grammar: "Mixes present and past tense mid-sentence when describing past client calls.",
+      live_interaction: "Answered a different question than the one Aria asked twice in the same call.",
       business_vocabulary: "Reached for \"thing\" and \"stuff\" repeatedly when discussing fintech products.",
       presentation_delivery: "Avoided giving an extended answer when offered the chance.",
     },
@@ -320,10 +340,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "sales_rep",
     overallCefr: "C1",
     scores: {
-      speaking_fluency: 860,
-      listening_comprehension: 840,
-      writing_formal: 820,
-      reading_intent: 880,
+      speaking: 860,
+      listening: 840,
+      writing: 820,
+      reading: 880,
+      grammar: 850,
+      live_interaction: 830,
       business_vocabulary: 800,
       presentation_delivery: 840,
     },
@@ -334,10 +356,12 @@ const DEMO_COHORT: DemoStudent[] = [
     learningStyle:
       "Coaching tone over direct feedback. Once or twice a week is enough — values quality over volume. Comfortable in either Vietnamese or English written form.",
     evidence: {
-      speaking_fluency: "Spoke fluently for two minutes uninterrupted with no hesitation markers.",
-      listening_comprehension: "Caught the British accent test immediately and correctly.",
-      writing_formal: "Self-described emails were \"three-paragraph, register-shifted\" — sophisticated.",
-      reading_intent: "Identified Sarah was \"hedging her ask\" — C1-level interpretation.",
+      speaking: "Spoke fluently for two minutes uninterrupted with no hesitation markers.",
+      listening: "Caught the British accent test immediately and correctly.",
+      writing: "Self-described emails were \"three-paragraph, register-shifted\" — sophisticated.",
+      reading: "Identified Sarah was \"hedging her ask\" — C1-level interpretation.",
+      grammar: "No tense, agreement, or article errors across the whole transcript.",
+      live_interaction: "Picked up Aria's follow-ups mid-question and answered before she finished asking.",
       business_vocabulary: "Used \"in light of\" and \"net of\" naturally; HR-domain precision.",
       presentation_delivery: "Reported leading 30-min strategy briefings monthly — clearly comfortable.",
     },
@@ -378,10 +402,12 @@ const DEMO_COHORT: DemoStudent[] = [
     roleKey: "bpo_operator",
     overallCefr: "A2",
     scores: {
-      speaking_fluency: 380,
-      listening_comprehension: 320,
-      writing_formal: 280,
-      reading_intent: 350,
+      speaking: 380,
+      listening: 320,
+      writing: 280,
+      reading: 350,
+      grammar: 300,
+      live_interaction: 310,
       business_vocabulary: 300,
       presentation_delivery: 250,
     },
@@ -392,10 +418,12 @@ const DEMO_COHORT: DemoStudent[] = [
     learningStyle:
       "Patient pace, prefers visual examples over abstract rules. Better with audio than reading. Confident written Vietnamese.",
     evidence: {
-      speaking_fluency: "Long pauses; reverted to Vietnamese for two phrases mid-conversation.",
-      listening_comprehension: "Asked Aria to repeat three times during the reading-intent test.",
-      writing_formal: "Self-reported he writes \"only WhatsApp messages, no real emails yet\".",
-      reading_intent: "Said Sarah \"wants to confirm the meeting\" — read the email literally.",
+      speaking: "Long pauses; reverted to Vietnamese for two phrases mid-conversation.",
+      listening: "Asked Aria to repeat three times during the reading-intent test.",
+      writing: "Self-reported he writes \"only WhatsApp messages, no real emails yet\".",
+      reading: "Said Sarah \"wants to confirm the meeting\" — read the email literally.",
+      grammar: "Drops tense markers almost entirely — mostly present-tense fragments regardless of when the event happened.",
+      live_interaction: "Repetition requests slowed the conversation to single-exchange turns throughout.",
       business_vocabulary: "Reached for \"good\" and \"yes\" frequently; limited domain range.",
       presentation_delivery: "Self-described as \"never presented in English, only Vietnamese\".",
     },
@@ -514,7 +542,7 @@ export async function seedDemoCohort(
     result.rolesUpserted += 1;
 
     // Six baselines per role — upsert keyed on (role_id, skill).
-    const baselineRows = (Object.keys(role.baselines) as SkillKey[]).map(
+    const baselineRows = (Object.keys(role.baselines) as AnySkillKey[]).map(
       (skill) => ({
         role_id: roleId,
         skill,
@@ -603,7 +631,7 @@ export async function seedDemoCohort(
     if (!role) {
       throw new Error(`unknown role for student ${demo.email}`);
     }
-    const scoreRows = (Object.keys(demo.scores) as SkillKey[]).map((skill) => ({
+    const scoreRows = (Object.keys(demo.scores) as AnySkillKey[]).map((skill) => ({
       student_id: userId,
       skill,
       score: demo.scores[skill],
@@ -629,7 +657,7 @@ export async function seedDemoCohort(
       learning_style_notes: demo.learningStyle,
       overall_cefr: demo.overallCefr,
       ...Object.fromEntries(
-        (Object.keys(demo.scores) as SkillKey[]).map((skill) => [
+        (Object.keys(demo.scores) as AnySkillKey[]).map((skill) => [
           skill,
           {
             score: demo.scores[skill],
@@ -662,7 +690,7 @@ export async function seedDemoCohort(
       const lessonRows = demo.lessons.map((l) => ({
         student_id: userId,
         type: l.type,
-        skill_focus: l.type === "email_sprint" ? "writing_formal" : "speaking_fluency",
+        skill_focus: l.type === "email_sprint" ? "writing" : "speaking",
         content_json: { demo_seed: true, prompt: { scenario: "(seeded)" } },
         score_before: Math.max(0, l.scoreAfter - 8),
         score_after: l.scoreAfter,

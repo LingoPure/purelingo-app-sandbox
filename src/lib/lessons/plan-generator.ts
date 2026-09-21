@@ -10,14 +10,16 @@
  * Stateless: no database writes. The dashboard calls this on every page
  * load (cheap — a few rows + arithmetic).
  *
- * Skill → recommendation mapping:
+ * Skill → recommendation mapping (six PRIMARY dimensions only — the two
+ * supporting measures, business_vocabulary/presentation_delivery, are not
+ * looped over here; see ISS-048 / rubric.ts):
  *
- *   speaking_fluency        → speak_score (Claude-evaluated 90-second monologue)
- *   listening_comprehension → ClassIn class (no micro-lesson generator yet)
- *   writing_formal          → email_sprint
- *   reading_intent          → email_sprint  (the rubric scores reading_intent)
- *   business_vocabulary     → email_sprint  (also covers vocab via the rubric)
- *   presentation_delivery   → speak_score   (monologue mode)
+ *   speaking         → speak_score (Claude-evaluated 90-second monologue)
+ *   listening        → ClassIn class (no micro-lesson generator yet)
+ *   writing          → email_sprint
+ *   reading          → email_sprint  (the rubric's reading dimension)
+ *   grammar          → ClassIn class (no micro-lesson generator yet)
+ *   live_interaction → ClassIn class (no micro-lesson generator yet)
  *
  * For any skill with gap > 200, ALSO recommend a teacher-led class
  * regardless of whether a micro-lesson exists — that's spec-aligned
@@ -25,7 +27,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
+import { SKILL_KEYS, SKILL_LABELS, type SkillKey } from "@/lib/scoring/rubric";
 import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
 
 export type RecommendationKind = "micro_lesson" | "class";
@@ -50,15 +52,6 @@ export type PlanRecommendation = {
   priority: Priority;
 };
 
-const SKILL_LABELS: Record<SkillKey, string> = {
-  speaking_fluency: "Speaking",
-  listening_comprehension: "Listening",
-  writing_formal: "Writing",
-  reading_intent: "Reading intent",
-  business_vocabulary: "Vocabulary",
-  presentation_delivery: "Presenting",
-};
-
 /**
  * For each skill the student is below baseline on, what we recommend.
  * Multiple skills can map to the same lesson type — the consolidation
@@ -70,34 +63,32 @@ const SKILL_TO_RECOMMENDATION: Record<
   | { kind: "micro_lesson"; lessonType: MicroLessonType; title: string }
   | { kind: "class"; title: string }
 > = {
-  speaking_fluency: {
+  speaking: {
     kind: "micro_lesson",
     lessonType: "speak_score",
     title: "Speaking sprint — 90-second monologue",
   },
-  listening_comprehension: {
+  listening: {
     kind: "class",
     title: "Live class — listening comprehension drills",
   },
-  writing_formal: {
+  writing: {
     kind: "micro_lesson",
     lessonType: "email_sprint",
     title: "Email sprint — write a calibrated reply",
   },
-  reading_intent: {
+  reading: {
     kind: "micro_lesson",
     lessonType: "email_sprint",
     title: "Email sprint — practise reading subtext",
   },
-  business_vocabulary: {
-    kind: "micro_lesson",
-    lessonType: "email_sprint",
-    title: "Email sprint — register-aware vocabulary",
+  grammar: {
+    kind: "class",
+    title: "Live class — grammar accuracy coaching",
   },
-  presentation_delivery: {
-    kind: "micro_lesson",
-    lessonType: "speak_score",
-    title: "Speaking sprint — present a 90-second update",
+  live_interaction: {
+    kind: "class",
+    title: "Live class — real-time conversation drills",
   },
 };
 

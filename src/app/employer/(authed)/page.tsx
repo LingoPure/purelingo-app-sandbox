@@ -11,16 +11,7 @@ import {
   loadCoverageByRole,
   type RoleCoverage,
 } from "@/lib/employer/data";
-import { SKILL_KEYS } from "@/lib/scoring/rubric";
-
-const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "Speaking",
-  listening_comprehension: "Listening",
-  writing_formal: "Writing",
-  reading_intent: "Reading intent",
-  business_vocabulary: "Vocabulary",
-  presentation_delivery: "Presenting",
-};
+import { SKILL_KEYS, SKILL_LABELS as SKILL_LABEL } from "@/lib/scoring/rubric";
 
 export default async function EmployerOverviewPage() {
   const [students, activity, roleCoverage] = await Promise.all([

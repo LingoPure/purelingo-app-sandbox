@@ -55,12 +55,12 @@ async function main() {
   ];
 
   const BASELINE_SKILLS = [
-    "speaking_fluency",
-    "listening_comprehension",
-    "writing_formal",
-    "reading_intent",
-    "business_vocabulary",
-    "presentation_delivery",
+    "speaking",
+    "listening",
+    "writing",
+    "reading",
+    "grammar",
+    "live_interaction",
   ];
 
   for (const r of rolesToCreate) {

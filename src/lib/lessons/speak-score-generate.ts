@@ -51,7 +51,7 @@ export async function generateSpeakScorePrompt(
       return `  - ${k}: current ${cur ?? "—"} | baseline ${base} | ${gap}`;
     }),
     "",
-    "Speak-score exercises: speaking_fluency, business_vocabulary, presentation_delivery (last only when expects_structure=true).",
+    "Speak-score exercises: speaking, business_vocabulary, presentation_delivery (last only when expects_structure=true).",
     "Calibrate the prompt to close the LARGEST relevant gap by ~5–10 points on a strong attempt.",
     "",
     "Role / discovery context:",
@@ -101,7 +101,7 @@ export async function createSpeakScoreLesson(
     .insert({
       student_id: input.studentId,
       type: "speak_score",
-      skill_focus: "speaking_fluency",
+      skill_focus: "speaking",
       content_json: { prompt },
       score_before: beforeAvg,
       status: "active",
@@ -118,8 +118,8 @@ function averageRelevant(
   expectsStructure: boolean
 ): number | null {
   const keys = expectsStructure
-    ? ["speaking_fluency", "business_vocabulary", "presentation_delivery"]
-    : ["speaking_fluency", "business_vocabulary"];
+    ? ["speaking", "business_vocabulary", "presentation_delivery"]
+    : ["speaking", "business_vocabulary"];
   const relevant = keys
     .map((k) => scores[k])
     .filter((s): s is number => s !== null);

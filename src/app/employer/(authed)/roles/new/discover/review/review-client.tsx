@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
 
 const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "Speaking fluency",
-  listening_comprehension: "Listening comprehension",
-  writing_formal: "Formal writing",
-  reading_intent: "Reading intent",
-  business_vocabulary: "Business vocabulary",
-  presentation_delivery: "Presentation delivery",
+  speaking: "Speaking",
+  listening: "Listening",
+  writing: "Writing",
+  reading: "Reading",
+  grammar: "Grammar",
+  live_interaction: "Live interaction",
 };
 
 type SkillEntry = {

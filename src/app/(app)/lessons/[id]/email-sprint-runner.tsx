@@ -209,9 +209,9 @@ function ResultsPanel({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <ScoreTile
-          label="Writing — formal"
-          score={evaluation.writing_formal.score}
-          band={evaluation.writing_formal.cefr_band}
+          label="Writing"
+          score={evaluation.writing.score}
+          band={evaluation.writing.cefr_band}
         />
         <ScoreTile
           label="Business vocabulary"
@@ -219,9 +219,9 @@ function ResultsPanel({
           band={evaluation.business_vocabulary.cefr_band}
         />
         <ScoreTile
-          label="Reading intent"
-          score={evaluation.reading_intent.score}
-          band={evaluation.reading_intent.cefr_band}
+          label="Reading"
+          score={evaluation.reading.score}
+          band={evaluation.reading.cefr_band}
         />
       </div>
 

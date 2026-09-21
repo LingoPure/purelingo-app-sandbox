@@ -24,10 +24,11 @@ import {
 import { transcribeAudio } from "@/lib/transcription/whisper";
 import {
   loadBaselinesForStudent,
+  FLAT_FALLBACK_TARGET,
   type Baselines,
 } from "@/lib/scoring/baselines";
 import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export type SubmitInput = {
   lessonId: string;
@@ -90,8 +91,12 @@ export async function submitSpeakScore(
     supabase,
     input.studentId
   );
-  const subSkills: { skill: SkillKey; score: number }[] = [
-    { skill: "speaking_fluency", score: evaluation.speaking_fluency.score },
+  // business_vocabulary / presentation_delivery are supporting measures — no
+  // role-specific baseline (Baselines only carries the 6 primary keys), so
+  // they fall through to the flat 800 default.
+  const baselinesAny = baselines as Partial<Record<AnySkillKey, number>>;
+  const subSkills: { skill: AnySkillKey; score: number }[] = [
+    { skill: "speaking", score: evaluation.speaking.score },
     { skill: "business_vocabulary", score: evaluation.business_vocabulary.score },
   ];
   if (evaluation.presentation_delivery) {
@@ -107,7 +112,7 @@ export async function submitSpeakScore(
       studentId: input.studentId,
       skill: s.skill,
       score: s.score,
-      target: baselines[s.skill],
+      target: baselinesAny[s.skill] ?? FLAT_FALLBACK_TARGET,
       source: "lesson",
     }))
   );

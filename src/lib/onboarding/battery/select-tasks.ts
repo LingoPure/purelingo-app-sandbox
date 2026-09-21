@@ -6,22 +6,28 @@
  * (and at what difficulty band). Replaces the original "always run all
  * four at B2" logic.
  *
- * Decision principles (post-voice signal quality, per spec §1):
+ * Decision principles (post-voice signal quality, per spec §1; taxonomy
+ * updated for ISS-048 — six primary dimensions + two supporting measures):
  *
- *   speaking_fluency        — voice MEASURED. No battery task exists.
- *   listening_comprehension — voice partially measured (Sarah/Mark email
- *                              read aloud). listen_paraphrase probes
- *                              when the partial signal is weak or below
- *                              the role baseline.
- *   writing_formal          — voice INFERRED only. Always probe.
- *   reading_intent          — voice partially measured (Sarah/Mark
- *                              hint test) but conflated with listening.
- *                              Always probe — silent reading is the
- *                              only clean signal.
- *   business_vocabulary     — voice partially measured (spoken vocab
- *                              only). Probe when below baseline; written
- *                              register is its own gap.
- *   presentation_delivery   — voice INFERRED only. No battery task.
+ *   speaking          — voice MEASURED. No battery task exists.
+ *   listening         — voice partially measured (Sarah/Mark email
+ *                        read aloud). listen_paraphrase probes
+ *                        when the partial signal is weak or below
+ *                        the role baseline.
+ *   writing           — voice INFERRED only. Always probe.
+ *   reading           — voice partially measured (Sarah/Mark
+ *                        hint test) but conflated with listening.
+ *                        Always probe — silent reading is the
+ *                        only clean signal.
+ *   grammar           — voice MEASURED (whole-transcript pattern). No
+ *                        battery task exists.
+ *   live_interaction  — voice MEASURED (turn-taking/repair). No battery
+ *                        task exists.
+ *   business_vocabulary   (supporting) — voice partially measured (spoken
+ *                        vocab only). Probe when below baseline; written
+ *                        register is its own gap.
+ *   presentation_delivery (supporting) — voice INFERRED only. No battery
+ *                        task.
  *
  * Difficulty band: target_level (the band the student needs to reach).
  * That's the level we should be calibrating against — not their current
@@ -39,7 +45,7 @@ import {
   loadBaselinesForStudent,
   FLAT_FALLBACK_TARGET,
 } from "@/lib/scoring/baselines";
-import type { CefrBand, SkillKey } from "@/lib/scoring/rubric";
+import type { CefrBand, AnySkillKey } from "@/lib/scoring/rubric";
 
 export type SelectedTask = {
   taskType: TaskType;
@@ -66,16 +72,18 @@ export type SelectedTask = {
  */
 const PROBE_SLACK = 40;
 
-const ALWAYS_PROBE: ReadonlySet<SkillKey> = new Set([
-  "writing_formal", // voice infers entirely
-  "reading_intent", // voice probes but conflates with listening
+const ALWAYS_PROBE: ReadonlySet<AnySkillKey> = new Set([
+  "writing", // voice infers entirely
+  "reading", // voice probes but conflates with listening
 ]);
 
 type ProfileJson = {
-  speaking_fluency?: { score: number };
-  listening_comprehension?: { score: number };
-  writing_formal?: { score: number };
-  reading_intent?: { score: number };
+  speaking?: { score: number };
+  listening?: { score: number };
+  writing?: { score: number };
+  reading?: { score: number };
+  grammar?: { score: number };
+  live_interaction?: { score: number };
   business_vocabulary?: { score: number };
   presentation_delivery?: { score: number };
   target_level?: CefrBand;
@@ -122,7 +130,12 @@ export async function selectTasksForStudent(
   for (const taskType of TASK_TYPES) {
     const skill = TASK_SKILL[taskType];
     const voiceScore = profile?.[skill]?.score ?? null;
-    const baseline = baselines[skill] ?? FLAT_FALLBACK_TARGET;
+    // Supporting skills (e.g. business_vocabulary) have no role-specific
+    // baseline — Baselines only carries the 6 primary keys — so they fall
+    // straight through to the flat 800 default.
+    const baseline =
+      (baselines as Partial<Record<AnySkillKey, number>>)[skill] ??
+      FLAT_FALLBACK_TARGET;
 
     let probe = false;
     let reason = "";
@@ -130,7 +143,7 @@ export async function selectTasksForStudent(
     if (ALWAYS_PROBE.has(skill)) {
       probe = true;
       reason =
-        skill === "writing_formal"
+        skill === "writing"
           ? "Voice can't measure written register — probe directly."
           : "Voice conflates reading with listening — silent reading is the clean signal.";
     } else if (voiceScore == null) {
@@ -168,16 +181,16 @@ export async function selectTasksForStudent(
   });
 
   // Floor: never return zero tasks. If a (rare) high-performing student
-  // skips every probe, still run writing_formal at target — the demo
+  // skips every probe, still run a writing probe at target — the demo
   // shouldn't have an empty battery state.
   if (selected.length === 0) {
-    const baseline = baselines.writing_formal ?? FLAT_FALLBACK_TARGET;
+    const baseline = baselines.writing ?? FLAT_FALLBACK_TARGET;
     selected.push({
       taskType: "email_writing",
       difficultyBand: targetLevel,
       reason:
         "Voice signals all exceed baseline — running a single direct writing probe to confirm.",
-      voiceScore: profile?.writing_formal?.score ?? null,
+      voiceScore: profile?.writing?.score ?? null,
       baseline,
     });
   }

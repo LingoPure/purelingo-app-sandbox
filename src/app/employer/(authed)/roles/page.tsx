@@ -6,12 +6,12 @@ import { SKILL_KEYS } from "@/lib/scoring/rubric";
 export const dynamic = "force-dynamic";
 
 const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "Speak",
-  listening_comprehension: "Listen",
-  writing_formal: "Write",
-  reading_intent: "Read",
-  business_vocabulary: "Vocab",
-  presentation_delivery: "Present",
+  speaking: "Speak",
+  listening: "Listen",
+  writing: "Write",
+  reading: "Read",
+  grammar: "Grammar",
+  live_interaction: "Interact",
 };
 
 export default async function RolesIndexPage() {

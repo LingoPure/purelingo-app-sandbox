@@ -28,7 +28,7 @@ function validPacket(): EdgeIntelligencePacket {
       },
     ],
     capability_scores: [
-      { capability: "SPK", skill: "speaking_fluency", score: 620, confidence: 0.8, evidence_ids: ["ev-001"] },
+      { capability: "SPK", skill: "speaking", score: 620, confidence: 0.8, evidence_ids: ["ev-001"] },
     ],
     telemetry: { dimensions: { semantics: 1 }, confidence: 0.9 },
     provenance: { engine_version: "bpo-harness-edge-v1", artifact_id: "artifact-001", created_at: "2026-09-01T00:00:00Z" },

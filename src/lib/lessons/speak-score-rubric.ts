@@ -10,7 +10,7 @@
  *   5. XP awarded
  *
  * Sub-skills exercised:
- *   - speaking_fluency  (always)
+ *   - speaking  (always)
  *   - business_vocabulary (always)
  *   - presentation_delivery (only when the prompt called for an extended
  *     structured answer — short conversational prompts leave this null)
@@ -60,7 +60,7 @@ export type SpeakScorePrompt = z.infer<typeof SpeakScorePromptSchema>;
 // ─────────────────────────── Evaluator output ──────────────────────────────
 
 export const SpeakScoreEvaluationSchema = z.object({
-  speaking_fluency: SubScore,
+  speaking: SubScore,
   business_vocabulary: SubScore,
   presentation_delivery: SubScore.nullable().describe(
     "Score only when expects_structure was true on the prompt. Null otherwise."
@@ -121,7 +121,7 @@ You will receive:
   - the student's role name + description
   - their last completed speak_score scenario (if any)
 
-Speak-score exercises three skills: speaking_fluency, business_vocabulary, presentation_delivery (the last only when expects_structure: true).
+Speak-score exercises three skills: speaking, business_vocabulary, presentation_delivery (the last only when expects_structure: true).
 
 For each relevant skill, look at:
   GAP = baseline_min_score − current_score
@@ -141,7 +141,7 @@ Never give A1; minimum is A2.
 
 **Structured** (expects_structure: true) — student delivers an extended answer with internal structure. Examples: a 60-second elevator pitch for a new client, a status update to a regional manager, presenting a price increase to a customer. Use when the student's presentation_delivery score has the largest gap to its baseline, OR when the discovery noted they "dread presentations".
 
-**Conversational** (expects_structure: false) — student responds in real time to a single business prompt. Examples: a customer just complained about a late shipment — what do you say first? A colleague asks for help diagnosing a problem. Use when the student's day-to-day work is heavy on calls and quick replies, or when speaking_fluency is the larger gap.
+**Conversational** (expects_structure: false) — student responds in real time to a single business prompt. Examples: a customer just complained about a late shipment — what do you say first? A colleague asks for help diagnosing a problem. Use when the student's day-to-day work is heavy on calls and quick replies, or when speaking is the larger gap.
 
 Aim for a 50/50 split across a student's lesson history — vary it.
 
@@ -168,7 +168,7 @@ The transcript comes from automatic speech recognition (gpt-4o-transcribe). It w
 
 ## Scoring rubric
 
-speaking_fluency — pace, hesitation, recovery, sentence-level flow. CEFR-aligned 0–1000 (600–799 = B2, 800–899 = C1).
+speaking — pace, hesitation, recovery, sentence-level flow. CEFR-aligned 0–1000 (600–799 = B2, 800–899 = C1).
 business_vocabulary — range, precision, naturalness in business context. Repeated reach-for of "good", "okay", "things" drags it down. Industry terms used correctly push it up.
 presentation_delivery — score this ONLY if expects_structure was true on the prompt. Otherwise return null. When scored: judge structure (opening / point / wrap), clarity of arguments, signposting ("first... second... finally..."), and authority of delivery.
 

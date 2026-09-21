@@ -11,16 +11,19 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  SKILL_KEYS as PRIMARY_SKILL_KEYS,
+  SUPPORTING_SKILL_KEYS,
+  type AnySkillKey,
+} from "@/lib/scoring/rubric";
 
+// Canonical taxonomy (ISS-048), not a local duplicate — every scored
+// dimension (6 primary + 2 supporting), matching intelligence.ts.
 export const SKILL_KEYS = [
-  "speaking_fluency",
-  "listening_comprehension",
-  "writing_formal",
-  "reading_intent",
-  "business_vocabulary",
-  "presentation_delivery",
+  ...PRIMARY_SKILL_KEYS,
+  ...SUPPORTING_SKILL_KEYS,
 ] as const;
-export type SkillKey = (typeof SKILL_KEYS)[number];
+export type SkillKey = AnySkillKey;
 
 export interface SkillScore {
   skill: SkillKey;

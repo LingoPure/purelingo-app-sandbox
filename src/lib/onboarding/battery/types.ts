@@ -169,23 +169,25 @@ export function parseTaskResponse(
 
 // ─── Skill mapping (spec §8) ─────────────────────────────────────────────────
 
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 /**
- * Per-task → skill mapping. Battery-sourced rows mark these skills canonical;
- * the previous voice-sourced rows for the same skills become non-canonical.
+ * Per-task → skill mapping (ISS-048 taxonomy). Battery-sourced rows mark
+ * these skills canonical; the previous voice-sourced rows for the same
+ * skills become non-canonical.
  *
- *   email_writing      → writing_formal
- *   listen_paraphrase  → listening_comprehension
- *   read_summarise     → reading_intent
- *   vocab_cloze        → business_vocabulary
+ *   email_writing      → writing               (primary)
+ *   listen_paraphrase  → listening             (primary)
+ *   read_summarise     → reading               (primary)
+ *   vocab_cloze        → business_vocabulary   (supporting — unchanged key)
  *
- * Voice-only skills NOT touched by the battery: speaking_fluency,
- * presentation_delivery — the voice transcript stays canonical for those.
+ * Voice-only skills NOT touched by the battery: speaking, grammar,
+ * live_interaction, presentation_delivery — the voice transcript stays
+ * canonical for those.
  */
-export const TASK_SKILL: Record<TaskType, SkillKey> = {
-  email_writing: "writing_formal",
-  listen_paraphrase: "listening_comprehension",
-  read_summarise: "reading_intent",
+export const TASK_SKILL: Record<TaskType, AnySkillKey> = {
+  email_writing: "writing",
+  listen_paraphrase: "listening",
+  read_summarise: "reading",
   vocab_cloze: "business_vocabulary",
 };

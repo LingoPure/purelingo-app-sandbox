@@ -68,32 +68,105 @@ export default async function PlanPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-slate-800">{skill.label}</span>
                   <span className="text-slate-500">
-                    {skill.score != null ? `${skill.score}/1000` : "—"}
+                    {skill.assessed ? `${skill.score}/1000` : "—"}
                   </span>
                 </div>
-                <div
-                  className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
-                  role="progressbar"
-                  aria-valuenow={skill.score ?? 0}
-                  aria-valuemin={0}
-                  aria-valuemax={1000}
-                >
+                {skill.assessed ? (
                   <div
-                    className={`h-full rounded-full ${
-                      skill.gap > 200
-                        ? "bg-rose-500"
-                        : skill.gap > 100
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
-                    }`}
-                    style={{
-                      width: `${Math.min(100, ((skill.score ?? 0) / 1000) * 100)}%`,
-                    }}
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+                    role="progressbar"
+                    aria-valuenow={skill.score!}
+                    aria-valuemin={0}
+                    aria-valuemax={1000}
+                  >
+                    <div
+                      className={`h-full rounded-full ${
+                        skill.roleFloorGap! > 200
+                          ? "bg-rose-500"
+                          : skill.roleFloorGap! > 100
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (skill.score! / 1000) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-[repeating-linear-gradient(45deg,theme(colors.slate.200),theme(colors.slate.200)_4px,theme(colors.slate.50)_4px,theme(colors.slate.50)_8px)]"
+                    role="img"
+                    aria-label={`${skill.label}: not yet assessed`}
                   />
+                )}
+                {skill.assessed ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Gap vs role baseline: {skill.roleFloorGap} · Gap vs target ({plan.targetLevel}):{" "}
+                    {skill.targetGap}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-400">Not yet assessed</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Supporting signals — secondary measures, not part of the CEFR band */}
+      <section aria-label="Supporting signals" className="space-y-6">
+        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Supporting signals</h2>
+            <p className="text-sm text-slate-500">
+              Secondary measures — they inform your programme but aren&apos;t part of your CEFR band above.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {plan.supportingSkills.map((skill) => (
+              <div key={skill.skill} className="rounded-xl border border-slate-100 p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium text-slate-800">{skill.label}</span>
+                  <span className="text-slate-500">
+                    {skill.assessed ? `${skill.score}/1000` : "—"}
+                  </span>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Gap vs role baseline: {skill.gap}
-                </p>
+                {skill.assessed ? (
+                  <div
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"
+                    role="progressbar"
+                    aria-valuenow={skill.score!}
+                    aria-valuemin={0}
+                    aria-valuemax={1000}
+                  >
+                    <div
+                      className={`h-full rounded-full ${
+                        skill.roleFloorGap! > 200
+                          ? "bg-rose-500"
+                          : skill.roleFloorGap! > 100
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (skill.score! / 1000) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="mt-2 h-2 overflow-hidden rounded-full bg-[repeating-linear-gradient(45deg,theme(colors.slate.200),theme(colors.slate.200)_4px,theme(colors.slate.50)_4px,theme(colors.slate.50)_8px)]"
+                    role="img"
+                    aria-label={`${skill.label}: not yet assessed`}
+                  />
+                )}
+                {skill.assessed ? (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Gap vs role baseline: {skill.roleFloorGap} · Gap vs target ({plan.targetLevel}):{" "}
+                    {skill.targetGap}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-400">Not yet assessed</p>
+                )}
               </div>
             ))}
           </div>

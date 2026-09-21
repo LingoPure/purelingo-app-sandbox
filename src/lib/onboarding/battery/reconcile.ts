@@ -8,21 +8,25 @@
  *   - demotes any prior canonical row for (student, skill) to is_canonical=false
  *   - upserts the new battery_task row with is_canonical=true
  *
- * Skill mapping (spec §8):
- *   email_writing      → writing_formal           (battery wins)
- *   listen_paraphrase  → listening_comprehension  (battery wins)
- *   read_summarise     → reading_intent           (battery wins)
- *   vocab_cloze        → business_vocabulary      (battery wins)
+ * Skill mapping (spec §8; ISS-048 taxonomy):
+ *   email_writing      → writing               (battery wins)
+ *   listen_paraphrase  → listening             (battery wins)
+ *   read_summarise     → reading               (battery wins)
+ *   vocab_cloze        → business_vocabulary   (battery wins)
  *
- * Voice keeps canonical for: speaking_fluency, presentation_delivery
- * (no battery task — voice is the only signal there).
+ * Voice keeps canonical for: speaking, grammar, live_interaction,
+ * presentation_delivery (no battery task — voice is the only signal there).
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TASK_SKILL, type TaskType } from "./types";
-import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
+import {
+  loadBaselinesForStudent,
+  FLAT_FALLBACK_TARGET,
+} from "@/lib/scoring/baselines";
 import { setCanonicalGapScore } from "@/lib/scoring/set-canonical";
 import { sendBatteryCompleteReport } from "./report";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export async function reconcileBatteryScore(
   supabase: SupabaseClient,
@@ -32,12 +36,16 @@ export async function reconcileBatteryScore(
 ): Promise<void> {
   const skill = TASK_SKILL[taskType];
   const baselines = await loadBaselinesForStudent(supabase, studentId);
+  // business_vocabulary is a supporting measure — no role-specific baseline
+  // (Baselines only carries the 6 primary keys), so it falls through to the
+  // flat 800 default.
+  const baselinesAny = baselines as Partial<Record<AnySkillKey, number>>;
 
   await setCanonicalGapScore(supabase, {
     studentId,
     skill,
     score: battery.score,
-    target: baselines[skill],
+    target: baselinesAny[skill] ?? FLAT_FALLBACK_TARGET,
     source: "battery_task",
   });
 

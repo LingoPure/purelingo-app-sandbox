@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 /**
  * GET /api/onboarding/discovery/status — poll target for the post-call screen.
@@ -33,7 +33,7 @@ export async function GET() {
   const complete = status === "complete";
 
   let scores: Array<{
-    skill: SkillKey;
+    skill: AnySkillKey;
     score: number;
     target: number;
   }> | null = null;
@@ -48,7 +48,7 @@ export async function GET() {
       console.error("[discovery/status] gap_scores lookup failed:", scoreErr.message);
     } else {
       scores = (scoreRows ?? []) as Array<{
-        skill: SkillKey;
+        skill: AnySkillKey;
         score: number;
         target: number;
       }>;

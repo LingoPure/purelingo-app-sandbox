@@ -17,20 +17,20 @@ const BASELINE: BaselineSnapshot = {
     score: 500,
     band: "Professional",
     components: {
-      speaking_fluency: 400,
-      listening_comprehension: 500,
-      writing_formal: 450,
-      reading_intent: 550,
+      speaking: 400,
+      listening: 500,
+      writing: 450,
+      reading: 550,
       business_vocabulary: 350,
       presentation_delivery: 600,
     },
   },
   cefr_macro: "B1",
   capabilities: [
-    { address: "speaking_fluency", score: 400, level: "B1" },
-    { address: "listening_comprehension", score: 500, level: "B1" },
-    { address: "writing_formal", score: 450, level: "B1" },
-    { address: "reading_intent", score: 550, level: "B2" },
+    { address: "speaking", score: 400, level: "B1" },
+    { address: "listening", score: 500, level: "B1" },
+    { address: "writing", score: 450, level: "B1" },
+    { address: "reading", score: 550, level: "B2" },
     { address: "business_vocabulary", score: 350, level: "A2" },
     { address: "presentation_delivery", score: 600, level: "B2" },
   ],
@@ -78,12 +78,12 @@ test("computeSkillGaps: scores above target are CLEAR", () => {
 test("computeSkillGaps: completions improve current score", () => {
   const gaps_before = computeSkillGaps(BASELINE, "B2", [], []);
   const gaps_after = computeSkillGaps(BASELINE, "B2", [
-    { lesson_id: "l1", modality: "speaking", skill: "speaking_fluency", completed_at: "2026-01-02T00:00:00Z" },
-    { lesson_id: "l2", modality: "speaking", skill: "speaking_fluency", completed_at: "2026-01-03T00:00:00Z" },
+    { lesson_id: "l1", modality: "speaking", skill: "speaking", completed_at: "2026-01-02T00:00:00Z" },
+    { lesson_id: "l2", modality: "speaking", skill: "speaking", completed_at: "2026-01-03T00:00:00Z" },
   ], []);
 
-  const before = gaps_before.find((g) => g.skill === "speaking_fluency")!;
-  const after = gaps_after.find((g) => g.skill === "speaking_fluency")!;
+  const before = gaps_before.find((g) => g.skill === "speaking")!;
+  const after = gaps_after.find((g) => g.skill === "speaking")!;
 
   assert.ok(after.current > before.current, "completions improved score");
   assert.ok(after.gap < before.gap, "gap reduced");
@@ -92,12 +92,12 @@ test("computeSkillGaps: completions improve current score", () => {
 test("computeSkillGaps: negative feedback penalises score", () => {
   const gaps_before = computeSkillGaps(BASELINE, "B2", [], []);
   const gaps_after = computeSkillGaps(BASELINE, "B2", [], [
-    { skill: "writing_formal", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
-    { skill: "writing_formal", outcome_status: "negative", created_at: "2026-01-03T00:00:00Z" },
+    { skill: "writing", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
+    { skill: "writing", outcome_status: "negative", created_at: "2026-01-03T00:00:00Z" },
   ]);
 
-  const before = gaps_before.find((g) => g.skill === "writing_formal")!;
-  const after = gaps_after.find((g) => g.skill === "writing_formal")!;
+  const before = gaps_before.find((g) => g.skill === "writing")!;
+  const after = gaps_after.find((g) => g.skill === "writing")!;
 
   assert.ok(after.current < before.current, "negative feedback reduced score");
 });
@@ -152,8 +152,8 @@ test("evaluateReset: triggers reset on 2+ negative feedback entries", () => {
     existing_plan: plan,
     new_completions: [],
     new_feedback: [
-      { skill: "writing_formal", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
-      { skill: "writing_formal", outcome_status: "inconclusive", created_at: "2026-01-03T00:00:00Z" },
+      { skill: "writing", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
+      { skill: "writing", outcome_status: "inconclusive", created_at: "2026-01-03T00:00:00Z" },
     ],
     new_observations: [],
   });
@@ -170,8 +170,8 @@ test("evaluateReset: reset reason contains feedback context", () => {
     existing_plan: plan,
     new_completions: [],
     new_feedback: [
-      { skill: "speaking_fluency", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
-      { skill: "listening_comprehension", outcome_status: "inconclusive", created_at: "2026-01-03T00:00:00Z" },
+      { skill: "speaking", outcome_status: "negative", created_at: "2026-01-02T00:00:00Z" },
+      { skill: "listening", outcome_status: "inconclusive", created_at: "2026-01-03T00:00:00Z" },
     ],
     new_observations: [],
   });

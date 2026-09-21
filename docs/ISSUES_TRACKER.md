@@ -99,3 +99,109 @@ discovery → battery → plan run has completed live. See `docs/integration-sta
       `LingoPure/purelingo-app-sandbox`; both git remotes deploy.
 - [ ] **ISS-046**: `ELEVENLABS_WEBHOOK_SECRET` — only needed if provision created a NEW
       workspace webhook (ElevenLabs → Webhooks); otherwise the existing secret still matches
+
+## Phase 9 — Sandbox testing feedback (2026-09-20: Daniel, Shamini, Thao)
+
+Sourced from `docs/lingopure feedback folder 20092026/` (raised 2026-09-20, triaged 2026-09-21).
+Full narrative + screenshot evidence: `LingoPure_Sandbox_Testing_Feedback.docx` in that folder.
+Per-issue audit trail (raised → action → resolved): `docs/ISSUE_LOG.md`. Not yet scoped —
+severity tags are a triage starting point, to be confirmed in scoping.
+
+### Critical
+- [ ] **ISS-047** `[CRITICAL]`: Score inconsistency — Dashboard shows overall **B2.3**, My Programme
+      shows **B1**, from the *same* six `gap_scores` rows. Trace both pages to the one saved
+      assessment/mapping; make the programme consume whichever result is canonical. (Daniel §04,
+      Review Section 06 screenshot.)
+- [ ] **ISS-048** `[CRITICAL]`: Six capability dimensions don't match Dan's reference framework.
+      Sandbox shows *Speaking, Listening, Writing, Reading intent, Vocabulary, Presenting*; required
+      per Dan's LP-18 spec is *Reading, Writing, Speaking, Grammar, Listening, Live Interaction*.
+      Reconcile across radar charts, lists, `role_baselines`, results, and programme logic; confirm
+      whether the mismatch reaches into `rubric.ts`/prompts/storage or is display-only. (Daniel §02
+      + reference `LingoPure_LP18_Master_Brain_Web_v6.1...html`.)
+- [ ] **ISS-049** `[CRITICAL]`: Org setup — entering `prelabz` as the company name throws a raw
+      `organisations_slug_key` duplicate-key Postgres error to the user; a random name succeeds.
+      Investigate create/retry semantics (does each submit create a new org? do partial attempts
+      persist?); build a real "join existing org" flow (name match ≠ membership — separate orgs may
+      share a display name); replace the raw DB error with guidance and preserve entered details for
+      retry. (Daniel §03, Review Section 08 screenshot.)
+- [ ] **ISS-050** `[HIGH]`: Target inconsistency — dashboard target badge shows **C2.1** while the
+      skill target line and My Programme both show **C1**. Confirm whether these are legitimately
+      different targets (e.g. pre- vs post-discovery re-target) or a bug. (Daniel §02/§04.)
+
+### High
+- [ ] **ISS-051** `[HIGH]`: Auth — magic-link login shows "Email link is invalid or has expired" on
+      mobile. Repro + smoke-test against the current Supabase auth config (redirect allowlist / token
+      expiry). (Shamini, `WhatsApp Image 2026-09-19 at 23.31.05.jpeg`.)
+- [ ] **ISS-052** `[HIGH]`: Live transcription missing — completed turns render after the fact, but no
+      interim/live transcript appears while the student is speaking, and no mic-input-level indicator
+      is shown. Determine whether the ConvAI/STT path exposes partial transcripts that the UI drops,
+      or only returns finalized turns. Pass condition: live text appears during speech and finalises
+      without duplicate messages. (Daniel §03, Review Section 08 screenshot.)
+
+### Medium
+- [ ] **ISS-053** `[MED]`: Aria discovery — duplicate questions observed: asked for role, got an
+      answer; separately asked for "responsibility in the meeting," got an answer; then asked again.
+      Confirm whether this predates or postdates the 2026-09-19 prompt rewrite (`125beb7`, Dimension 2
+      = 3 true turns) — re-verify against the currently live provisioned prompt before treating as a
+      regression. (Thao, voice memo transcript.)
+- [ ] **ISS-054** `[MED]`: Aria should adapt spoken complexity to the student's level — mirror simple
+      sentence structure back if the student speaks simply. (Thao, voice memo transcript.)
+- [ ] **ISS-055** `[MED]`: Role drifted between setup and results — setup showed "Inbound Customer
+      Service," results show "Inbound Sales." Confirm with Daniel whether he changed it during setup;
+      if not, investigate persistence. (Daniel §04.)
+- [ ] **ISS-058** `[MED]`: CEFR-18 micro-levels visible on the completed Dashboard are not carried into
+      My Programme or spoken by Aria's plan-agent explanation. (Daniel §02.)
+- [ ] **ISS-059** `[MED]`: No distinction shown between role-minimum gap and target-level gap — 5 of 6
+      role gaps display `0` while C1 remains a stated goal, reading as contradictory. Show both gap
+      types separately and explain how each influences practice. (Daniel §04.)
+- [ ] **ISS-060** `[MED]`: Missing/insufficient evidence must render as "Not assessed" / "Insufficient
+      evidence" — never silently collapse to a zero score or "no gap." (Daniel §02.)
+- [ ] **ISS-061** `[MED]`: Live Interaction capability needs its 12 supporting telemetry signals (Tone
+      Alignment, Adaptive Shifting, Frame Integrity, Semantic Continuity, Repair Behaviour, Cognitive
+      Load Alignment, Response Latency, Turn-Taking Behaviour, Hierarchy Sensitivity, Cultural
+      Continuity, Hesitation Markers, Drift Detection) exposed individually, each tagged
+      measured / inferred / insufficient-evidence. (Daniel §05 + reference "LP Telemetry Framework"
+      infographic.)
+
+### Low
+- [ ] **ISS-056** `[LOW]`: Intro video duration label wrong — heading states "60s," actual clip is
+      0:26. (Daniel §03, Review Section 07 screenshot.)
+- [ ] **ISS-057** `[LOW]`: Copy bugs — placeholder string `"for your role as your role"`; "Learning
+      style" should read "Learning preferences"; a pre-assessment programme/commitment CTA appeared
+      with N/A scores, unlabeled as sample data. (Daniel §03/§04.)
+- [ ] **ISS-062** `[LOW]`: Radar chart — labels clipped at the left edge; ambiguous paired band/score
+      display (e.g. "C1.1 alongside B2" on the same row) needs an explained convention. (Daniel
+      §02/§07 + screenshot.)
+
+### Verification (gates sign-off, not a code bug per se)
+- [ ] **ISS-063** `[VERIFY]`: Daniel has requested a full evidence-chain + cross-page persistence
+      demo: trace responses → evidence → CEFR-18 result → identified gaps → chosen activities →
+      programme duration live, and confirm Dashboard/Programme/Lessons all read the same saved result
+      and survive a refresh. Gates Daniel's sign-off on Review Sections 02–05. (Daniel §05, "Checks
+      required to close the review.")
+
+## Phase 10 — Raised 2026-09-21 (mid-session, relayed by Dennis)
+
+- [ ] **ISS-064** `[MED]`: No email is sent when a student's improvement programme is generated or
+      committed. Confirmed by reading `src/app/api/plan/delivery/route.ts` — `GET` builds the plan,
+      `POST` only writes `plan_status`/`plan_committed_at` to `students`; neither path calls
+      `@caistech/email-send` or any Resend transport. Stephen Munich and Shamini both expected an
+      email summarising their generated programme after finishing the assessment/plan flow. The
+      existing battery-complete report email (`af828c1`, `src/lib/onboarding/battery/report.ts`) is a
+      different artifact — an LP-18 score summary + "Book a demo" CTA sent on battery completion, not
+      a programme summary sent on plan generation/commitment. (Dennis, relaying Stephen Munich +
+      Shamini, 2026-09-21.) **Scope clarified 2026-09-21 (see ISS-065) — folds into that broader
+      reframing rather than a standalone "just add an email" fix.**
+- [ ] **ISS-065** `[MED]`: Sales-funnel reframing of the plan-delivery closing moment. Dennis clarified
+      the discovery→battery→plan flow is a **free self-assessment / lead-gen step**, not the live
+      enrolled product — the generated programme is a **sample/preview**, not active or executed.
+      Three surfaces currently say or imply otherwise and need reframing: (1) `/plan` page's
+      "commitment" section — currently asks the student to "commit to following the programme," should
+      instead present it as a sample with a **"Book a call"** CTA; (2) `compilePlanPrompt()`
+      (`src/lib/plan/plan-delivery.ts`) — Aria's voice script literally instructs her to "get a genuine
+      commitment," needs to become "this is a sample — next step is a call with the team"; (3) the
+      ISS-064 email needs to go out at `/plan` completion (not just battery completion), explicitly
+      labeled as a sample/non-active programme, with the same Book-a-Call CTA. **Open question for
+      Dennis**: is "Book a call" one generic CTA regardless of context, or does it need to branch by
+      who's asking (individual self-assessor vs. someone evaluating on behalf of a BPO/call-centre)?
+      Scoped as its own phase, after Phase 2 (taxonomy migration) completes. (Dennis, 2026-09-21.)

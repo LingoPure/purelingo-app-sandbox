@@ -6,12 +6,12 @@ import { runSelfSetup } from "@/lib/org/self-setup";
 
 const BaselineScoresSchema = z
   .object({
-    speaking_fluency: z.number().min(0).max(1000),
-    presentation_delivery: z.number().min(0).max(1000),
-    writing_formal: z.number().min(0).max(1000),
-    business_vocabulary: z.number().min(0).max(1000),
-    listening_comprehension: z.number().min(0).max(1000),
-    reading_intent: z.number().min(0).max(1000),
+    speaking: z.number().min(0).max(1000),
+    listening: z.number().min(0).max(1000),
+    writing: z.number().min(0).max(1000),
+    reading: z.number().min(0).max(1000),
+    grammar: z.number().min(0).max(1000),
+    live_interaction: z.number().min(0).max(1000),
   })
   .strict();
 

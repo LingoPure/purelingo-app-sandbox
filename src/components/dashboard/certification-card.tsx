@@ -3,12 +3,12 @@ import { ScheduleCertButton } from "./schedule-cert-button";
 import type { Eligibility } from "@/lib/tracktest/eligibility";
 
 const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "speaking",
-  listening_comprehension: "listening",
-  writing_formal: "writing",
-  reading_intent: "reading intent",
-  business_vocabulary: "vocabulary",
-  presentation_delivery: "presenting",
+  speaking: "speaking",
+  listening: "listening",
+  writing: "writing",
+  reading: "reading",
+  grammar: "grammar",
+  live_interaction: "live interaction",
 };
 
 export type LatestCert = {

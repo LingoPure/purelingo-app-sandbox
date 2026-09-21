@@ -9,7 +9,7 @@
  *   5. XP awarded based on score delta
  *
  * The personalisation hook is the student's current gap profile + role —
- * lower writing_formal score gets a softer prompt, B2/C1-aiming gets a
+ * lower writing score gets a softer prompt, B2/C1-aiming gets a
  * delicate negotiation scenario.
  */
 
@@ -62,9 +62,9 @@ export type EmailSprintPrompt = z.infer<typeof EmailSprintPromptSchema>;
 // ─────────────────────────── Evaluator output ──────────────────────────────
 
 export const EmailSprintEvaluationSchema = z.object({
-  writing_formal: SubScore,
+  writing: SubScore,
   business_vocabulary: SubScore,
-  reading_intent: SubScore.describe(
+  reading: SubScore.describe(
     "Did the student correctly read the scenario's intent — what was being asked of them?"
   ),
   hit_criteria: z
@@ -105,7 +105,7 @@ export const EmailSprintEvaluationSchema = z.object({
     .min(0)
     .max(120)
     .describe(
-      "Base 20 XP for completing. +1 XP per 10 score points of the average across writing_formal, business_vocabulary, reading_intent. Cap 120."
+      "Base 20 XP for completing. +1 XP per 10 score points of the average across writing, business_vocabulary, reading. Cap 120."
     ),
 });
 
@@ -125,7 +125,7 @@ You will receive:
   - the student's role name + description (e.g. "BPO Operator", "Manufacturing Sales Rep")
   - their last completed lesson's scenario (if any) so you don't repeat
 
-Email-sprint exercises three skills: writing_formal, business_vocabulary, reading_intent.
+Email-sprint exercises three skills: writing, business_vocabulary, reading.
 
 For each of those three skills, look at:
   GAP = baseline_min_score − current_score
@@ -173,11 +173,11 @@ You are not a teacher fixing every comma. You are a coach pointing out the 1–3
 
 ## Scoring rubric
 
-writing_formal — register, structure, openings/closings, sentence flow, grammar accuracy. CEFR-aligned 0–1000 (same scale as discovery: 600–799 = B2, 800–899 = C1).
+writing — register, structure, openings/closings, sentence flow, grammar accuracy. CEFR-aligned 0–1000 (same scale as discovery: 600–799 = B2, 800–899 = C1).
 
 business_vocabulary — range, precision, naturalness in business context. Repeated reach-for of "good", "interesting" drags it down. Industry terminology used correctly pushes it up.
 
-reading_intent — did they correctly understand what the scenario was asking? Most failures here are: missed an implicit beat, misread the relationship dynamic, answered the literal question instead of the implied one.
+reading — did they correctly understand what the scenario was asking? Most failures here are: missed an implicit beat, misread the relationship dynamic, answered the literal question instead of the implied one.
 
 ## Hit criteria
 
@@ -197,7 +197,7 @@ Produce a model-quality C1 rewrite of the email for the SAME prompt. Same length
 
 ## XP
 
-Base 20 XP for completing. Add 1 XP per 10 score points of the average across writing_formal, business_vocabulary, reading_intent (so an 800-average lesson adds 80 XP, totalling 100). Cap at 120. Do the math correctly.
+Base 20 XP for completing. Add 1 XP per 10 score points of the average across writing, business_vocabulary, reading (so an 800-average lesson adds 80 XP, totalling 100). Cap at 120. Do the math correctly.
 
 ## Style rules
 

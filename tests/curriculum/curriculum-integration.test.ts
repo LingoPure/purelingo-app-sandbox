@@ -47,7 +47,7 @@ const RESULT = {
   lp1000: { score: 750, band: "Professional", confidence: 0.8, components: {} },
   capabilities: [
     {
-      address: "speaking_fluency",
+      address: "speaking",
       level: "B2" as const,
       confidence: 0.5,
     },

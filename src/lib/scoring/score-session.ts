@@ -22,8 +22,12 @@ import {
   SessionScoresSchema,
   type SessionScoresOutput,
 } from "./session-rubric";
-import { SKILL_KEYS } from "./rubric";
+import { SKILL_KEYS, SUPPORTING_SKILL_KEYS } from "./rubric";
 import { setCanonicalGapScores } from "./set-canonical";
+
+// Session scoring can update ANY of the 8 dimensions the model actually
+// exercised — primary and supporting alike (ISS-048).
+const ALL_SKILL_KEYS = [...SKILL_KEYS, ...SUPPORTING_SKILL_KEYS];
 
 export type ScoreSessionInput = {
   sessionId: string;
@@ -79,7 +83,7 @@ export async function scoreSession(
   // Only write sub-skills that came back non-null — never overwrite a prior
   // score with "we didn't assess this today".
   const skillsUpdated: string[] = [];
-  const writes = SKILL_KEYS.flatMap((skill) => {
+  const writes = ALL_SKILL_KEYS.flatMap((skill) => {
     const sub = parsed[skill];
     if (!sub) return [];
     skillsUpdated.push(skill);

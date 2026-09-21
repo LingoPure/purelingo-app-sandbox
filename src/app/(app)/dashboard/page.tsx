@@ -12,7 +12,15 @@ import { RecommendedPlan } from "@/components/dashboard/recommended-plan";
 import { ProgressChart } from "@/components/dashboard/progress-chart";
 import { generateLessonPlan } from "@/lib/lessons/plan-generator";
 import { computeEligibility } from "@/lib/tracktest/eligibility";
-import { SKILL_KEYS, scoreToLp18 } from "@/lib/scoring/rubric";
+import {
+  SKILL_KEYS,
+  SUPPORTING_SKILL_KEYS,
+  SKILL_LABELS,
+  scoreToLp18,
+  scoreToCefrBand,
+  type SkillKey,
+  type CefrBand,
+} from "@/lib/scoring/rubric";
 import { readClassinCredentials } from "@/lib/classin/token";
 import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
@@ -20,28 +28,16 @@ import { BilingualText } from "@/components/i18n/bilingual-text";
 import { tierForTarget } from "@/lib/gamification/rules";
 import { getDict } from "@/lib/i18n";
 
-const SKILLS = [
-  { key: "speaking_fluency", label: "Speaking" },
-  { key: "listening_comprehension", label: "Listening" },
-  { key: "writing_formal", label: "Writing" },
-  { key: "reading_intent", label: "Reading intent" },
-  { key: "business_vocabulary", label: "Vocabulary" },
-  { key: "presentation_delivery", label: "Presenting" },
-] as const;
+/** The six PRIMARY, CEFR-mapped dimensions — the radar + headline bars. */
+const SKILLS = SKILL_KEYS.map((key) => ({ key, label: SKILL_LABELS[key] }));
 
-type SkillKey = (typeof SKILLS)[number]["key"];
+/** The two supporting/secondary measures — own section, never the radar. */
+const SUPPORTING_SKILLS = SUPPORTING_SKILL_KEYS.map((key) => ({
+  key,
+  label: SKILL_LABELS[key],
+}));
+
 type ScoreRow = { skill: string; score: number; target: number | null };
-
-type CefrBand = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-
-const TARGET_SCORE: Record<CefrBand, number> = {
-  A1: 250,
-  A2: 400,
-  B1: 550,
-  B2: 700,
-  C1: 850,
-  C2: 950,
-};
 
 type SubScoreEvidence = {
   score: number;
@@ -65,10 +61,12 @@ type RecentClass = {
 };
 
 type ProfileJson = {
-  speaking_fluency: SubScoreEvidence;
-  listening_comprehension: SubScoreEvidence;
-  writing_formal: SubScoreEvidence;
-  reading_intent: SubScoreEvidence;
+  speaking: SubScoreEvidence;
+  listening: SubScoreEvidence;
+  writing: SubScoreEvidence;
+  reading: SubScoreEvidence;
+  grammar: SubScoreEvidence;
+  live_interaction: SubScoreEvidence;
   business_vocabulary: SubScoreEvidence;
   presentation_delivery: SubScoreEvidence;
   overall_cefr: CefrBand;
@@ -154,9 +152,33 @@ export default async function DashboardPage() {
   const student = studentResult.data;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
-  const profileScores = profile
-    ? SKILL_KEYS.map((k) => profile[k]?.score ?? 0)
-    : [];
+
+  // Live overall band/LP-18, from the SAME source (live gap_scores) and the
+  // SAME formula (scoreToCefrBand/scoreToLp18) the Skills list below already
+  // uses — never the frozen discovery_sessions.profile_json snapshot, which
+  // battery reconciliation can leave stale relative to the canonical rows
+  // (ISS-047). profile_json is still used for the narrative summary/target_why,
+  // which have no live equivalent.
+  const liveAssessedScores = scores
+    .map((s) => s.score)
+    .filter((s): s is number => s != null);
+  const liveAvgScore =
+    liveAssessedScores.length > 0
+      ? liveAssessedScores.reduce((a, b) => a + b, 0) / liveAssessedScores.length
+      : null;
+  const liveOverallBand: CefrBand | null =
+    liveAvgScore != null ? scoreToCefrBand(liveAvgScore) : null;
+  const liveOverallLp18 = liveAvgScore != null ? scoreToLp18(liveAvgScore) : null;
+
+  // One target level, read once, used everywhere on this page (badge + the
+  // "Target line" caption below) so they can't diverge (ISS-050). Prefer the
+  // live students.target_level (can be updated independently of the frozen
+  // discovery profile) and fall back to the profile snapshot.
+  const targetLevel: CefrBand =
+    (student?.target_level as CefrBand | undefined) ??
+    profile?.target_level ??
+    "B2";
+
   const nextClass = nextClassResult.data as NextClass | null;
   const recentClasses = (recentClassesResult.data ?? []) as RecentClass[];
   const lessons = (lessonsResult.data ?? []) as { xp_awarded: number | null; status: string | null }[];
@@ -238,7 +260,11 @@ export default async function DashboardPage() {
   const targetLang: LanguageCode | null = isLanguageCode(studentNative)
     ? studentNative
     : null;
-  const evidenceStrings = SKILL_KEYS.map((k) => profile?.[k]?.evidence ?? "");
+  // Evidence for the 6 primary dimensions AND the 2 supporting signals — one
+  // combined key list so both the radar bars and the Supporting signals
+  // section below get bilingual evidence text.
+  const allSkillKeys = [...SKILL_KEYS, ...SUPPORTING_SKILL_KEYS];
+  const evidenceStrings = allSkillKeys.map((k) => profile?.[k]?.evidence ?? "");
   const planStrings = lessonPlan.map((r) => r.rationale);
   const summaryString = profile?.summary ?? "";
   const [evidenceBilingual, planBilingual, summaryBilingual] = await Promise.all([
@@ -247,7 +273,7 @@ export default async function DashboardPage() {
     bilingualize([summaryString], targetLang).then((arr) => arr[0]),
   ]);
   const evidenceByKey = new Map<string, Bilingual>(
-    SKILL_KEYS.map((k, i) => [k, evidenceBilingual[i]])
+    allSkillKeys.map((k, i) => [k, evidenceBilingual[i]])
   );
   const planWithBilingual = lessonPlan.map((rec, i) => ({
     ...rec,
@@ -332,22 +358,16 @@ export default async function DashboardPage() {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <CefrBadge
               label="Now"
-              band={profile.overall_cefr}
-              lp18={scoreToLp18(
-                profileScores.length > 0
-                  ? profileScores.reduce((a, b) => a + b, 0) / profileScores.length
-                  : 800
-              )}
+              band={liveOverallBand ?? profile.overall_cefr}
+              lp18={liveOverallLp18 ?? undefined}
               tone="current"
             />
-            <CefrBadge
-              label="Target"
-              band={profile.target_level}
-              lp18={scoreToLp18(
-                TARGET_SCORE[profile.target_level]
-              )}
-              tone="target"
-            />
+            {/* Target is a threshold, not a measured value — show the plain
+                CEFR letter only. Fabricating an LP-18 micro-band for it
+                (e.g. via a hardcoded score constant) is what produced the
+                "C2.1 target" bug (ISS-050): a CEFR letter spans 3 micro-bands,
+                so there is no single correct sub-band to invent for a goal. */}
+            <CefrBadge label="Target" band={targetLevel} tone="target" />
           </div>
           <BilingualText
             text={summaryBilingual}
@@ -360,7 +380,7 @@ export default async function DashboardPage() {
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-serif text-xl text-navy">Skills</h2>
           <span className="font-mono text-xs uppercase tracking-[0.2em] text-mute">
-            Target line: {student?.target_level ?? "B2"} · 800
+            Target line: {targetLevel} · 800
           </span>
         </div>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[360px_1fr]">
@@ -408,6 +428,39 @@ export default async function DashboardPage() {
 
       {hasScores && (
         <section className="rounded-lg border border-cream bg-paper p-6">
+          <div className="mb-5">
+            <h2 className="font-serif text-xl text-navy">Supporting signals</h2>
+            <p className="mt-1 text-sm text-mute">
+              Secondary measures — they inform your plan but aren&apos;t part of your
+              CEFR band above.
+            </p>
+          </div>
+          <div className="flex flex-col gap-4">
+            {SUPPORTING_SKILLS.map((s) => {
+              const row = scoreMap.get(s.key);
+              const sub = profile ? profile[s.key] : null;
+              const evidenceBi = evidenceByKey.get(s.key);
+              return (
+                <ScoreBar
+                  key={s.key}
+                  label={s.label}
+                  score={row?.score ?? null}
+                  target={row?.target ?? 800}
+                  band={sub?.cefr_band}
+                  evidence={
+                    sub?.evidence
+                      ? evidenceBi ?? { native: sub.evidence, en: sub.evidence, translated: false }
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {hasScores && (
+        <section className="rounded-lg border border-cream bg-paper p-6">
           <div className="mb-4">
             <h2 className="font-serif text-xl text-navy">Progress over time</h2>
             <p className="mt-1 text-sm text-mute">
@@ -423,7 +476,7 @@ export default async function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <ProfileCard
             heading="Why this target"
-            tag={`Target · ${profile.target_level}`}
+            tag={`Target · ${targetLevel}`}
             body={profile.target_why}
           />
           <ProfileCard
@@ -598,22 +651,27 @@ function ScoreBar({
           )}
         </div>
         <span className="w-24 text-right font-mono text-xs text-mute">
-          {score == null
-            ? "—"
-            : `${score} · ${scoreToLp18(score)} · ${band ?? ""}`}
+          {score == null ? "—" : `${score} · ${scoreToLp18(score)}`}
         </span>
       </div>
-      {evidence && (
+      {(evidence || band) && (
         <details className="group pl-[7.75rem]">
           <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.18em] text-mute hover:text-navy">
             Evidence
           </summary>
-          <div className="mt-1.5 border-l-2 border-cream pl-3 text-xs text-mute">
-            <BilingualText
-              text={evidence}
-              className="text-xs italic text-mute"
-              englishLabel="EN"
-            />
+          <div className="mt-1.5 flex flex-col gap-1 border-l-2 border-cream pl-3 text-xs text-mute">
+            {band && (
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-mute">
+                Model assessment: {band}
+              </p>
+            )}
+            {evidence && (
+              <BilingualText
+                text={evidence}
+                className="text-xs italic text-mute"
+                englishLabel="EN"
+              />
+            )}
           </div>
         </details>
       )}
@@ -629,7 +687,10 @@ function CefrBadge({
 }: {
   label: string;
   band: CefrBand;
-  lp18: string;
+  /** LP-18 micro-band, e.g. "B2.3". Omit for a threshold value (a target) —
+   * a CEFR letter spans 3 micro-bands, so there is no single correct
+   * sub-band to show for a goal rather than a measurement. */
+  lp18?: string;
   tone: "current" | "target";
 }) {
   const styles =
@@ -643,10 +704,12 @@ function CefrBadge({
       <span className="font-mono text-[10px] uppercase tracking-[0.22em]">
         {label}
       </span>
-      <span className="font-serif text-base">{lp18}</span>
-      <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-mute sm:inline">
-        {band}
-      </span>
+      <span className="font-serif text-base">{lp18 ?? band}</span>
+      {lp18 && (
+        <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-mute sm:inline">
+          {band}
+        </span>
+      )}
     </span>
   );
 }

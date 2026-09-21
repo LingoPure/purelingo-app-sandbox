@@ -3,17 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { loadStudentDetail } from "@/lib/employer/data";
-import { SKILL_KEYS } from "@/lib/scoring/rubric";
+import { SKILL_KEYS, SKILL_LABELS as SKILL_LABEL } from "@/lib/scoring/rubric";
 import type { PlanRecommendation } from "@/lib/lessons/plan-generator";
-
-const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "Speaking",
-  listening_comprehension: "Listening",
-  writing_formal: "Writing",
-  reading_intent: "Reading intent",
-  business_vocabulary: "Vocabulary",
-  presentation_delivery: "Presenting",
-};
 
 export default async function StudentDetailPage({
   params,

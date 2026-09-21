@@ -6,21 +6,21 @@ import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
 import type { RoleBaselines } from "@/lib/employer/roles-data";
 
 const SKILL_LABEL: Record<string, string> = {
-  speaking_fluency: "Speaking fluency",
-  listening_comprehension: "Listening comprehension",
-  writing_formal: "Formal writing",
-  reading_intent: "Reading intent",
-  business_vocabulary: "Business vocabulary",
-  presentation_delivery: "Presentation delivery",
+  speaking: "Speaking",
+  listening: "Listening",
+  writing: "Writing",
+  reading: "Reading",
+  grammar: "Grammar",
+  live_interaction: "Live interaction",
 };
 
 const SKILL_HINT: Record<string, string> = {
-  speaking_fluency: "Pace, hesitation, sentence-level flow on calls.",
-  listening_comprehension: "Following accented English in real time.",
-  writing_formal: "Email register, structure, grammar accuracy.",
-  reading_intent: "Reading what the customer is really asking for.",
-  business_vocabulary: "Range and precision of business terms.",
-  presentation_delivery: "Structure, signposting, authority of delivery.",
+  speaking: "Pace, hesitation, sentence-level flow on calls.",
+  listening: "Following accented English in real time.",
+  writing: "Email register, structure, grammar accuracy.",
+  reading: "Reading what the customer is really asking for.",
+  grammar: "Tense, agreement, articles, word order.",
+  live_interaction: "Turn-taking, repair, responsiveness in real-time conversation.",
 };
 
 export type RoleFormProps = {

@@ -18,10 +18,10 @@ const BASELINE: BaselineSnapshot = {
   },
   cefr_macro: "B1",
   capabilities: [
-    { address: "speaking_fluency", score: 500, level: "B1" },
-    { address: "writing_formal", score: 570, level: "B1" },
-    { address: "listening_comprehension", score: 650, level: "B2" },
-    { address: "reading_intent", score: 650, level: "B2" },
+    { address: "speaking", score: 500, level: "B1" },
+    { address: "writing", score: 570, level: "B1" },
+    { address: "listening", score: 650, level: "B2" },
+    { address: "reading", score: 650, level: "B2" },
     { address: "business_vocabulary", score: 650, level: "B2" },
     { address: "presentation_delivery", score: 650, level: "B2" },
   ],
@@ -29,19 +29,19 @@ const BASELINE: BaselineSnapshot = {
 
 test("workplace observations widen the skill gap and flip status to AT_RISK", () => {
   const without = computeSkillGaps(BASELINE, "B2", [], [], []);
-  const writing = without.find((g) => g.skill === "writing_formal");
+  const writing = without.find((g) => g.skill === "writing");
   assert.ok(writing);
   assert.equal(writing.gap, 80); // 650 - 570, below the 100 threshold
   assert.equal(writing.status, "CLEAR");
 
   const withObs = computeSkillGaps(BASELINE, "B2", [], [], [
     {
-      skill: "writing_formal",
+      skill: "writing",
       observation: "Work draft shows persistent register drift",
       created_at: "2026-02-01T00:00:00Z",
     },
   ]);
-  const writingNow = withObs.find((g) => g.skill === "writing_formal");
+  const writingNow = withObs.find((g) => g.skill === "writing");
   assert.ok(writingNow);
   assert.equal(writingNow.gap, 120); // 40-point workplace penalty
   assert.equal(writingNow.status, "AT_RISK");
@@ -64,7 +64,7 @@ test("observations trigger a WORK_OBSERVATION reset when the gap widens", () => 
     new_feedback: [],
     new_observations: [
       {
-        skill: "speaking_fluency",
+        skill: "speaking",
         observation: "Call transcript shows mid-sentence stalls",
         created_at: "2026-02-01T00:00:00Z",
       },

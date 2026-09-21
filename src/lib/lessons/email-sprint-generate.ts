@@ -156,7 +156,7 @@ export async function generateEmailSprintPrompt(
       return `  - ${k}: current ${cur ?? "—"} | baseline ${base} | ${gap}`;
     }),
     "",
-    "Email-sprint exercises: writing_formal, business_vocabulary, reading_intent.",
+    "Email-sprint exercises: writing, business_vocabulary, reading.",
     "Calibrate the prompt to close the LARGEST of those three gaps by ~5–10 points on a strong attempt.",
     "",
     "Role / discovery context:",
@@ -206,7 +206,7 @@ export async function createEmailSprintLesson(
     .insert({
       student_id: input.studentId,
       type: "email_sprint",
-      skill_focus: "writing_formal",
+      skill_focus: "writing",
       content_json: { prompt },
       score_before: beforeAvg,
       status: "active",
@@ -221,7 +221,7 @@ export async function createEmailSprintLesson(
 function averageRelevant(
   scores: Record<string, number | null>
 ): number | null {
-  const relevant = ["writing_formal", "business_vocabulary", "reading_intent"]
+  const relevant = ["writing", "business_vocabulary", "reading"]
     .map((k) => scores[k])
     .filter((s): s is number => s !== null);
   if (relevant.length === 0) return null;

@@ -21,16 +21,21 @@ import {
   type DeltaReport,
 } from "@/lib/bpo/delta-report";
 import { agentTeamByName } from "@/lib/bpo/generator";
+import {
+  SKILL_KEYS as PRIMARY_SKILL_KEYS,
+  SUPPORTING_SKILL_KEYS,
+  type AnySkillKey,
+} from "@/lib/scoring/rubric";
 
+// BPO is "the same one-person shape, scaled to many people" — the cohort
+// rollup covers every scored dimension (6 primary + 2 supporting), not just
+// the headline bars. Import the canonical taxonomy rather than duplicating
+// it locally (ISS-048).
 export const SKILL_KEYS = [
-  "speaking_fluency",
-  "listening_comprehension",
-  "writing_formal",
-  "reading_intent",
-  "business_vocabulary",
-  "presentation_delivery",
+  ...PRIMARY_SKILL_KEYS,
+  ...SUPPORTING_SKILL_KEYS,
 ] as const;
-export type SkillKey = (typeof SKILL_KEYS)[number];
+export type SkillKey = AnySkillKey;
 
 /** A skill is a common gap when the cohort mean sits this far below target. */
 export const GAP_MARGIN = 150;

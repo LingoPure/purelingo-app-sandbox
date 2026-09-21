@@ -18,10 +18,10 @@ const roster = [
 
 function rawScores(): RawAgentScore[] {
   return [
-    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "speaking_fluency", score: 600, target: TARGET },
-    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "writing_formal", score: 540, target: TARGET },
-    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "speaking_fluency", score: 760, target: TARGET },
-    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "writing_formal", score: 700, target: TARGET },
+    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "speaking", score: 600, target: TARGET },
+    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "writing", score: 540, target: TARGET },
+    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "speaking", score: 760, target: TARGET },
+    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "writing", score: 700, target: TARGET },
   ];
 }
 
@@ -49,13 +49,13 @@ test("intelligence rollup produces role/team/overall capability", () => {
 test("common gaps flag skills below target by GAP_MARGIN", () => {
   const report = buildOrgIntelligence(EMPLOYER, rawScores(), emptyDelta());
 
-  const speaking = report.common_gaps.find((g) => g.skill === "speaking_fluency")!;
+  const speaking = report.common_gaps.find((g) => g.skill === "speaking")!;
   // mean=(600+760)/2=680, target 700 → gap 20
   assert.equal(speaking.mean, 680);
   assert.equal(speaking.gap, 20);
   assert.equal(speaking.is_common_gap, false);
 
-  const writing = report.common_gaps.find((g) => g.skill === "writing_formal")!;
+  const writing = report.common_gaps.find((g) => g.skill === "writing")!;
   // mean=(540+700)/2=620, gap 80
   assert.equal(writing.gap, 80);
   assert.equal(writing.is_common_gap, false);
@@ -64,25 +64,25 @@ test("common gaps flag skills below target by GAP_MARGIN", () => {
 test("large shortfall is flagged as a common gap and sorts first", () => {
   const scores = rawScores();
   scores.push(
-    { student_id: "s3", student_name: "Pham Thanh Tam", role: "Manufacturing Sales Rep", team: "alpha", skill: "writing_formal", score: 500, target: TARGET }
+    { student_id: "s3", student_name: "Pham Thanh Tam", role: "Manufacturing Sales Rep", team: "alpha", skill: "writing", score: 500, target: TARGET }
   );
   const report = buildOrgIntelligence(EMPLOYER, scores, emptyDelta());
-  const writing = report.common_gaps.find((g) => g.skill === "writing_formal")!;
+  const writing = report.common_gaps.find((g) => g.skill === "writing")!;
   // mean=(540+700+500)/3=580, gap 120 — under GAP_MARGIN, so NOT a common gap
   assert.equal(writing.gap, 120);
   assert.equal(writing.is_common_gap, false);
 
   const bigGap = scores.map((s) => ({ ...s, score: 320 }));
   const bigReport = buildOrgIntelligence(EMPLOYER, bigGap, emptyDelta());
-  const big = bigReport.common_gaps.find((g) => g.skill === "writing_formal")!;
+  const big = bigReport.common_gaps.find((g) => g.skill === "writing")!;
   assert.equal(big.is_common_gap, true);
   assert.ok(big.gap! > GAP_MARGIN);
 });
 
 test("training demand sorted lowest-first", () => {
   const scores: RawAgentScore[] = [
-    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "speaking_fluency", score: 760, target: TARGET },
-    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "speaking_fluency", score: 470, target: TARGET },
+    { student_id: "s2", student_name: "Vo Ngoc Anh", role: "BPO Operator", team: "bravo", skill: "speaking", score: 760, target: TARGET },
+    { student_id: "s1", student_name: "Bui Thi Lan", role: "BPO Operator", team: "alpha", skill: "speaking", score: 470, target: TARGET },
   ];
   const report = buildOrgIntelligence(EMPLOYER, scores, emptyDelta());
   assert.ok(report.training_demand[0].studentId === "s1");
@@ -91,12 +91,12 @@ test("training demand sorted lowest-first", () => {
 
 test("improvement trend surfaces employer + role delta", () => {
   const baseline = {
-    s1: { speaking_fluency: { score: 600, source: "workplace" as const } },
-    s2: { speaking_fluency: { score: 620, source: "workplace" as const } },
+    s1: { speaking: { score: 600, source: "workplace" as const } },
+    s2: { speaking: { score: 620, source: "workplace" as const } },
   };
   const trained = {
-    s1: { speaking_fluency: { score: 800, source: "workplace_trained" as const } },
-    s2: { speaking_fluency: { score: 820, source: "workplace_trained" as const } },
+    s1: { speaking: { score: 800, source: "workplace_trained" as const } },
+    s2: { speaking: { score: 820, source: "workplace_trained" as const } },
   };
   const delta = computeDelta(baseline as ScoreSet, trained as ScoreSet, roster);
 

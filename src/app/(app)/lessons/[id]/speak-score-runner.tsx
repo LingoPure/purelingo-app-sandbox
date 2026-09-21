@@ -327,9 +327,9 @@ function ResultsPanel({
         }`}
       >
         <ScoreTile
-          label="Speaking fluency"
-          score={evaluation.speaking_fluency.score}
-          band={evaluation.speaking_fluency.cefr_band}
+          label="Speaking"
+          score={evaluation.speaking.score}
+          band={evaluation.speaking.cefr_band}
         />
         <ScoreTile
           label="Business vocabulary"

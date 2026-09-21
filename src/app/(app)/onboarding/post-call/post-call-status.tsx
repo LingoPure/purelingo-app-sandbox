@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Bilingual } from "@/lib/i18n/translate";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 type Props = {
   name: string | null;
@@ -28,14 +28,16 @@ const SCORE_SCALE = 1000;
 type StatusBody = {
   discovery_status: string;
   complete: boolean;
-  scores: Array<{ skill: SkillKey; score: number; target: number }> | null;
+  scores: Array<{ skill: AnySkillKey; score: number; target: number }> | null;
 };
 
-const SKILL_LABELS: Partial<Record<SkillKey, string>> = {
-  speaking_fluency: "Speaking fluency",
-  listening_comprehension: "Listening comprehension",
-  writing_formal: "Writing — formal",
-  reading_intent: "Reading — intent",
+const SKILL_LABELS: Partial<Record<AnySkillKey, string>> = {
+  speaking: "Speaking",
+  listening: "Listening",
+  writing: "Writing",
+  reading: "Reading",
+  grammar: "Grammar",
+  live_interaction: "Live interaction",
   business_vocabulary: "Business vocabulary",
   presentation_delivery: "Presentation",
 };

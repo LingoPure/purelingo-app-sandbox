@@ -14,7 +14,7 @@ const roster = [
 function scoreSet(rows: Array<[string, number]>): ScoreSet {
   const set: ScoreSet = {};
   for (const [studentId, score] of rows) {
-    const skill = "speaking_fluency";
+    const skill = "speaking";
     set[studentId] ??= {};
     set[studentId][skill] = { score, source: "workplace" };
   }

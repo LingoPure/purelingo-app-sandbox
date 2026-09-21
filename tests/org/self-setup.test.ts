@@ -81,12 +81,12 @@ function makeInput(overrides: Partial<SelfSetupInput> = {}): SelfSetupInput {
     role: "Customer Service",
     nativeLanguage: "vi",
     baselines: {
-      speaking_fluency: 60,
-      presentation_delivery: 50,
-      writing_formal: 45,
-      business_vocabulary: 55,
-      listening_comprehension: 70,
-      reading_intent: 50,
+      speaking: 60,
+      listening: 70,
+      writing: 45,
+      reading: 50,
+      grammar: 55,
+      live_interaction: 65,
     },
     ...overrides,
   };
@@ -137,8 +137,8 @@ test("happy path: creates org → employer → role → baselines → student li
     [...SELF_SETUP_SKILLS].sort(),
   );
   // Spot-check a known value.
-  const fluRow = baselineRows.find((r) => r.skill === "speaking_fluency");
-  assert.ok(fluRow, "speaking_fluency baseline present");
+  const fluRow = baselineRows.find((r) => r.skill === "speaking");
+  assert.ok(fluRow, "speaking baseline present");
   assert.equal(fluRow.min_score, 60);
   assert.equal(fluRow.role_id, "role-99");
 
@@ -273,12 +273,12 @@ test("membership insert error → stops at 'membership'", async () => {
 test("all 6 SELF_SETUP_SKILLS are seeded with the values from input.baselines", async () => {
   const { chain, admin } = makeAdmin();
   const baselines = {
-    speaking_fluency: 99,
-    presentation_delivery: 88,
-    writing_formal: 77,
-    business_vocabulary: 66,
-    listening_comprehension: 55,
-    reading_intent: 44,
+    speaking: 99,
+    listening: 55,
+    writing: 77,
+    reading: 44,
+    grammar: 66,
+    live_interaction: 88,
   };
   await runSelfSetup(admin, makeInput({ baselines }));
 

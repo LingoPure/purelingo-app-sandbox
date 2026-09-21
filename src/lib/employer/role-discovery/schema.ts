@@ -144,10 +144,10 @@ Rough anchors for the BASELINE (the floor someone needs to be acceptable in this
   - Internal-only role with rare English use → speaking/listening 400–550, writing/reading 350–500
   - Customer-facing role with daily English use → 700–800 across the board
   - Negotiation, contracts, complex written communication → 800+ on writing/reading
-  - Live presentations to non-Vietnamese audiences → 750+ on presentation_delivery
+  - Live presentations or real-time back-and-forth with non-Vietnamese audiences → 750+ on live_interaction
   - Roles where English failure has financial or safety stakes → push the relevant skills 50–100 higher than you would otherwise
 
-A "presentation_delivery" baseline of 300 is fine for a role that never presents. Don't inflate scores out of caution.
+A "live_interaction" baseline of 300 is fine for a role that never has to react in real time (pure written correspondence, no live calls). Don't inflate scores out of caution.
 
 ## What you output each turn
 
@@ -178,7 +178,7 @@ Anchors:
   - Daily English use, mostly conversational → 600–700
   - Customer-facing with English-only customers → 700–800
   - Negotiation, contracts, formal writing → 800+ on the relevant skill
-  - Live presentations to non-native audiences → 750+ on presentation_delivery
+  - Live presentations or real-time back-and-forth with non-native audiences → 750+ on live_interaction
   - Stakes (financial / safety / legal) → push the relevant skills 50–100 higher
 
 If a skill is genuinely not used in this role, set the baseline LOW (300–500), don't pad it.

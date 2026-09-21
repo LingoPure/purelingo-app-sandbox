@@ -15,10 +15,10 @@ const BASELINE: BaselineSnapshot = {
   lp1000: { score: 550, band: "Professional", components: {} },
   cefr_macro: "B1",
   capabilities: [
-    { address: "speaking_fluency", score: 500, level: "B1" },
-    { address: "listening_comprehension", score: 650, level: "B2" },
-    { address: "writing_formal", score: 650, level: "B2" },
-    { address: "reading_intent", score: 650, level: "B2" },
+    { address: "speaking", score: 500, level: "B1" },
+    { address: "listening", score: 650, level: "B2" },
+    { address: "writing", score: 650, level: "B2" },
+    { address: "reading", score: 650, level: "B2" },
     { address: "business_vocabulary", score: 650, level: "B2" },
     { address: "presentation_delivery", score: 650, level: "B2" },
   ],
@@ -130,21 +130,21 @@ test("synthesizeObservations maps owned-skill rows into engine observations", ()
     {
       pseudonymous_id: PID,
       employer_id: EMPLOYER_ID,
-      skill: "writing_formal",
+      skill: "writing",
       observation: "register drift",
       created_at: "2030-01-01T00:00:00Z",
     },
     {
       pseudonymous_id: PID,
       employer_id: EMPLOYER_ID,
-      skill: "speaking_fluency",
+      skill: "speaking",
       observation: "mid-sentence stalls",
       created_at: "2030-01-01T00:00:01Z",
     },
   ];
-  const out = synthesizeObservations(rows, "writing_formal");
+  const out = synthesizeObservations(rows, "writing");
   assert.equal(out.length, 1);
-  assert.equal(out[0].skill, "writing_formal");
+  assert.equal(out[0].skill, "writing");
   assert.equal(out[0].observation, "register drift");
 });
 
@@ -160,14 +160,14 @@ test("applyWorkplaceEvidence resets and persists a new curriculum version", asyn
     {
       pseudonymous_id: PID,
       employer_id: EMPLOYER_ID,
-      skill: "speaking_fluency",
+      skill: "speaking",
       observation: "Call transcript shows mid-sentence stalls",
       created_at: "2030-01-01T00:00:00Z",
     },
     {
       pseudonymous_id: PID,
       employer_id: EMPLOYER_ID,
-      skill: "writing_formal",
+      skill: "writing",
       observation: "Draft shows register drift",
       created_at: "2030-01-01T00:00:00Z",
     },
@@ -202,7 +202,7 @@ test("applyWorkplaceEvidence does not reset when the evidence does not change ga
     {
       pseudonymous_id: PID,
       employer_id: EMPLOYER_ID,
-      skill: "reading_intent",
+      skill: "reading",
       observation: "Comprehension is steady",
       created_at: "2030-01-01T00:00:00Z",
     },

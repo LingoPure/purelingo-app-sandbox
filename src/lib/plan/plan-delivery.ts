@@ -16,16 +16,32 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SKILL_KEYS, type SkillKey } from "@/lib/scoring/rubric";
+import {
+  SKILL_KEYS,
+  SUPPORTING_SKILL_KEYS,
+  SKILL_LABELS,
+  type AnySkillKey,
+  type CefrBand,
+  type Lp18Band,
+  scoreToLp18,
+  scoreToCefrBand,
+  computeGap,
+} from "@/lib/scoring/rubric";
 import { generateLessonPlan, type PlanRecommendation } from "@/lib/lessons/plan-generator";
 
 export type SkillProfile = {
-  skill: SkillKey;
+  skill: AnySkillKey;
   label: string;
   score: number | null;
   baseline: number;
-  gap: number;
+  /** Gap vs the role-floor value (baseline) — "good enough for the job". Null when unassessed. */
+  roleFloorGap: number | null;
+  /** Gap vs the CEFR aspiration target — "the goal". Null when unassessed. */
+  targetGap: number | null;
+  /** false when score is null — render "not yet assessed", never a 0 gap. */
+  assessed: boolean;
   cefrBand: string;
+  lp18Band: Lp18Band | null;
   evidence: string;
 };
 
@@ -42,22 +58,17 @@ export type PlanData = {
   role: string;
   employer: string;
   currentLevel: string;
+  /** LP-18 micro-band for currentLevel, e.g. "B2.3" — null if no skill is assessed yet. */
+  currentLp18: Lp18Band | null;
   targetLevel: string;
   skills: SkillProfile[];
+  /** Supporting/secondary measures — business_vocabulary, presentation_delivery. */
+  supportingSkills: SkillProfile[];
   recommendations: PlanRecommendation[];
   phases: PlanPhase[];
   totalWeeks: number;
   commitmentStatement: string;
 };
-
-function scoreToCefr(score: number | null): string {
-  if (score == null) return "N/A";
-  if (score >= 800) return "B2+";
-  if (score >= 650) return "B2";
-  if (score >= 500) return "B1";
-  if (score >= 350) return "A2";
-  return "A1";
-}
 
 /**
  * Build the full plan data from a student's scores + role context.
@@ -75,7 +86,7 @@ export async function buildPlan(
 
   const studentName = student?.name ?? "there";
   const firstName = studentName.split(" ")[0];
-  const targetLevel = student?.target_level ?? "B2";
+  const targetLevel = (student?.target_level as CefrBand | undefined) ?? "B2";
 
   let roleName = "your role";
   let employerName = "your company";
@@ -108,20 +119,39 @@ export async function buildPlan(
     scoreMap.set(row.skill, { score: row.score, target: row.target });
   }
 
-  // 3. Build skill profiles
-  const skills: SkillProfile[] = SKILL_KEYS.map((skill) => {
+  // 3. Build skill profiles — six primary dimensions (the headline bars) and,
+  // separately, the two supporting/secondary measures (ISS-048).
+  const buildProfile = (skill: AnySkillKey): SkillProfile => {
     const row = scoreMap.get(skill);
     const score = row?.score ?? null;
     const baseline = row?.target ?? 800;
-    const gap = score == null ? 0 : Math.max(0, baseline - score);
-    const label = skill.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return { skill, label, score, baseline, gap, cefrBand: scoreToCefr(score), evidence: "" };
-  });
+    const { roleFloorGap, targetGap, assessed } = computeGap(score, baseline, targetLevel);
+    return {
+      skill,
+      label: SKILL_LABELS[skill],
+      score,
+      baseline,
+      roleFloorGap,
+      targetGap,
+      assessed,
+      cefrBand: assessed ? scoreToCefrBand(score!) : "not yet assessed",
+      lp18Band: assessed ? scoreToLp18(score!) : null,
+      evidence: "",
+    };
+  };
+  const skills: SkillProfile[] = SKILL_KEYS.map(buildProfile);
+  const supportingSkills: SkillProfile[] = SUPPORTING_SKILL_KEYS.map(buildProfile);
 
-  // 4. Compute current aggregate level
-  const scores = skills.filter((s) => s.score != null).map((s) => s.score!);
-  const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-  const currentLevel = scoreToCefr(avgScore || null);
+  // 4. Compute current aggregate level — same scoreToCefrBand/scoreToLp18 the
+  // Dashboard uses, over the same live gap_scores, so the two surfaces agree
+  // by construction rather than by coincidence (ISS-047).
+  const assessedScores = skills.filter((s) => s.assessed).map((s) => s.score!);
+  const avgScore =
+    assessedScores.length > 0
+      ? assessedScores.reduce((a, b) => a + b, 0) / assessedScores.length
+      : null;
+  const currentLevel = avgScore != null ? scoreToCefrBand(avgScore) : "N/A";
+  const currentLp18 = avgScore != null ? scoreToLp18(avgScore) : null;
 
   // 5. Generate lesson recommendations
   const recommendations = await generateLessonPlan(supabase, studentId);
@@ -135,8 +165,10 @@ export async function buildPlan(
     role: roleName,
     employer: employerName,
     currentLevel,
+    currentLp18,
     targetLevel,
     skills,
+    supportingSkills,
     recommendations,
     phases,
     totalWeeks: 16,
@@ -207,11 +239,15 @@ function buildPhases(
  */
 export function compilePlanPrompt(plan: PlanData): string {
   const skillSummary = plan.skills
-    .map(
-      (s) =>
-        `- ${s.label}: ${s.score != null ? `${s.score}/1000 (${s.cefrBand})` : "not yet scored"} ` +
-        `(baseline: ${s.baseline}/1000, gap: ${s.gap})`
-    )
+    .map((s) => {
+      if (!s.assessed) {
+        return `- ${s.label}: not yet assessed (role floor: ${s.baseline}/1000)`;
+      }
+      return (
+        `- ${s.label}: ${s.score}/1000 (${s.lp18Band}, ${s.cefrBand}) ` +
+        `— role-floor gap: ${s.roleFloorGap}, target-level gap (${plan.targetLevel}): ${s.targetGap}`
+      );
+    })
     .join("\n");
 
   const phaseSummary = plan.phases
@@ -234,7 +270,7 @@ export function compilePlanPrompt(plan: PlanData): string {
 
 - Name: ${plan.firstName}
 - Role: ${plan.role} at ${plan.employer}
-- Current level: ${plan.currentLevel}
+- Current level: ${plan.currentLevel}${plan.currentLp18 ? ` (${plan.currentLp18})` : ""}
 - Target level: ${plan.targetLevel}
 
 ## THEIR SCORES (out of 1000)

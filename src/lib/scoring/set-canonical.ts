@@ -19,7 +19,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export type GapScoreSource =
   | "discovery"
@@ -31,7 +31,8 @@ export type GapScoreSource =
 
 export type CanonicalWrite = {
   studentId: string;
-  skill: SkillKey;
+  /** Primary or supporting — any of the 8 scored dimensions (ISS-048). */
+  skill: AnySkillKey;
   score: number;
   target: number;
   source: GapScoreSource;

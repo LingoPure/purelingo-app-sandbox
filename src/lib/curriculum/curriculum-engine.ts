@@ -12,7 +12,7 @@
  * Engine version string: CUR-ENGINE-v1.0.0
  */
 
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey as SkillKey } from "@/lib/scoring/rubric";
 
 export const CURRICULUM_ENGINE_VERSION = "CUR-ENGINE-v1.0.0";
 
@@ -21,19 +21,23 @@ export const CURRICULUM_ENGINE_VERSION = "CUR-ENGINE-v1.0.0";
 const GAP_THRESHOLD = 100;
 
 const MODALITY_MAP: Record<SkillKey, CurriculumModality[]> = {
-  speaking_fluency: ["speaking", "live_tutor"],
-  listening_comprehension: ["comprehension", "live_tutor"],
-  writing_formal: ["writing"],
-  reading_intent: ["writing"],
+  speaking: ["speaking", "live_tutor"],
+  listening: ["comprehension", "live_tutor"],
+  writing: ["writing"],
+  reading: ["writing"],
+  grammar: ["writing", "live_tutor"],
+  live_interaction: ["speaking", "live_tutor"],
   business_vocabulary: ["writing", "live_tutor"],
   presentation_delivery: ["speaking", "live_tutor"],
 };
 
 const SKILL_TITLES: Record<SkillKey, string> = {
-  speaking_fluency: "Speaking practice — monologue or dialogue",
-  listening_comprehension: "Listening comprehension — repeat and interpret",
-  writing_formal: "Writing practice — email or report draft",
-  reading_intent: "Reading comprehension — subtext and intent",
+  speaking: "Speaking practice — monologue or dialogue",
+  listening: "Listening comprehension — repeat and interpret",
+  writing: "Writing practice — email or report draft",
+  reading: "Reading comprehension — subtext and intent",
+  grammar: "Grammar accuracy drill — tense, agreement, articles",
+  live_interaction: "Live interaction practice — turn-taking and repair",
   business_vocabulary: "Vocabulary drill — register-aware contexts",
   presentation_delivery: "Presentation practice — structured delivery",
 };
@@ -190,8 +194,8 @@ export function computeSkillGaps(
   }
 
   const all_skills: SkillKey[] = [
-    "speaking_fluency", "listening_comprehension", "writing_formal",
-    "reading_intent", "business_vocabulary", "presentation_delivery",
+    "speaking", "listening", "writing", "reading", "grammar", "live_interaction",
+    "business_vocabulary", "presentation_delivery",
   ];
 
   return all_skills.map((skill) => {

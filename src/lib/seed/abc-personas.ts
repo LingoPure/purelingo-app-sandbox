@@ -8,7 +8,7 @@
  * code. So: simulated humans, real LLM assessment.
  */
 
-import type { SkillKey } from "@/lib/scoring/rubric";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 
 export const ABC_EMPLOYER = {
   name: "ABC Manufacturer",
@@ -36,7 +36,7 @@ export type AbcRole = {
   name: string;
   description: string;
   /** 0–1000 scale per skill (post-rescale migration 0011). */
-  baselines: Record<SkillKey, number>;
+  baselines: Record<AnySkillKey, number>;
 };
 
 export const ABC_ROLES: AbcRole[] = [
@@ -46,10 +46,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "Assembly-line operator on shifts at the Bình Dương plant. Reads English work instructions and safety bulletins from the German machinery vendor. Brief verbal exchanges with foreign supervisors during line audits. Almost no writing.",
     baselines: {
-      speaking_fluency: 600,
-      listening_comprehension: 700,
-      writing_formal: 400,
-      reading_intent: 500,
+      speaking: 600,
+      listening: 700,
+      writing: 400,
+      reading: 500,
+      grammar: 450,
+      live_interaction: 650,
       business_vocabulary: 500,
       presentation_delivery: 300,
     },
@@ -60,10 +62,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "Coordinates between operators (Vietnamese-only) and the foreign engineering team. Reads spec sheets and ISO docs in English; writes incident reports and corrective-action notes; runs short stand-ups with the visiting QA delegation.",
     baselines: {
-      speaking_fluency: 700,
-      listening_comprehension: 750,
-      writing_formal: 700,
-      reading_intent: 750,
+      speaking: 700,
+      listening: 750,
+      writing: 700,
+      reading: 750,
+      grammar: 700,
+      live_interaction: 700,
       business_vocabulary: 700,
       presentation_delivery: 600,
     },
@@ -74,10 +78,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "B2B sales rep handling export accounts in Australia, Singapore, and the UK. Negotiates prices, drafts proposals, and presents quarterly reviews to client procurement teams over Teams calls.",
     baselines: {
-      speaking_fluency: 800,
-      listening_comprehension: 750,
-      writing_formal: 750,
-      reading_intent: 800,
+      speaking: 800,
+      listening: 750,
+      writing: 750,
+      reading: 800,
+      grammar: 750,
+      live_interaction: 750,
       business_vocabulary: 800,
       presentation_delivery: 750,
     },
@@ -88,10 +94,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "Sources raw materials from international suppliers. Reads contracts and incoterms documents; drafts purchase orders and clarification emails; runs supplier-call follow-ups in English.",
     baselines: {
-      speaking_fluency: 700,
-      listening_comprehension: 700,
-      writing_formal: 800,
-      reading_intent: 800,
+      speaking: 700,
+      listening: 700,
+      writing: 800,
+      reading: 800,
+      grammar: 800,
+      live_interaction: 650,
       business_vocabulary: 750,
       presentation_delivery: 600,
     },
@@ -102,10 +110,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "Handles technical documentation, troubleshooting calls with foreign equipment vendors, and design-review meetings. Writes detailed RCA reports; reads dense technical PDFs; presents engineering changes to mixed local/foreign audiences.",
     baselines: {
-      speaking_fluency: 700,
-      listening_comprehension: 750,
-      writing_formal: 850,
-      reading_intent: 850,
+      speaking: 700,
+      listening: 750,
+      writing: 850,
+      reading: 850,
+      grammar: 850,
+      live_interaction: 700,
       business_vocabulary: 800,
       presentation_delivery: 650,
     },
@@ -116,10 +126,12 @@ export const ABC_ROLES: AbcRole[] = [
     description:
       "Front-line on phone + chat with English-speaking distributors and end customers. Handles complaints, follow-ups, and warranty claims — speaking and listening under time pressure dominate the day.",
     baselines: {
-      speaking_fluency: 800,
-      listening_comprehension: 800,
-      writing_formal: 700,
-      reading_intent: 750,
+      speaking: 800,
+      listening: 800,
+      writing: 700,
+      reading: 750,
+      grammar: 700,
+      live_interaction: 800,
       business_vocabulary: 750,
       presentation_delivery: 650,
     },

@@ -15,13 +15,20 @@ type RoleKey =
   | "accounts_finance"
   | "training_ld";
 
+// Six PRIMARY dimensions only (ISS-048) — the two supporting measures
+// (business_vocabulary, presentation_delivery) are not role-customised;
+// they use the flat 800 default everywhere. grammar/live_interaction are
+// genuinely new dimensions with no historical data, so these numbers are
+// a judgment call (not derived from prior scores) — set per role from the
+// same rationale as the existing four: grammar tracks written-precision
+// demand, live_interaction tracks how real-time/reactive the role is.
 type BaselineScores = {
-  speaking_fluency: number;
-  presentation_delivery: number;
-  writing_formal: number;
-  business_vocabulary: number;
-  listening_comprehension: number;
-  reading_intent: number;
+  speaking: number;
+  listening: number;
+  writing: number;
+  reading: number;
+  grammar: number;
+  live_interaction: number;
 };
 
 type RoleDef = {
@@ -38,12 +45,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Must decode prospect intent; talking well is useless if you pitch the wrong thing",
     baselines: {
-      speaking_fluency: 650,
-      presentation_delivery: 500,
-      writing_formal: 400,
-      business_vocabulary: 550,
-      listening_comprehension: 700,
-      reading_intent: 450,
+      speaking: 650,
+      listening: 700,
+      writing: 400,
+      reading: 450,
+      grammar: 450,
+      live_interaction: 650,
     },
   },
   {
@@ -52,12 +59,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Cold outreach is persuasion; fluency and confidence determine whether they stay on the line",
     baselines: {
-      speaking_fluency: 750,
-      presentation_delivery: 650,
-      writing_formal: 450,
-      business_vocabulary: 600,
-      listening_comprehension: 550,
-      reading_intent: 400,
+      speaking: 750,
+      listening: 550,
+      writing: 450,
+      reading: 400,
+      grammar: 500,
+      live_interaction: 700,
     },
   },
   {
@@ -66,12 +73,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Customer leads the conversation; misunderstanding the issue = wrong resolution = churn",
     baselines: {
-      speaking_fluency: 600,
-      presentation_delivery: 400,
-      writing_formal: 450,
-      business_vocabulary: 550,
-      listening_comprehension: 750,
-      reading_intent: 500,
+      speaking: 600,
+      listening: 750,
+      writing: 450,
+      reading: 500,
+      grammar: 500,
+      live_interaction: 750,
     },
   },
   {
@@ -80,12 +87,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Must extract precise technical details from non-technical users; vocabulary prevents miscommunication",
     baselines: {
-      speaking_fluency: 550,
-      presentation_delivery: 400,
-      writing_formal: 550,
-      business_vocabulary: 650,
-      listening_comprehension: 700,
-      reading_intent: 600,
+      speaking: 550,
+      listening: 700,
+      writing: 550,
+      reading: 600,
+      grammar: 600,
+      live_interaction: 700,
     },
   },
   {
@@ -94,12 +101,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Document-in, document-out function; spoken English is irrelevant to core output",
     baselines: {
-      speaking_fluency: 350,
-      presentation_delivery: 300,
-      writing_formal: 650,
-      business_vocabulary: 550,
-      listening_comprehension: 400,
-      reading_intent: 650,
+      speaking: 350,
+      listening: 400,
+      writing: 650,
+      reading: 650,
+      grammar: 700,
+      live_interaction: 300,
     },
   },
   {
@@ -108,12 +115,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Evaluates interactions and writes evaluations; analytical documentation function",
     baselines: {
-      speaking_fluency: 450,
-      presentation_delivery: 450,
-      writing_formal: 700,
-      business_vocabulary: 600,
-      listening_comprehension: 650,
-      reading_intent: 700,
+      speaking: 450,
+      listening: 650,
+      writing: 700,
+      reading: 700,
+      grammar: 700,
+      live_interaction: 500,
     },
   },
   {
@@ -122,12 +129,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Shifts between reading resumes, interviewing, writing policies — no single skill dominates",
     baselines: {
-      speaking_fluency: 600,
-      presentation_delivery: 550,
-      writing_formal: 600,
-      business_vocabulary: 550,
-      listening_comprehension: 550,
-      reading_intent: 550,
+      speaking: 600,
+      listening: 550,
+      writing: 600,
+      reading: 550,
+      grammar: 600,
+      live_interaction: 600,
     },
   },
   {
@@ -136,12 +143,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Document-driven function; financial writing precision prevents real risk",
     baselines: {
-      speaking_fluency: 350,
-      presentation_delivery: 300,
-      writing_formal: 700,
-      business_vocabulary: 650,
-      listening_comprehension: 350,
-      reading_intent: 700,
+      speaking: 350,
+      listening: 350,
+      writing: 700,
+      reading: 700,
+      grammar: 750,
+      live_interaction: 300,
     },
   },
   {
@@ -150,12 +157,12 @@ const ROLES: RoleDef[] = [
     rationale:
       "Training IS delivery; if they cannot present, nothing else matters",
     baselines: {
-      speaking_fluency: 700,
-      presentation_delivery: 700,
-      writing_formal: 550,
-      business_vocabulary: 550,
-      listening_comprehension: 500,
-      reading_intent: 500,
+      speaking: 700,
+      listening: 500,
+      writing: 550,
+      reading: 500,
+      grammar: 550,
+      live_interaction: 650,
     },
   },
 ];
@@ -298,28 +305,28 @@ export function SelfSetup() {
             Role baseline (what this role demands)
           </p>
           <BaselineRow
-            label="Speaking fluency"
-            score={selectedRole.baselines.speaking_fluency}
+            label="Speaking"
+            score={selectedRole.baselines.speaking}
           />
           <BaselineRow
-            label="Presentation & delivery"
-            score={selectedRole.baselines.presentation_delivery}
+            label="Listening"
+            score={selectedRole.baselines.listening}
           />
           <BaselineRow
-            label="Formal writing"
-            score={selectedRole.baselines.writing_formal}
+            label="Writing"
+            score={selectedRole.baselines.writing}
           />
           <BaselineRow
-            label="Business vocabulary"
-            score={selectedRole.baselines.business_vocabulary}
+            label="Reading"
+            score={selectedRole.baselines.reading}
           />
           <BaselineRow
-            label="Listening comprehension"
-            score={selectedRole.baselines.listening_comprehension}
+            label="Grammar"
+            score={selectedRole.baselines.grammar}
           />
           <BaselineRow
-            label="Reading & intent"
-            score={selectedRole.baselines.reading_intent}
+            label="Live interaction"
+            score={selectedRole.baselines.live_interaction}
           />
         </div>
       )}

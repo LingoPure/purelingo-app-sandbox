@@ -81,14 +81,32 @@ export function TRadar({ skills, size = 360 }: { skills: Skill[]; size?: number 
         />
       )}
 
-      {hasAnyScore &&
-        skills.map((s, i) => {
-          if (s.score == null) return null;
-          const p = polarPoint(cx, cy, (s.score / SCALE_MAX) * maxR, angles[i]);
+      {/* An unassessed skill gets a distinct hollow/dashed marker rather than
+          no marker — otherwise indistinguishable from a real zero (ISS-060). */}
+      {skills.map((s, i) => {
+        const p = polarPoint(cx, cy, ((s.score ?? 0) / SCALE_MAX) * maxR, angles[i]);
+        if (s.score == null) {
           return (
-            <circle key={`dot-${s.key}`} cx={p.x} cy={p.y} r={3.6} fill="#ff9f1c" />
+            <circle
+              key={`dot-${s.key}`}
+              cx={p.x}
+              cy={p.y}
+              r={3.6}
+              fill="none"
+              stroke="#91a8b8"
+              strokeWidth={1.25}
+              strokeDasharray="2 2"
+            >
+              <title>{`${s.label}: not yet assessed`}</title>
+            </circle>
           );
-        })}
+        }
+        return (
+          <circle key={`dot-${s.key}`} cx={p.x} cy={p.y} r={3.6} fill="#ff9f1c">
+            <title>{`${s.label}: ${s.score}`}</title>
+          </circle>
+        );
+      })}
 
       {skills.map((s, i) => {
         const p = polarPoint(cx, cy, maxR + 24, angles[i]);
