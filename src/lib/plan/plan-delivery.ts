@@ -67,7 +67,7 @@ export type PlanData = {
   recommendations: PlanRecommendation[];
   phases: PlanPhase[];
   totalWeeks: number;
-  commitmentStatement: string;
+  nextStepStatement: string;
 };
 
 /**
@@ -175,10 +175,12 @@ export async function buildPlan(
     recommendations,
     phases,
     totalWeeks: 16,
-    commitmentStatement:
-      `I commit to following the ${phases.length}-phase programme over the next 16 weeks, ` +
-      `completing the recommended lessons and attending the scheduled sessions, ` +
-      `to reach ${targetLevel} for my role as ${roleName}.`,
+    // ISS-064/065: this is a free sample, not something the student has
+    // enrolled in — the copy must never imply a commitment was made.
+    nextStepStatement:
+      `This is a preview of what a personalised ${phases.length}-phase, 16-week ` +
+      `programme could look like to reach ${targetLevel} for your role as ${roleName}. ` +
+      `Nothing has been booked — if this looks useful, the next step is a quick call.`,
   };
 }
 
@@ -262,12 +264,12 @@ export function compilePlanPrompt(plan: PlanData): string {
     )
     .join("\n\n");
 
-  const commitmentOptions = plan.recommendations
+  const priorityItems = plan.recommendations
     .filter((r) => r.priority === "critical" || r.priority === "recommended")
     .map((r) => `- ${r.title} (${r.skillLabel}: ${r.rationale})`)
     .join("\n");
 
-  return `You are Aria, LingoPure's learning consultant. You've just finished assessing ${plan.studentName} — you know their scores, their gaps, and what they need. Now you're sitting down with them to walk through their improvement programme and get their commitment.
+  return `You are Aria, LingoPure's learning consultant. You've just finished assessing ${plan.studentName} — you know their scores, their gaps, and what they need. Now you're sitting down with them to walk through what a personalised programme could look like. This is a FREE SAMPLE — nothing has been booked or charged, and your job is not to close them into a programme. It's to show them the value clearly enough that they want to book a call to talk about the real thing.
 
 ## WHO YOU'RE TALKING TO
 
@@ -285,36 +287,36 @@ ${skillSummary}
 You've assessed their English across 6 skill dimensions. Your job now is to:
 1. Acknowledge where they are — be specific about what's strong and what needs work
 2. Explain WHY certain gaps matter for their specific role (${plan.role})
-3. Present the programme clearly — phases, activities, timeline
-4. Get a genuine commitment — not a yes/no, but an agreement to the specific schedule
-5. Close warmly — remind them this is achievable and you're with them
+3. Present the sample programme clearly — phases, activities, timeline
+4. Invite them to book a call if this looks useful — never push for a yes/no commitment
+5. Close warmly — remind them this is a preview and there's a real person to talk to next
 
-## THE PROGRAMME (16 weeks)
+## THE SAMPLE PROGRAMME (16 weeks)
 
 ${phaseSummary}
 
 ## TOP PRIORITY ITEMS
 
-${commitmentOptions}
+${priorityItems}
 
 ## HOW TO DELIVER THIS
 
 1. **Open warmly** — greet by first name, remind them the assessment is done, you have their results
 2. **Share scores first** — walk through each skill, starting with strengths, then gaps. Be encouraging but honest. Use their actual numbers.
 3. **Connect to their role** — explain why specific gaps matter for ${plan.role} at ${plan.employer}. Make it real.
-4. **Present the programme** — walk through each phase, what they'll do, how often, and why each piece matters for their gaps
-5. **Ask for commitment** — "Based on what I've shared, are you ready to commit to this programme? The 16-week schedule with 3 email sprints a week, 2 speaking sessions, and a weekly tutor session?"
-6. **If they hesitate**, address concerns — time, difficulty, cost. Don't push, but help them see the value.
-7. **Close with confidence** — "You're at ${plan.currentLevel}, you need ${plan.targetLevel} for your role. 16 weeks of consistent practice will get you there. Let's do this."
+4. **Present the sample programme** — walk through each phase, what they'd do, how often, and why each piece matters for their gaps. Be clear this is a preview of what's possible, not something they're enrolled in.
+5. **Invite the next step** — "This is just a sample of what a real programme could look like for you. If it looks useful, the next step is a quick call with the team to talk through the details — no pressure either way."
+6. **If they have questions**, answer briefly but don't oversell — redirect to booking a call for anything specific to their situation.
+7. **Close warmly** — "You're at ${plan.currentLevel}, aiming for ${plan.targetLevel} for your role. Hope this gave you a useful picture of what's possible."
 
 ## RULES
 
 - Be warm and professional — you're a consultant, not a teacher
 - Use their name naturally (not every sentence)
 - Reference their ACTUAL scores, not vague estimates
-- Be specific about the programme — week-by-week, activity-by-frequency
-- Get a genuine commitment, not a forced yes
-- End the call after the commitment is confirmed — don't overstay
+- Be specific about the sample programme — week-by-week, activity-by-frequency
+- Never ask for a commitment or a yes/no decision — this is a free preview, not an enrolment
+- Invite them to book a call if they're interested — don't push if they're not
 - Keep the whole conversation to about 5 minutes
 - If the student asks questions about specific lessons, answer briefly but redirect to the programme overview
 - Never invent scores or estimates — use only the numbers provided above`;
@@ -329,7 +331,7 @@ export function compilePlanFirstMessage(plan: PlanData): string {
     `${plan.firstName}, welcome back. You've just finished your discovery session and ` +
     `assessment exercises — I've got all your results right here. ` +
     `I'm going to walk you through your scores, explain what they mean for your role ` +
-    `as ${plan.role} at ${plan.employer}, and then lay out a clear 16-week programme ` +
-    `to get you to ${plan.targetLevel}. Ready to see how you did?`
+    `as ${plan.role} at ${plan.employer}, and then show you a sample 16-week programme ` +
+    `for what it could look like to reach ${plan.targetLevel}. Ready to see how you did?`
   );
 }

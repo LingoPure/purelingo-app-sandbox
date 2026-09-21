@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { VoiceWidget } from "@caistech/elevenlabs-convai/react";
 
 type PlanSession = {
@@ -19,6 +20,7 @@ type PlanSession = {
  * commitment to the /api/plan/delivery endpoint.
  */
 export function PlanDelivery() {
+  const router = useRouter();
   const [session, setSession] = useState<PlanSession | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
@@ -71,6 +73,13 @@ export function PlanDelivery() {
     }
   };
 
+  const bookACall = async () => {
+    // Record interest (best-effort — a failed write must never block getting
+    // to the booking page) then take the student to /book-a-demo.
+    await recordCommitment(true).catch(() => {});
+    router.push("/book-a-demo");
+  };
+
   if (error) {
     return (
       <div className="mx-auto max-w-lg rounded-xl border border-red-200 bg-red-50 p-6 text-center">
@@ -86,8 +95,7 @@ export function PlanDelivery() {
           role="status"
           className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800"
         >
-          ✓ Commitment recorded — you&apos;re on the programme. Your dashboard
-          will keep your schedule and scores moving.
+          ✓ Interest recorded — taking you to book a call.
         </div>
       )}
       {commitState === "declined" && (
@@ -95,8 +103,8 @@ export function PlanDelivery() {
           role="status"
           className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800"
         >
-          No problem — your programme stays available whenever you&apos;re ready
-          to commit.
+          No problem — your sample programme stays available on your dashboard
+          whenever you want to revisit it.
         </div>
       )}
 
@@ -129,7 +137,7 @@ export function PlanDelivery() {
             onReady={(controls) => {
               controlsRef.current = controls;
               controls.sendContextualUpdate(
-                "The student has just completed their assessment. You are presenting their programme and asking for commitment. Do not re-run the assessment."
+                "The student has just completed their assessment. You are presenting a free sample programme and inviting them to book a call if they're interested — this is not an enrolment and you should not ask for a commitment. Do not re-run the assessment."
               );
             }}
             onDisconnect={() => {
@@ -143,11 +151,11 @@ export function PlanDelivery() {
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <button
           type="button"
-          onClick={() => recordCommitment(true)}
+          onClick={bookACall}
           disabled={committing || !session}
           className="min-h-[44px] w-full rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {committing ? "Saving…" : "I commit to this programme"}
+          {committing ? "Saving…" : "Book a call"}
         </button>
         <button
           type="button"
@@ -155,7 +163,7 @@ export function PlanDelivery() {
           disabled={committing || !session}
           className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          Not now
+          Not right now
         </button>
       </div>
     </div>

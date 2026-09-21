@@ -6,6 +6,7 @@
  * POST /api/plan/delivery — record the student's commitment to the programme.
  */
 
+import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePlanAgentId } from "@/lib/plan/resolve-plan-agent";
@@ -14,6 +15,7 @@ import {
   compilePlanPrompt,
   compilePlanFirstMessage,
 } from "@/lib/plan/plan-delivery";
+import { sendPlanReportEmail } from "@/lib/email/plan-report";
 
 export async function GET() {
   const supabase = await createClient();
@@ -30,6 +32,13 @@ export async function GET() {
     const prompt = compilePlanPrompt(plan);
     const firstMessage = compilePlanFirstMessage(plan);
 
+    // Fire the "your sample programme is ready" email exactly once (ISS-064/065).
+    // Best-effort: a failed/duplicate send must never break rendering the plan
+    // the student is actively looking at right now.
+    void sendPlanReadyEmailOnce(supabase, user.id, plan).catch((err) => {
+      console.error("[plan/delivery] plan-report email failed:", err);
+    });
+
     return NextResponse.json({
       plan,
       promptOverride: prompt,
@@ -42,6 +51,42 @@ export async function GET() {
       { error: err instanceof Error ? err.message : "Plan generation failed" },
       { status: 500 }
     );
+  }
+}
+
+async function sendPlanReadyEmailOnce(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  studentId: string,
+  plan: Awaited<ReturnType<typeof buildPlan>>
+): Promise<void> {
+  const { data: student } = await supabase
+    .from("students")
+    .select("email, plan_report_sent_at")
+    .eq("id", studentId)
+    .maybeSingle();
+  const row = student as { email?: string | null; plan_report_sent_at?: string | null } | null;
+  if (!row?.email || row.plan_report_sent_at) return;
+
+  const h = await headers();
+  const origin =
+    h.get("origin") ??
+    (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
+      ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
+      : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
+
+  const result = await sendPlanReportEmail({
+    to: row.email,
+    firstName: plan.firstName,
+    role: plan.role,
+    currentLevel: plan.currentLevel,
+    targetLevel: plan.targetLevel,
+    origin,
+  });
+  if (result.ok) {
+    await supabase
+      .from("students")
+      .update({ plan_report_sent_at: new Date().toISOString() })
+      .eq("id", studentId);
   }
 }
 

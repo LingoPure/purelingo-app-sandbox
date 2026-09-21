@@ -30,22 +30,23 @@ export default async function PlanPage() {
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Your improvement programme
+          Your sample programme
         </h1>
         <p className="max-w-prose text-sm text-slate-600 sm:text-base">
           {plan.firstName}, here&apos;s how you did, what it means for your role
-          as {plan.role}, and the programme we propose to close the gap.
+          as {plan.role}, and what a personalised programme could look like to
+          close the gap. This is a free preview — nothing here has been booked.
         </p>
       </header>
 
-      {/* Voice delivery + commitment */}
+      {/* Voice delivery */}
       <section aria-label="Talk through your programme" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-900">
           Sit down with Aria
         </h2>
         <p className="mt-1 max-w-prose text-sm text-slate-600">
-          Aria will walk you through your results, the rationale behind each
-          area, and get your commitment to the programme.
+          Aria will walk you through your results and the rationale behind
+          each area, and show you what this sample programme could look like.
         </p>
         <div className="mt-4">
           <PlanDelivery />
@@ -215,15 +216,21 @@ export default async function PlanPage() {
         ))}
       </section>
 
-      {/* Commitment statement */}
+      {/* Next step */}
       <section
-        aria-label="Commitment"
+        aria-label="Next step"
         className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-6"
       >
-        <h2 className="font-semibold text-emerald-900">Your commitment</h2>
+        <h2 className="font-semibold text-emerald-900">Your next step</h2>
         <p className="mt-2 max-w-prose text-sm text-emerald-800">
-          {plan.commitmentStatement}
+          {plan.nextStepStatement}
         </p>
+        <a
+          href="/book-a-demo"
+          className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-emerald-700 px-5 text-sm font-semibold text-white hover:bg-emerald-800"
+        >
+          Book a call
+        </a>
       </section>
     </div>
   );
