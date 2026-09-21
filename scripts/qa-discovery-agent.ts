@@ -1,58 +1,78 @@
 /**
- * Live agent QA — runs a programmatic discovery session against the deployed
- * ElevenLabs ConvAI agent using a fictional Vietnamese B2B student persona,
- * then scores the transcript against the 6 dimensions from briefing §07.1
- * and the protocol-enforcement rules from §09.
+ * Live agent QA — runs a REAL text-mode ConvAI conversation against the
+ * deployed ElevenLabs discovery agent using a fictional Vietnamese B2B
+ * student persona, then scores the transcript against the 6 dimensions from
+ * briefing §07.1 and the protocol-enforcement rules from §09.
  *
  * Usage:
  *   npx tsx scripts/qa-discovery-agent.ts
  *
- * Env required: ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID. Loaded from
- * .env.local automatically.
+ * Env required: ELEVENLABS_AGENT_ID. Loaded from .env.local automatically.
+ * (ELEVENLABS_API_KEY is not required for this path — the agent is public,
+ * same as the browser widget, which also connects with a bare agentId.)
  *
- * Note: this calls ElevenLabs' /v1/convai/agents/{id}/simulate-conversation
- * endpoint. It does not consume voice minutes — it's text-only simulation
- * over the same system prompt and tools that drive a real call.
+ * HISTORY: this used to call ElevenLabs' single-shot
+ * /v1/convai/agents/{id}/simulate-conversation REST endpoint. That endpoint
+ * reliably fails on a realistic ~20-minute discovery conversation —
+ * `SocketError: other side closed` / `UND_ERR_SOCKET`, connection killed
+ * ~30-40s in with 0 bytes read, reproduced even with an unrelated dummy
+ * persona (2026-09-21). A short/simple simulation on that same endpoint
+ * completes fine in ~9s, so this looks like a timeout on ElevenLabs' side
+ * (or a network hop) tied to how long the full simulation takes to generate,
+ * not anything about this repo's prompt content.
+ *
+ * FIX: drive a real, turn-by-turn TEXT conversation instead of one giant
+ * blocking call — each round-trip is fast, so there's nothing for a
+ * long-request timeout to kill. Uses `@elevenlabs/client`'s `Conversation`
+ * in `textOnly` mode over a websocket (the same connection type + package
+ * the real app widget uses, just without audio). The persona's replies are
+ * a fixed, ordered script rather than a second LLM role-playing the
+ * student — good enough to smoke-test dimension coverage and the specific
+ * ISS-053 regression (Aria re-asking role/responsibility after the student
+ * already covered both), without adding another model dependency to a QA
+ * script.
  */
 
-import { config as loadEnv } from "dotenv";
-loadEnv({ path: ".env.local" });
-loadEnv();
-
-const PERSONA_PROMPT = `You are Nguyen Thi Lan, a 32-year-old Senior Account Manager at Vinh Hoan Export Co., a seafood exporter based in Ho Chi Minh City, Vietnam. You speak intermediate English (around B1+ in CEFR terms): generally fluent and confident in conversation, but you occasionally use Vietnamese-accented constructions, sometimes pause to find a word, and your formal writing in English needs work. Your tone is friendly and professional.
-
-Your situation:
-- You have been at the company for 4 years, promoted to Senior AM 8 months ago.
-- You manage 12 international client accounts, mostly in the US, UK, and Australia.
-- Your English usage in a typical week: ~15 emails to international clients (mostly transactional but some delicate negotiation), 2–3 video calls (mix of inbound client calls and outbound supplier calls), one weekly internal report in English to regional management, and one monthly presentation slot you dread.
-- Your boss wants you at B2 within 6 months because the company is opening an Australia desk and you may relocate.
-- You feel confident speaking but get stuck on formal email register and on understanding fast British accents in calls.
-- You prefer learning in short bursts (15–25 min), late evening (after kids are asleep around 9pm). You're competitive — you like leaderboards and would push harder if you knew where you stood vs peers.
-- Your Vietnamese literacy is excellent — university educated.
-
-How to behave in this conversation:
-- Speak naturally. Don't volunteer everything at once. Wait for the agent to ask.
-- Occasionally use a slightly imperfect English construction (e.g. "I am working there since 4 years", "the meeting was very interesting for me").
-- Be honest when the agent asks something you don't know.
-- If asked to interpret a business email, do it with reasonable but not perfect accuracy.
-- Aim to end the conversation when the agent signals wrap-up. Don't end early.
-- Do not break character. Do not mention you are a simulation.`;
+import { Conversation, type TextConversation } from "@elevenlabs/client";
 
 type TranscriptTurn = {
   role: "user" | "agent";
   message: string;
-  time_in_call_secs?: number;
 };
 
-type SimulateResponse = {
-  simulated_conversation: TranscriptTurn[];
-  analysis?: {
-    transcript_summary?: string;
-    call_successful?: string;
-    data_collection_results?: Record<string, unknown>;
-    evaluation_criteria_results?: Record<string, unknown>;
-  };
-};
+/**
+ * Nguyen Thi Lan, 32, Senior Account Manager at Vinh Hoan Export Co. (Ho Chi
+ * Minh City seafood exporter). B1+ English — fluent and confident but with
+ * occasional Vietnamese-accented constructions and a weaker formal-writing
+ * register. 4 years at the company, promoted 8 months ago; manages 12
+ * international accounts across the US/UK/Australia; her boss wants her at
+ * B2 within 6 months for a possible Australia relocation.
+ *
+ * Fixed, ordered script rather than an LLM role-playing her — sent one line
+ * per Aria turn regardless of Aria's exact wording. That's a deliberate
+ * simplification (a real student would react to what was actually asked),
+ * but it's sufficient to smoke-test dimension coverage and the specific
+ * regression this QA run exists to catch: turn 1 answers BOTH Dimension 1
+ * (role) and Dimension 3 (responsibilities) together, which is exactly the
+ * scenario Thao reported Aria re-asking from scratch (ISS-053).
+ */
+const LAN_TURNS: string[] = [
+  "I'm the Senior Account Manager for our international accounts team — I've been in the role about eight months, four years at the company overall. Day to day I manage twelve client accounts across the US, UK and Australia: emails, calls, negotiating pricing, and a weekly report to regional management.",
+  "I report directly to our regional director in Singapore. Maybe fifteen emails a week to clients, two or three calls, and one presentation a month that I always dread a little.",
+  "Yes, go ahead.",
+  "I think Sarah is hinting she wants to reopen the Q3 conversation, maybe get a better deal, without saying it directly.",
+  "I'm aiming for B2 within six months — my manager wants me ready in case I move to the new Australia office.",
+  "It's an employer requirement really, tied to the relocation.",
+  "I like short sessions, maybe 15 to 25 minutes, usually in the evening after my kids are asleep. I'm pretty competitive, so I like seeing how I compare to others. My Vietnamese reading and writing is very strong.",
+  "That's right.",
+  "Yes, that covers everything I think.",
+  "Sounds good, thank you.",
+];
+const LAN_FALLBACK =
+  "I think I've covered that already, but happy to go into more detail if it helps.";
+
+const MAX_AGENT_TURNS = 16;
+const MAX_WALL_MS = 4 * 60 * 1000; // hard cap so a stuck connection can't hang the script forever
 
 // Pre-call dynamic variables — must match what the runtime client passes
 // in src/app/(app)/onboarding/discovery-session.tsx. ConvAI does not
@@ -83,36 +103,77 @@ const QA_DYNAMIC_VARIABLES: Record<string, string> = {
     .replaceAll("{{native_language}}", QA_STUDENT.native_language),
 };
 
-async function simulate(
-  apiKey: string,
-  agentId: string
-): Promise<SimulateResponse> {
-  const res = await fetch(
-    `https://api.elevenlabs.io/v1/convai/agents/${agentId}/simulate-conversation`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        simulation_specification: {
-          simulated_user_config: {
-            first_message: "Hi, I'm here.",
-            language: "en",
-            prompt: { prompt: PERSONA_PROMPT },
-          },
-          dynamic_variables: QA_DYNAMIC_VARIABLES,
-        },
-      }),
-    }
-  );
+/**
+ * Drive a real text-mode ConvAI conversation turn by turn. Each agent
+ * message triggers the next scripted Lan reply after a short pause (so it
+ * doesn't look like a bot firing instantly); the session ends on
+ * MAX_AGENT_TURNS, the wall-clock cap, or the agent disconnecting on its
+ * own (its `end_call` tool, per the discovery-system-prompt closing phrase).
+ */
+async function runLiveConversation(agentId: string): Promise<TranscriptTurn[]> {
+  const transcript: TranscriptTurn[] = [];
+  let lanIdx = 0;
+  let agentTurnCount = 0;
+  let convo: TextConversation | null = null;
+  let settled = false;
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`simulate-conversation ${res.status}: ${text}`);
-  }
-  return (await res.json()) as SimulateResponse;
+  await new Promise<void>((resolve, reject) => {
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(wallClock);
+      fn();
+    };
+
+    const wallClock = setTimeout(() => {
+      console.log("  (hit the 4-minute wall-clock cap — ending session)");
+      settle(() => {
+        convo?.endSession().finally(resolve).catch(resolve);
+      });
+    }, MAX_WALL_MS);
+
+    Conversation.startSession({
+      agentId,
+      textOnly: true,
+      connectionType: "websocket",
+      dynamicVariables: QA_DYNAMIC_VARIABLES,
+      onConnect: () => {
+        console.log("  (connected)\n");
+      },
+      onMessage: (props) => {
+        const role: "agent" | "user" = props.source === "ai" ? "agent" : "user";
+        transcript.push({ role, message: props.message });
+        console.log(`  [${role === "agent" ? "ARIA" : "LAN "}] ${props.message}`);
+
+        if (role !== "agent") return;
+        agentTurnCount++;
+        if (agentTurnCount >= MAX_AGENT_TURNS) {
+          settle(() => {
+            convo?.endSession().finally(resolve).catch(resolve);
+          });
+          return;
+        }
+        const reply = LAN_TURNS[lanIdx] ?? LAN_FALLBACK;
+        lanIdx++;
+        setTimeout(() => convo?.sendUserMessage(reply), 500);
+      },
+      onDisconnect: (details) => {
+        console.log(`  (disconnected: ${details.reason})`);
+        settle(resolve);
+      },
+      onError: (message) => {
+        console.error(`  (connection error: ${message})`);
+      },
+    })
+      .then((c) => {
+        convo = c;
+      })
+      .catch((err) => {
+        settle(() => reject(err));
+      });
+  });
+
+  return transcript;
 }
 
 // ── Heuristic dimension coverage scoring ─────────────────────────────────────
@@ -239,23 +300,19 @@ function turnCount(transcript: TranscriptTurn[]) {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
   const agentId = process.env.ELEVENLABS_AGENT_ID;
-  if (!apiKey || !agentId) {
-    throw new Error(
-      "ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID must be set in env"
-    );
+  if (!agentId) {
+    throw new Error("ELEVENLABS_AGENT_ID must be set in env");
   }
 
-  console.log("\n▶ Running simulated discovery session...\n");
+  console.log("\n▶ Running LIVE discovery session (text mode)...\n");
   console.log(`  Agent: ${agentId}`);
   console.log(`  Persona: Nguyen Thi Lan, B1+ Senior Account Manager (HCMC)\n`);
 
   const start = Date.now();
-  const result = await simulate(apiKey, agentId);
+  const transcript = await runLiveConversation(agentId);
   const elapsedSecs = Math.round((Date.now() - start) / 1000);
 
-  const transcript = result.simulated_conversation;
   const counts = turnCount(transcript);
   const coverage = scoreCoverage(transcript);
   const englishOnly = checkEnglishOnly(transcript);
@@ -266,10 +323,10 @@ async function main() {
   const overall =
     allCovered && englishOnly && closing && readingTest ? "PASS" : "REVIEW";
 
-  console.log(`◾ Simulation finished in ${elapsedSecs}s — ${counts.total} turns (${counts.agent} agent / ${counts.user} user)\n`);
+  console.log(`\n◾ Session finished in ${elapsedSecs}s — ${counts.total} turns (${counts.agent} agent / ${counts.user} user)\n`);
   console.log(`◾ Verdict: ${overall}\n`);
 
-  console.log("◾ Dimension coverage (≥2 trigger hits = covered):");
+  console.log("◾ Dimension coverage (≥1 trigger hit = covered):");
   for (const d of coverage) {
     const mark = d.covered ? "✓" : "✗";
     console.log(`  ${mark} ${d.label.padEnd(50)} (${d.hits} hits)`);
@@ -279,29 +336,45 @@ async function main() {
   console.log(`◾ English-only:                          ${englishOnly ? "✓" : "✗ Vietnamese chars detected"}`);
   console.log(`◾ Closing phrase template:               ${closing ? "✓" : "✗ wrap-up phrase missing"}`);
 
-  if (result.analysis?.transcript_summary) {
-    console.log(`\n◾ ElevenLabs summary:\n  ${result.analysis.transcript_summary}\n`);
-  }
-  if (result.analysis?.call_successful) {
-    console.log(`◾ ElevenLabs call_successful: ${result.analysis.call_successful}`);
+  // ISS-053 regression check: turn 1 deliberately answers BOTH role and
+  // responsibilities. Print every agent turn that still matched the
+  // "responsibilities" or "role_seniority" triggers AFTER that point, so a
+  // human can eyeball whether it's Aria re-asking from scratch (a fail) or
+  // just referencing/building on what Lan already said (fine).
+  const laterAgentTurns = transcript.filter((t) => t.role === "agent").slice(1);
+  const roleOrRespDim = DIMENSIONS.filter((d) =>
+    ["role_seniority", "responsibilities"].includes(d.key)
+  );
+  const possibleReasks = laterAgentTurns.filter((t) =>
+    roleOrRespDim.some((d) => d.triggers.some((re) => re.test(t.message)))
+  );
+  console.log(
+    `\n◾ ISS-053 check — turns after #1 matching role/responsibility triggers (${possibleReasks.length}); ` +
+      `review manually for "re-ask from scratch" vs. "referencing what was already said":`
+  );
+  for (const t of possibleReasks) {
+    console.log(`  [ARIA] ${t.message}`);
   }
 
   // Save full transcript for human review.
   const path = `qa-transcript-${Date.now()}.json`;
   await import("node:fs/promises").then((fs) =>
-    fs.writeFile(path, JSON.stringify({ transcript, analysis: result.analysis }, null, 2))
+    fs.writeFile(path, JSON.stringify({ transcript }, null, 2))
   );
   console.log(`\n◾ Full transcript saved → ${path}\n`);
 
-  // Print first 6 and last 4 turns for at-a-glance review.
+  // Print first 6 and last 4 turns for at-a-glance review (they've already
+  // scrolled by live above, so this is mainly useful for a long transcript).
   console.log("◾ Transcript (first 6 + last 4 turns):\n");
   const head = transcript.slice(0, 6);
-  const tail = transcript.slice(-4);
+  const tail = transcript.length > head.length ? transcript.slice(Math.max(head.length, transcript.length - 4)) : [];
   for (const t of head) {
     const tag = t.role === "agent" ? "ARIA" : "LAN ";
     console.log(`  [${tag}] ${t.message}`);
   }
-  if (transcript.length > 10) console.log(`  ... ${transcript.length - 10} turns omitted ...`);
+  if (transcript.length > head.length + tail.length) {
+    console.log(`  ... ${transcript.length - head.length - tail.length} turns omitted ...`);
+  }
   for (const t of tail) {
     const tag = t.role === "agent" ? "ARIA" : "LAN ";
     console.log(`  [${tag}] ${t.message}`);
