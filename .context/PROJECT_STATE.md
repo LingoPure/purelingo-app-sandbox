@@ -1,9 +1,47 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-21 (Phase 2 code cutover complete)
+**Updated:** 2026-09-21 (Phase 2 SHIPPED — code pushed + deployed, 0058 migration applied)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
 
-## Session log — 2026-09-21 continued #2 (Phase 2 code cutover COMPLETE — ready to push)
+## Session log — 2026-09-21 continued #3 (Phase 2 SHIPPED)
+
+**Pushed + migrated. The taxonomy cutover is live.**
+
+- Commit `678ea53` pushed to both `origin` (caistech/LingoPureAI) and `lingopure`
+  (LingoPure/purelingo-app-sandbox) → triggered a Vercel deploy of the sandbox.
+- Waited ~4.5 minutes (bounded poll loop; the live site was reachable throughout — Vercel does an
+  atomic swap, so a 200 during the window doesn't by itself prove the NEW deploy is live). **Could
+  not independently confirm the deployed commit SHA**: the Vercel CLI isn't installed, the connected
+  Vercel MCP is scoped to the Corporate AI Solutions team (only sees the STALE `lingo-pure-ai`
+  project, not `purelingo-app-sandbox` under the `lingopure-cloud`/`dev-lingo-pure` team), and there's
+  no local `.vercel/project.json` link. This is a real gap for next session (see below).
+- Then ran `supabase migration list` against the linked ref (`uovbwccvxgdghqvlpuql` — confirmed
+  correct, matches the sandbox) — confirmed 0057 already applied remotely, 0058 pending.
+- Ran `supabase db push` — **applied cleanly, no errors** ("Applying migration
+  0058_backfill_skill_taxonomy_renames.sql... Finished supabase db push."). This is a real Postgres
+  connection (not the Management API), so a constraint violation or bad SQL would have surfaced here.
+- **Could not independently re-query `gap_scores`/`role_baselines` afterward to eyeball the new skill
+  values**: `supabase db query --linked` 403'd ("account does not have the necessary privileges" —
+  same Management-API restriction noted in earlier sessions), and reading `.env.local` directly to
+  script a service-role verification query was blocked by this session's tool permissions.
+
+**Not verified (be the one to close this next session):**
+1. **Deployed commit SHA matches `678ea53`** — recommend `npx portfolio-gate-deploy-status` once the
+   Vercel CLI is installed (`npm i -g vercel`) and linked to the correct team, or check the Vercel
+   dashboard directly (project `purelingo-app-sandbox`, team `dev-lingo-pure`/`lingopure-cloud`).
+2. **`gap_scores`/`role_baselines` actually show the new key names post-backfill** — the migration
+   reported success but wasn't independently re-queried. A quick check: `select distinct skill from
+   gap_scores` should show `speaking/listening/writing/reading` (not the old names) plus
+   `business_vocabulary`/`presentation_delivery` untouched, and zero rows still on
+   `speaking_fluency`/`listening_comprehension`/`writing_formal`/`reading_intent`.
+3. **A live discovery/battery run actually produces grammar + live_interaction scores** — this is
+   the first real end-to-end proof the new dimensions work, not just that the code compiles.
+
+**If either #1 or #2 comes back wrong**, the fix is small (re-push the code / re-run 0058) but should
+happen before Daniel/Shamini/Thao/Stephen are asked to re-run discovery (step 5 below) — don't want
+them re-assessed against a half-migrated backend.
+
+## Session log — 2026-09-21 continued #2 (Phase 2 code cutover COMPLETE — pushed this session)
 
 **The working tree now compiles clean.** `npx tsc --noEmit` passes with zero errors related to the
 taxonomy migration (the only remaining errors are pre-existing, unrelated mock-typing issues in
