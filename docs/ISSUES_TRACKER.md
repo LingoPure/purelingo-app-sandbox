@@ -128,9 +128,14 @@ severity tags are a triage starting point, to be confirmed in scoping.
       returns a friendly message, never the raw Postgres text, on the non-recoverable path; covered
       by `tests/org/self-setup.test.ts`. **Not done**: the real "join existing org" flow (name
       match ≠ membership) — still just silently mints a second organisation with a suffixed slug.
-- [ ] **ISS-050** `[HIGH]`: Target inconsistency — dashboard target badge shows **C2.1** while the
+- [x] **ISS-050** `[HIGH]`: Target inconsistency — dashboard target badge shows **C2.1** while the
       skill target line and My Programme both show **C1**. Confirm whether these are legitimately
-      different targets (e.g. pre- vs post-discovery re-target) or a bug. (Daniel §02/§04.)
+      different targets (e.g. pre- vs post-discovery re-target) or a bug. (Daniel §02/§04.) Fixed
+      `678ea53` (Phase 1) — the "Target" badge was fabricating an LP-18 micro-band from a hardcoded
+      `TARGET_SCORE` constant; a CEFR letter spans 3 micro-bands so there's no single correct one to
+      invent. Now renders the plain CEFR letter only, sourced from the same `target_level` field both
+      dashboard and `/plan` read — see the code comment at `dashboard/page.tsx` above the Target
+      badge.
 
 ### High
 - [ ] **ISS-051** `[HIGH]`: Auth — magic-link login shows "Email link is invalid or has expired" on
