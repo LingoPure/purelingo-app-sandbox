@@ -1,7 +1,63 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-22 continued (ISS-058 fixed; ISS-052 split — mic indicator confirmed present, live-text transcript is a genuine vendor limitation)
+**Updated:** 2026-09-23 (ISS-066 CRITICAL — discovery agent context injection was completely dead; fixed)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-23 (ISS-066 — the discovery agent's context injection never worked, for anyone, ever)
+
+Dennis ran a real live discovery call himself (as a fresh test student assigned to "Inbound Customer
+Service") — the first genuinely live, human-in-the-loop verification all session. It surfaced a
+bigger bug than anything found by code inspection: the conversation never connected to the nominated
+role at any point, and Aria told the student "you mentioned you're aiming for B2 level English" —
+the student never said that, and pushed back twice.
+
+**Traced to root cause, not patched at the symptom.** `discovery-session.tsx` computes
+`identityVariables` (role/employer/student name) but never passes them to the widget — dead code.
+The intended path, `session.promptOverride` (pushed as `overrides.agent.prompt.prompt` at connect),
+depends on `@caistech/discovery-agent`'s `startSession()` calling `config.primeContext(subjectId)` —
+a hook the package has always supported (confirmed in its own `.d.ts` and doc comments: *"what we
+already know, PUSHED into the agent so it walks in informed"*) that `ariaDiscoveryConfig` never
+implemented. Checked every other possible path before concluding this: the full `VoiceWidgetProps`
+interface has no other variable-injection mechanism, and the live agent's own ElevenLabs dashboard
+config has `dynamic_variable_placeholders: {}` — no fallback defaults set there either. **Net effect:
+every discovery call, for every student, ever, has run with the prompt's `{{role_name}}`/
+`{{target_level}}`/`{{employer_name}}`/`{{student_name}}`/`{{native_language}}` placeholders
+completely unsubstituted.** The prompt's own Dimension 5 instruction — "you already know they're
+aiming for `{{target_level}}` — confirm it, don't re-ask" — combined with the literal unresolved
+token to make the model hallucinate a plausible CEFR level instead of taking the prompt's own
+"if empty, ask" branch. "B2" wasn't a random guess: it appears elsewhere in the same prompt (the
+Dimension-4 reading-test benchmark) as LingoPure's de facto default.
+
+**Fixed**: implemented `ariaDiscoveryConfig.primeContext(subjectId)` in `aria-discovery-config.ts`,
+following the exact same server-only dynamic-import pattern the file's existing (but dead —
+`ariaDiscovery.webhookRoutes()` is never called anywhere) `onResult` already used, so the
+service-role key never risks reaching a client bundle. It loads the real student/role/employer rows
+and returns `SYSTEM_PROMPT` with every placeholder substituted.
+
+**One extra guard, found by reading the schema, not assumed**: `students.target_level` defaults to
+`'B2'` at the SCHEMA level (migration 0001) — every row is non-null whether or not anyone ever
+actually stated a level, so presence alone can't prove it was real. Since establishing the target
+level is literally Dimension 5 of a FIRST call, `primeContext` only trusts the stored value once a
+PRIOR discovery session has genuinely completed for that student (`discovery_status === 'complete'`)
+— otherwise treats it as empty, exactly matching the prompt's own contract, instead of laundering a
+schema default into a false "you told me" claim.
+
+**Verified against real data, not just compiled** (temp read-only script, deleted after use, no
+writes, no ElevenLabs call): against Dennis's own completed test student, the substitution correctly
+produced "a relaxed conversation about the Inbound Customer Service role at bigga corp, aiming for
+B2" — matching his real data. Against a never-assessed student, `target_level` correctly resolved to
+empty rather than the false schema-default. `tsc --noEmit` + `npm run build` clean.
+
+**Left deliberately untouched**: `onResult`/`webhookRoutes`/`extraction`/`interviewModel` on the same
+config object are dead code (the real scoring pipeline is the separately-built `score-discovery.ts`);
+`onResult` also writes an illegal `discovery_status` value, harmless only because it's unreachable.
+Flagged for a later cleanup pass, not fixed now — don't risk an unrelated change while landing a
+critical fix.
+
+**Still open**: this fix takes effect the moment the CODE deploys (no ElevenLabs-side push needed,
+unlike ISS-053/054) — but nobody has run a real live voice call through the fixed path yet to close
+the loop end-to-end. That's the next verification step, alongside the still-outstanding Vercel
+deploy-SHA confirmation from earlier in the session.
 
 ## Session log — 2026-09-22 continued #4 (ISS-052 / ISS-058)
 

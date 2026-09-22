@@ -305,3 +305,64 @@ severity tags are a triage starting point, to be confirmed in scoping.
       Dennis**: is "Book a call" one generic CTA regardless of context, or does it need to branch by
       who's asking (individual self-assessor vs. someone evaluating on behalf of a BPO/call-centre)?
       Scoped as its own phase, after Phase 2 (taxonomy migration) completes. (Dennis, 2026-09-21.)
+
+## Phase 11 — Raised 2026-09-23 (live-discovered by Dennis, own test discovery call)
+
+- [x] **ISS-066** `[CRITICAL]`: Discovery agent runs with ZERO real student context, for every call,
+      always — and hallucinates when it matters. Dennis ran a real discovery call as a fresh test
+      student assigned to "Inbound Customer Service": the conversation never connected to that role at
+      any point, and Aria stated "You mentioned you're aiming for B2 level English" to a student who
+      never said that (the student pushed back twice — "I never mentioned B2", "you're meant to be
+      telling me what I should be at, shouldn't you?"). (Dennis, live call transcript, 2026-09-22.)
+
+      **Root cause, traced fully**: `discovery-session.tsx` computes `identityVariables`
+      (role/employer/name) but never passes them to the widget — dead code. The documented "proper"
+      path (`session.promptOverride`, pushed via `overrides.agent.prompt.prompt`) depends on
+      `@caistech/discovery-agent`'s `startSession()` calling `config.primeContext(subjectId)` — a hook
+      `ariaDiscoveryConfig` never implemented. No other mechanism exists (checked the full
+      `VoiceWidgetProps` interface; checked the live agent's own dashboard config —
+      `dynamic_variable_placeholders: {}`, no fallback defaults set there either). Net effect: every
+      `{{role_name}}`/`{{target_level}}`/`{{employer_name}}`/`{{student_name}}`/`{{native_language}}`
+      placeholder in `scripts/discovery-system-prompt.ts` reaches the model completely unsubstituted,
+      for every call, always. Dimension 5's own instruction — *"You already know they're aiming for
+      `{{target_level}}`. Don't re-ask the level — confirm it"* — combined with the unsubstituted
+      literal token caused the model to hallucinate a plausible CEFR level rather than take the
+      prompt's own "if empty, ask" branch. "B2" is not a random guess: it appears repeatedly elsewhere
+      in this exact prompt (the Dimension-4 reading-test benchmark) as LingoPure's de facto default,
+      which the model most likely pattern-matched onto.
+
+      **Fixed 2026-09-23** — implemented `ariaDiscoveryConfig.primeContext(subjectId)`
+      (`src/lib/onboarding/aria-discovery-config.ts`): loads the student/role/employer rows
+      server-side (same dynamic-import, service-role-at-call-time pattern the file's existing
+      `onResult` already used, so the key never reaches a client bundle) and returns the full
+      `SYSTEM_PROMPT` with every real placeholder substituted, which `startSession()` now genuinely
+      pushes as a per-session override — no ElevenLabs-side push needed, this takes effect the moment
+      the app code deploys.
+
+      **One extra guard, not just a mechanical fix**: `students.target_level` defaults to `'B2'` **at
+      the schema level** (migration 0001), so every row has a non-null value whether or not anyone
+      ever actually stated one — presence alone can't distinguish "the student told us B2" from
+      "nobody's touched this column." Since establishing the target level is literally Dimension 5 of
+      a FIRST discovery call, `primeContext` only trusts the stored value once a PRIOR discovery
+      session has actually completed for that student (`discovery_status === 'complete'`, written by
+      `score-discovery.ts` after a real call) — otherwise treats it as empty and lets Aria ask, exactly
+      matching the prompt's own "any of these may be empty" contract instead of silently laundering a
+      schema default into a false "you told me" claim.
+
+      **Verified two ways against real data**, not just compiled: against Dennis's own completed test
+      student, the substitution correctly produced *"a relaxed conversation about the Inbound Customer
+      Service role at bigga corp, aiming for B2"* — matching his real role/employer. Against a
+      never-assessed student (`discovery_status: 'pending'`), `target_level` correctly resolved to
+      empty rather than the schema-default "B2". `tsc --noEmit` + `npm run build` clean.
+
+      **Also found, left alone deliberately**: `onResult`/`webhookRoutes`/`extraction`/`interviewModel`
+      on the same config object are dead code — `ariaDiscovery.webhookRoutes()` is never called
+      anywhere; the real scoring pipeline is the separately-built `score-discovery.ts` + its own
+      webhook. `onResult` also writes `discovery_status: "completed"`, which isn't even a legal value
+      (`'complete'` is) — harmless only because the path is unreachable. Not touched — out of scope for
+      this fix, flagged for a later cleanup pass rather than risking an unrelated change while fixing a
+      critical live bug.
+
+      **Not yet verified**: a real end-to-end voice call through the fixed path — everything above is
+      confirmed via direct code execution against live data, not a live ElevenLabs conversation. That
+      needs a fresh discovery call from an account with a nominated role to fully close.
