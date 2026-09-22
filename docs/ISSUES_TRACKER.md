@@ -176,7 +176,28 @@ severity tags are a triage starting point, to be confirmed in scoping.
       interim/live transcript appears while the student is speaking, and no mic-input-level indicator
       is shown. Determine whether the ConvAI/STT path exposes partial transcripts that the UI drops,
       or only returns finalized turns. Pass condition: live text appears during speech and finalises
-      without duplicate messages. (Daniel §03, Review Section 08 screenshot.)
+      without duplicate messages. (Daniel §03, Review Section 08 screenshot.) **Investigated
+      2026-09-22 — split into two, one closable, one not:**
+      1. **Mic-input-level indicator: CONFIRMED PRESENT**, as of the `@caistech/elevenlabs-convai`
+         0.17.1 bump (landed `45fc6be`, 2026-09-21 — incidental, never connected back to this issue).
+         Verified by reading the compiled widget source, not just the docstring:
+         `shouldShowInputLevel()` (`widget-logic.js`) only returns `false` on an explicit
+         `showInputLevel={false}`; `discovery-session.tsx` never sets it, so it defaults to `true`
+         and shows the built-in pulsing dot whenever connected and Aria isn't speaking. This is the
+         "system is hearing you mid-sentence" signal Daniel's Review Section 08 screenshot said was
+         missing.
+      2. **Live interim TEXT transcript: a confirmed vendor API limitation, not a LingoPure gap.**
+         `@caistech/elevenlabs-convai`'s own doc comment on `onInputVolume` states it directly:
+         *"This is the ONLY signal a visitor gets that the system is hearing them mid-sentence —
+         `onMessage` fires only once a turn is final."* That package's own changelog records checking
+         the ElevenLabs SDK at two versions (1.8.1 and 1.25.0) and finding no public interim-
+         transcript event either time. Daniel's literal pass condition ("live text appears during
+         speech") cannot be met with the current ElevenLabs Conversational AI SDK — there is no
+         partial-transcript event to read. **This needs a decision from Dennis on how to communicate
+         that to Daniel**, not further engineering time against this codebase — the honest options
+         are: accept the mic-indicator as the substitute signal, or raise it with ElevenLabs as a
+         feature request. Left unchecked rather than marked resolved, since the HIGH-severity ask
+         (live text) is genuinely not satisfied.
 
 ### Medium
 - [x] **ISS-053** `[MED]`: Aria discovery — duplicate questions observed: asked for role, got an
@@ -199,8 +220,16 @@ severity tags are a triage starting point, to be confirmed in scoping.
 - [ ] **ISS-055** `[MED]`: Role drifted between setup and results — setup showed "Inbound Customer
       Service," results show "Inbound Sales." Confirm with Daniel whether he changed it during setup;
       if not, investigate persistence. (Daniel §04.)
-- [ ] **ISS-058** `[MED]`: CEFR-18 micro-levels visible on the completed Dashboard are not carried into
-      My Programme or spoken by Aria's plan-agent explanation. (Daniel §02.)
+- [x] **ISS-058** `[MED]`: CEFR-18 micro-levels visible on the completed Dashboard are not carried into
+      My Programme or spoken by Aria's plan-agent explanation. (Daniel §02.) Fixed 2026-09-22 —
+      **Aria's spoken explanation already had it**: `plan-delivery.ts` computes `lp18Band` per skill
+      and `currentLp18` overall, and `compilePlanPrompt()` already includes both in the context Aria
+      is given (found on reading, not new work). **The on-screen `/plan` page was the real gap** — it
+      never rendered either value even though `PlanData` already carried them. Now shows the overall
+      micro-band next to the CEFR letter in the header ("You are: B2 (B2.3)") and per-skill next to
+      each score ("672/1000 · B2.3"), matching the Dashboard's existing `ScoreBar` convention. `tsc
+      --noEmit` + `npm run build` clean (one local build attempt hit a transient font-CDN network
+      failure unrelated to this change; retried clean).
 - [x] **ISS-059** `[MED]`: No distinction shown between role-minimum gap and target-level gap — 5 of 6
       role gaps display `0` while C1 remains a stated goal, reading as contradictory. Show both gap
       types separately and explain how each influences practice. (Daniel §04.) Fixed `678ea53` —

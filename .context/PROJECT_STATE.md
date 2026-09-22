@@ -1,7 +1,36 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-22 continued (ISS-053/054 pushed to the LIVE production Aria agent + independently verified)
+**Updated:** 2026-09-22 continued (ISS-058 fixed; ISS-052 split — mic indicator confirmed present, live-text transcript is a genuine vendor limitation)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-22 continued #4 (ISS-052 / ISS-058)
+
+**ISS-058 (CEFR-18 depth not carried into My Programme/Aria) — closed.** Read `plan-delivery.ts`
+before touching anything: it already computes `lp18Band` per skill and `currentLp18` overall, and
+`compilePlanPrompt()` already threads both into what Aria is briefed on — Aria's spoken half was
+never actually missing. The real gap was the on-screen `/plan` page (`plan/page.tsx`), which never
+rendered either value despite `PlanData` already carrying them. Added the micro-band next to the
+CEFR letter in the header and next to each skill's score, matching the Dashboard `ScoreBar`
+convention already in place. `tsc --noEmit` clean; `npm run build` clean after two transient
+font-CDN network failures unrelated to the change (this sandbox's local network, not Vercel's — the
+same class of flakiness seen earlier this session with posthog telemetry calls).
+
+**ISS-052 (live transcription) — investigated and split, NOT fully closeable.**
+1. **Mic-input-level indicator: confirmed present.** `@caistech/elevenlabs-convai` was bumped
+   0.16.0→0.17.1 in `45fc6be` (2026-09-21, incidental to an unrelated fix, never connected back to
+   this issue). That version's `VoiceWidget` ships a built-in pulsing mic-level dot, on by default.
+   Verified by reading the COMPILED logic, not the docstring: `shouldShowInputLevel()`
+   (`widget-logic.js`) only returns `false` on an explicit `showInputLevel={false}`, and
+   `discovery-session.tsx` never sets it — so it's live right now.
+2. **Live interim TEXT transcript: a confirmed ElevenLabs SDK limitation, not a LingoPure gap.**
+   The shared package's own doc comment on `onInputVolume` states plainly that it's "the ONLY signal
+   a visitor gets that the system is hearing them mid-sentence" because `onMessage` only fires once a
+   turn is final — and its changelog records checking the vendor SDK at two different versions with
+   the same result. There is no partial-transcript event to consume. Daniel's literal pass condition
+   ("live text appears during speech") cannot be met with the current ElevenLabs integration.
+   **Left open in the tracker rather than marked resolved** — this needs Dennis to decide how to
+   communicate the constraint to Daniel (accept the mic-indicator as the substitute signal, or raise
+   a feature request with ElevenLabs), not more engineering time against this codebase.
 
 ## Session log — 2026-09-22 continued #3 (ISS-053/054 actually deployed — a stale-blocker correction)
 

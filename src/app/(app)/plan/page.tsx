@@ -60,7 +60,11 @@ export default async function PlanPage() {
             <h2 className="text-lg font-semibold text-slate-900">Your scores</h2>
             <span className="text-sm font-medium text-slate-500">
               Target: <span className="font-bold text-slate-900">{plan.targetLevel}</span>
-              {" · "}You are: <span className="font-bold text-emerald-700">{plan.currentLevel}</span>
+              {" · "}You are:{" "}
+              <span className="font-bold text-emerald-700">
+                {plan.currentLevel}
+                {plan.currentLp18 && ` (${plan.currentLp18})`}
+              </span>
             </span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -69,7 +73,9 @@ export default async function PlanPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-slate-800">{skill.label}</span>
                   <span className="text-slate-500">
-                    {skill.assessed ? `${skill.score}/1000` : "—"}
+                    {skill.assessed
+                      ? `${skill.score}/1000${skill.lp18Band ? ` · ${skill.lp18Band}` : ""}`
+                      : "—"}
                   </span>
                 </div>
                 {skill.assessed ? (
@@ -129,7 +135,9 @@ export default async function PlanPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-slate-800">{skill.label}</span>
                   <span className="text-slate-500">
-                    {skill.assessed ? `${skill.score}/1000` : "—"}
+                    {skill.assessed
+                      ? `${skill.score}/1000${skill.lp18Band ? ` · ${skill.lp18Band}` : ""}`
+                      : "—"}
                   </span>
                 </div>
                 {skill.assessed ? (
