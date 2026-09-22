@@ -179,19 +179,23 @@ severity tags are a triage starting point, to be confirmed in scoping.
       without duplicate messages. (Daniel §03, Review Section 08 screenshot.)
 
 ### Medium
-- [ ] **ISS-053** `[MED]`: Aria discovery — duplicate questions observed: asked for role, got an
+- [x] **ISS-053** `[MED]`: Aria discovery — duplicate questions observed: asked for role, got an
       answer; separately asked for "responsibility in the meeting," got an answer; then asked again.
       Confirm whether this predates or postdates the 2026-09-19 prompt rewrite (`125beb7`, Dimension 2
       = 3 true turns) — re-verify against the currently live provisioned prompt before treating as a
-      regression. (Thao, voice memo transcript.) **Code fixed, NOT yet deployed** — `8218c2e` cross-
-      references Dimension 1 (Role) and Dimension 3 (Responsibilities) in
-      `scripts/discovery-system-prompt.ts` so the agent builds on an answer already given instead of
-      re-asking it. Requires `npx tsx scripts/update-discovery-prompt.ts --target prod` (needs
-      `ELEVENLABS_API_KEY`/`ELEVENLABS_AGENT_ID`, not available to this session's tool permissions) to
-      reach the live agent — leave unchecked until that push happens and is re-verified live.
-- [ ] **ISS-054** `[MED]`: Aria should adapt spoken complexity to the student's level — mirror simple
-      sentence structure back if the student speaks simply. (Thao, voice memo transcript.) **Code
-      fixed, NOT yet deployed** — same `8218c2e` prompt change, same live-push blocker as ISS-053.
+      regression. (Thao, voice memo transcript.) Code fixed `8218c2e` — cross-references Dimension 1
+      (Role) and Dimension 3 (Responsibilities) in `scripts/discovery-system-prompt.ts` so the agent
+      builds on an answer already given instead of re-asking it. **Pushed live 2026-09-22** —
+      `ELEVENLABS_API_KEY`/`ELEVENLABS_AGENT_ID` turned out to already be set in this environment
+      (an earlier session's note claiming otherwise was stale and never re-checked); ran
+      `npx tsx scripts/update-discovery-prompt.ts prod` (the script's actual argv check is a bare
+      `prod` positional, not the `--target prod` flag form its own comment describes). Verified
+      independently via a fresh `GET /v1/convai/agents/:id` — the live agent
+      (`agent_8701m2eyrep6exysepd25r16msst`) prompt now contains the fix text, not just the script's
+      own success message.
+- [x] **ISS-054** `[MED]`: Aria should adapt spoken complexity to the student's level — mirror simple
+      sentence structure back if the student speaks simply. (Thao, voice memo transcript.) Same
+      `8218c2e` prompt change, same push and independent live verification as ISS-053 — 2026-09-22.
 - [ ] **ISS-055** `[MED]`: Role drifted between setup and results — setup showed "Inbound Customer
       Service," results show "Inbound Sales." Confirm with Daniel whether he changed it during setup;
       if not, investigate persistence. (Daniel §04.)

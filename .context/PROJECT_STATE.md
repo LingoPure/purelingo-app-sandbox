@@ -1,7 +1,35 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-22 continued (Tier 3 closed: ISS-059/060 reconciled + radar-fill contradiction fixed)
+**Updated:** 2026-09-22 continued (ISS-053/054 pushed to the LIVE production Aria agent + independently verified)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-22 continued #3 (ISS-053/054 actually deployed — a stale-blocker correction)
+
+When asked why ISS-052/053/054/058/063 weren't closed, I repeated an earlier session's note that
+ISS-053/054's live push was blocked on missing `ELEVENLABS_API_KEY`/`ELEVENLABS_AGENT_ID` — without
+re-checking it myself. Dennis pushed back; checked directly; **both were actually set in
+`.env.local` the whole time.** The blocker was stale and I passed it along uncritically — worth
+recording as the mistake it was, not glossing over.
+
+**Fixed for real, not just code-complete:**
+- Confirmed `scripts/discovery-system-prompt.ts` already contains both fixes (Dimension 1/3
+  cross-reference so Aria doesn't re-ask an answered question; the "mirror the student's spoken
+  complexity" instruction) before pushing anything.
+- Ran `npx tsx scripts/update-discovery-prompt.ts prod` — note the actual argv check in that script
+  is a bare `prod` positional argument, NOT the `--target prod` flag form its own comment describes;
+  `--target prod` would silently fall through to the sandbox target instead of throwing. Needed
+  `set -a; source .env.local; set +a;` first — the script doesn't load `.env.local` itself (only
+  reads `process.env` directly), unlike the inline verification scripts elsewhere this session that
+  used `require('dotenv').config(...)`.
+- **Independently verified** via a fresh `GET /v1/convai/agents/:id` (not trusting the script's own
+  "✓ Agent updated" message) — the live prompt on `agent_8701m2eyrep6exysepd25r16msst` now contains
+  both fix strings, prompt length 13004 chars.
+
+ISS-053/054 marked Resolved in both trackers. **Still open, unstarted**: ISS-052 (live transcription
+— genuinely unbuilt, not blocked), ISS-058 (CEFR-18 depth not carried into Programme/Aria —
+genuinely unstarted). **Still genuinely blocked**: ISS-063 (live walkthrough) — confirmed
+`QA_TEST_USER_EMAIL`/`QA_TEST_ADMIN_EMAIL` are NOT set in this environment, so this one's blocker is
+real, unlike ISS-053/054's turned out to be.
 
 ## Session log — 2026-09-22 continued #2 (Tier 3: gap-vs-missing-evidence honesty)
 
