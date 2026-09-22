@@ -1,7 +1,46 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-22 (ISS-047 reconciled + ISS-049 join-flow closed; Vercel deploy-SHA still unverified)
+**Updated:** 2026-09-22 continued (Tier 2 data gap closed: grammar/live_interaction baselines backfilled + scoring pipeline verified)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-22 continued (Tier 2: why grammar/live_interaction never score)
+
+Investigated the "significant functional gap" question directly: is the six-dimension taxonomy
+fix (ISS-048) real or hollow? Traced the full write path first (read before editing, per the
+workflow contract) — `score-discovery.ts` requires both new dimensions via `GapScoresSchema`,
+`loadBaselinesForStudent`/`loadBaselinesForRole` defensively default to flat 800 for any missing
+skill, and both role-creation paths (`self-setup.ts`, `/api/employer/roles`) already write all 6
+skills correctly for new roles. The code was never broken.
+
+**Root cause, confirmed two ways:**
+1. **No discovery session has run since the fix shipped.** Queried the 10 most recent completed
+   `discovery_sessions` live — the newest is 2026-09-20, a full day BEFORE `678ea53` (2026-09-21).
+   The new-dimension scoring path had simply never been exercised, live or otherwise.
+2. **`role_baselines` was never backfilled for the two new dimensions** — genuinely new data, not a
+   rename, so migration 0058 had nothing to carry over. Confirmed live: 108 rows across 19 roles,
+   zero for grammar/live_interaction.
+
+**Fixed:**
+- `supabase/migrations/0060_backfill_grammar_live_interaction_baselines.sql` — applied to the live
+  sandbox DB (`uovbwccvxgdghqvlpuql`, ref verified before push). 6 roles whose name matches a
+  self-setup.tsx preset got that preset's judgment-call values (grammar/live_interaction, same
+  rationale already documented there); the remaining ad-hoc roles got the explicit flat-800 default
+  (made explicit rather than relying on the runtime fallback). Live-verified after push:
+  `role_baselines` now has 19/19 rows for both new dimensions (was 0/19).
+- **Verified the scoring pipeline actually works**, not just that it doesn't crash: ran a synthetic
+  transcript (deliberately containing a self-corrected tense error and an explicit "sorry, can you
+  repeat?" turn-taking repair) through the REAL `SYSTEM_PROMPT` + `GapScoresSchema` + Claude call —
+  no DB write, so no fake data landed against a real student. The model correctly isolated grammar-
+  specific errors ("the claim process **take**", "I **offer** to escalate") as distinct from
+  speaking fluency, and live_interaction repair behaviour as distinct from presentation_delivery —
+  real signal, matching the SYSTEM_PROMPT's own worked examples, not just schema compliance. Script
+  was temporary (`scripts/tmp-verify-*.ts`), deleted after use, never committed.
+
+**Still open (unchanged by this fix):** no LIVE discovery session — a real voice call through Aria
+— has run since `678ea53` shipped. The write path is now proven correct in isolation (synthetic
+transcript) and the baseline data is real, but nobody has watched an actual student's discovery
+session write a real grammar/live_interaction row end to end. This is part of what ISS-063 (Daniel's
+full evidence-chain demo request) would close.
 
 ## Session log — 2026-09-22 (ISS-047 doc reconciliation, DB verification, ISS-049 join flow)
 

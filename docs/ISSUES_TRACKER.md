@@ -119,12 +119,23 @@ severity tags are a triage starting point, to be confirmed in scoping.
       (avg 623.5) and both pages now land on B2/B2.3, matching Dashboard's original figure — so `/plan`'s
       B1 was the divergent one. **Live verification still pending** — folds into the deploy-SHA +
       `gap_scores` DB check already open from Phase 2 (see PROJECT_STATE.md).
-- [ ] **ISS-048** `[CRITICAL]`: Six capability dimensions don't match Dan's reference framework.
+- [x] **ISS-048** `[CRITICAL]`: Six capability dimensions don't match Dan's reference framework.
       Sandbox shows *Speaking, Listening, Writing, Reading intent, Vocabulary, Presenting*; required
       per Dan's LP-18 spec is *Reading, Writing, Speaking, Grammar, Listening, Live Interaction*.
       Reconcile across radar charts, lists, `role_baselines`, results, and programme logic; confirm
       whether the mismatch reaches into `rubric.ts`/prompts/storage or is display-only. (Daniel §02
-      + reference `LingoPure_LP18_Master_Brain_Web_v6.1...html`.)
+      + reference `LingoPure_LP18_Master_Brain_Web_v6.1...html`.) Fixed `678ea53` — `SKILL_KEYS` in
+      `rubric.ts` is now the canonical `speaking/listening/writing/reading/grammar/live_interaction`,
+      consumed identically by Dashboard, `/plan`, self-setup, and the employer console (not
+      display-only — reaches storage). Checkbox reconciled 2026-09-22 (same gap as ISS-047 — code
+      landed, tracker wasn't updated). **Data backfill closed 2026-09-22** — migration `0060` gave
+      all 19 existing roles real grammar/live_interaction baselines (19/19 rows, was 0/19). **Scoring
+      pipeline verified end-to-end** against a synthetic transcript through the real
+      `SYSTEM_PROMPT`/`GapScoresSchema`/Claude call (no DB write) — correctly isolated grammar-
+      specific errors and live_interaction repair behaviour as distinct signals from their
+      neighbours. **Still open**: no live discovery session has run since `678ea53` shipped (newest
+      completed session predates it), so the write path is proven in isolation but not yet proven
+      against a real voice call end-to-end. See PROJECT_STATE.md.
 - [x] **ISS-049** `[CRITICAL]`: Org setup — entering `prelabz` as the company name throws a raw
       `organisations_slug_key` duplicate-key Postgres error to the user; a random name succeeds.
       Investigate create/retry semantics (does each submit create a new org? do partial attempts
