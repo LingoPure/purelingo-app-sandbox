@@ -118,12 +118,16 @@ severity tags are a triage starting point, to be confirmed in scoping.
       Reconcile across radar charts, lists, `role_baselines`, results, and programme logic; confirm
       whether the mismatch reaches into `rubric.ts`/prompts/storage or is display-only. (Daniel §02
       + reference `LingoPure_LP18_Master_Brain_Web_v6.1...html`.)
-- [ ] **ISS-049** `[CRITICAL]`: Org setup — entering `prelabz` as the company name throws a raw
+- [x] **ISS-049** `[CRITICAL]`: Org setup — entering `prelabz` as the company name throws a raw
       `organisations_slug_key` duplicate-key Postgres error to the user; a random name succeeds.
       Investigate create/retry semantics (does each submit create a new org? do partial attempts
       persist?); build a real "join existing org" flow (name match ≠ membership — separate orgs may
       share a display name); replace the raw DB error with guidance and preserve entered details for
-      retry. (Daniel §03, Review Section 08 screenshot.)
+      retry. (Daniel §03, Review Section 08 screenshot.) Fixed `8218c2e` — `runSelfSetup()` retries
+      the insert with a random slug suffix on a `23505` unique-violation (up to 5 attempts) and
+      returns a friendly message, never the raw Postgres text, on the non-recoverable path; covered
+      by `tests/org/self-setup.test.ts`. **Not done**: the real "join existing org" flow (name
+      match ≠ membership) — still just silently mints a second organisation with a suffixed slug.
 - [ ] **ISS-050** `[HIGH]`: Target inconsistency — dashboard target badge shows **C2.1** while the
       skill target line and My Programme both show **C1**. Confirm whether these are legitimately
       different targets (e.g. pre- vs post-discovery re-target) or a bug. (Daniel §02/§04.)
@@ -143,9 +147,15 @@ severity tags are a triage starting point, to be confirmed in scoping.
       answer; separately asked for "responsibility in the meeting," got an answer; then asked again.
       Confirm whether this predates or postdates the 2026-09-19 prompt rewrite (`125beb7`, Dimension 2
       = 3 true turns) — re-verify against the currently live provisioned prompt before treating as a
-      regression. (Thao, voice memo transcript.)
+      regression. (Thao, voice memo transcript.) **Code fixed, NOT yet deployed** — `8218c2e` cross-
+      references Dimension 1 (Role) and Dimension 3 (Responsibilities) in
+      `scripts/discovery-system-prompt.ts` so the agent builds on an answer already given instead of
+      re-asking it. Requires `npx tsx scripts/update-discovery-prompt.ts --target prod` (needs
+      `ELEVENLABS_API_KEY`/`ELEVENLABS_AGENT_ID`, not available to this session's tool permissions) to
+      reach the live agent — leave unchecked until that push happens and is re-verified live.
 - [ ] **ISS-054** `[MED]`: Aria should adapt spoken complexity to the student's level — mirror simple
-      sentence structure back if the student speaks simply. (Thao, voice memo transcript.)
+      sentence structure back if the student speaks simply. (Thao, voice memo transcript.) **Code
+      fixed, NOT yet deployed** — same `8218c2e` prompt change, same live-push blocker as ISS-053.
 - [ ] **ISS-055** `[MED]`: Role drifted between setup and results — setup showed "Inbound Customer
       Service," results show "Inbound Sales." Confirm with Daniel whether he changed it during setup;
       if not, investigate persistence. (Daniel §04.)
@@ -156,23 +166,30 @@ severity tags are a triage starting point, to be confirmed in scoping.
       types separately and explain how each influences practice. (Daniel §04.)
 - [ ] **ISS-060** `[MED]`: Missing/insufficient evidence must render as "Not assessed" / "Insufficient
       evidence" — never silently collapse to a zero score or "no gap." (Daniel §02.)
-- [ ] **ISS-061** `[MED]`: Live Interaction capability needs its 12 supporting telemetry signals (Tone
+- [x] **ISS-061** `[MED]`: Live Interaction capability needs its 12 supporting telemetry signals (Tone
       Alignment, Adaptive Shifting, Frame Integrity, Semantic Continuity, Repair Behaviour, Cognitive
       Load Alignment, Response Latency, Turn-Taking Behaviour, Hierarchy Sensitivity, Cultural
       Continuity, Hesitation Markers, Drift Detection) exposed individually, each tagged
       measured / inferred / insufficient-evidence. (Daniel §05 + reference "LP Telemetry Framework"
-      infographic.)
+      infographic.) Fixed `71f4bb4` — new "Live interaction telemetry" section on
+      `/dashboard/journey` lists all 12 with a score bar + evidence-status pill. **Caveat**: that page
+      is powered by the separate 2K assessment pipeline, which the live discovery→battery→plan flow
+      does not populate — so a real tester sees the honest "No telemetry recorded yet" empty state,
+      not live data, until that pipeline gets wired to real flow. Verified live in browser per the
+      commit message.
 
 ### Low
-- [ ] **ISS-056** `[LOW]`: Intro video duration label wrong — heading states "60s," actual clip is
-      0:26. (Daniel §03, Review Section 07 screenshot.)
+- [x] **ISS-056** `[LOW]`: Intro video duration label wrong — heading states "60s," actual clip is
+      0:26. (Daniel §03, Review Section 07 screenshot.) Fixed `8218c2e` — reads the real duration
+      from the video element's `loadedmetadata` event instead of a fixed guess.
 - [x] **ISS-057** `[LOW]`: Copy bugs — placeholder string `"for your role as your role"`; "Learning
       style" should read "Learning preferences"; a pre-assessment programme/commitment CTA appeared
       with N/A scores, unlabeled as sample data. (Daniel §03/§04.) First two fixed `e5e89e0`; third
       (N/A sample labeling + gap-driven duration instead of a fixed 16 weeks) fixed `45fc6be`.
-- [ ] **ISS-062** `[LOW]`: Radar chart — labels clipped at the left edge; ambiguous paired band/score
-      display (e.g. "C1.1 alongside B2" on the same row) needs an explained convention. (Daniel
-      §02/§07 + screenshot.)
+- [x] **ISS-062** `[LOW]` (label clipping only): Radar chart labels clipped at the left edge; fixed
+      `8218c2e` — widened the SVG viewBox with dedicated label margin (circle geometry unchanged).
+      **Still open**: the ambiguous paired band/score display convention (e.g. "C1.1 alongside B2" on
+      the same row) — not addressed, needs its own fix. (Daniel §02/§07 + screenshot.)
 
 ### Verification (gates sign-off, not a code bug per se)
 - [ ] **ISS-063** `[VERIFY]`: Daniel has requested a full evidence-chain + cross-page persistence
