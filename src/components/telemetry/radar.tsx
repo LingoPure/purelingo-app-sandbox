@@ -29,9 +29,24 @@ export function TRadar({ skills, size = 360 }: { skills: Skill[]; size?: number 
       })
       .join(" ");
 
-  const scoreValues = skills.map((s) => s.score ?? 0);
   const targetValues = skills.map((s) => s.target);
-  const hasAnyScore = skills.some((s) => s.score != null);
+  const assessedSkills = skills
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.score != null);
+  const hasAnyScore = assessedSkills.length > 0;
+
+  // Connects only assessed axes, skipping unassessed ones — an unassessed
+  // skill passing through 0 pulled the whole filled shape down at that
+  // vertex, reading as "measured near-zero" rather than "not measured"
+  // (ISS-060). The per-skill dot below already marks it distinctly; this
+  // makes the filled area agree rather than contradict it.
+  const scorePolygon = assessedSkills
+    .map(({ s, i }) => {
+      const r = (Math.max(0, Math.min(SCALE_MAX, s.score!)) / SCALE_MAX) * maxR;
+      const p = polarPoint(cx, cy, r, angles[i]);
+      return `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+    })
+    .join(" ");
 
   return (
     <svg
@@ -73,7 +88,7 @@ export function TRadar({ skills, size = 360 }: { skills: Skill[]; size?: number 
 
       {hasAnyScore && (
         <polygon
-          points={polygon(scoreValues)}
+          points={scorePolygon}
           fill="#35c9ef"
           fillOpacity={0.18}
           stroke="#35c9ef"

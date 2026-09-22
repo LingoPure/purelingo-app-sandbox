@@ -51,9 +51,26 @@ export function GapRadar({ skills, size = 360 }: Props) {
       })
       .join(" ");
 
-  const scoreValues = skills.map((s) => s.score ?? 0);
   const targetValues = skills.map((s) => s.target);
-  const hasAnyScore = skills.some((s) => s.score != null);
+  const assessedSkills = skills
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => s.score != null);
+  const hasAnyScore = assessedSkills.length > 0;
+
+  // The filled score polygon connects ONLY the axes with a real score,
+  // skipping straight past any unassessed one. Passing an unassessed skill
+  // through 0 pulled the whole shape's silhouette down at that vertex,
+  // reading as "this skill measured near-zero" rather than "not measured
+  // yet" — the exact conflation ISS-060 is about. The per-skill dot below
+  // already marks "not yet assessed" distinctly; this makes the FILLED AREA
+  // agree with it rather than contradict it.
+  const scorePolygon = assessedSkills
+    .map(({ s, i }) => {
+      const r = (Math.max(0, Math.min(SCALE_MAX, s.score!)) / SCALE_MAX) * maxRadius;
+      const p = polarPoint(cx, cy, r, angles[i]);
+      return `${p.x.toFixed(2)},${p.y.toFixed(2)}`;
+    })
+    .join(" ");
 
   return (
     <svg
@@ -108,10 +125,10 @@ export function GapRadar({ skills, size = 360 }: Props) {
         strokeDasharray="4 3"
       />
 
-      {/* Score polygon (filled) */}
+      {/* Score polygon (filled) — connects only assessed axes (ISS-060). */}
       {hasAnyScore && (
         <polygon
-          points={buildPolygon(scoreValues)}
+          points={scorePolygon}
           fill="var(--color-teal-soft)"
           fillOpacity={0.28}
           stroke="var(--color-teal)"
@@ -120,11 +137,9 @@ export function GapRadar({ skills, size = 360 }: Props) {
       )}
 
       {/* Score dots — an unassessed skill gets a distinct hollow/dashed
-          marker rather than no marker at all. The filled polygon still
-          passes through 0 for that axis (a true "no data" radar shape needs
-          a redesign beyond this fix), but the marker itself now tells the
-          viewer "not measured" instead of being indistinguishable from a
-          real zero score with no marker shown (ISS-060). */}
+          marker rather than no marker at all, so it reads as "not measured"
+          rather than being indistinguishable from a real zero score
+          (ISS-060). */}
       {skills.map((s, i) => {
         const r = ((s.score ?? 0) / SCALE_MAX) * maxRadius;
         const p = polarPoint(cx, cy, r, angles[i]);

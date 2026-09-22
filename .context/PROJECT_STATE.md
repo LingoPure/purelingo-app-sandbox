@@ -1,7 +1,29 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-22 continued (Tier 2 data gap closed: grammar/live_interaction baselines backfilled + scoring pipeline verified)
+**Updated:** 2026-09-22 continued (Tier 3 closed: ISS-059/060 reconciled + radar-fill contradiction fixed)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-22 continued #2 (Tier 3: gap-vs-missing-evidence honesty)
+
+Checked whether ISS-059 (role-floor gap vs target-level gap not distinguished) and ISS-060 (missing
+evidence must render "Not assessed", never a zero) were real gaps or another doc-reconciliation miss
+— same read-before-editing approach as Tier 2. Both turned out to be MOSTLY already fixed by
+`678ea53`, same pattern as ISS-047/048/050:
+- `computeGap()` already returns `roleFloorGap`/`targetGap` as two separate values, and `/plan`
+  already renders both labeled distinctly. Daniel's original complaint (a single unlabeled "Role
+  gap" column) was from the pre-migration version of that page.
+- The Dashboard's `ScoreBar` and `/plan`'s skill rows already render "—"/"Not yet assessed" for a
+  null score, never a numeric 0.
+
+**One real gap found and fixed today**: `GapRadar` (student dashboard) and `TRadar` (telemetry
+surfaces) already gave an unassessed skill a distinct hollow/dashed DOT marker (also landed
+`678ea53`), but the FILLED polygon behind it still plotted that axis through 0 — so the chart's
+overall shape read as "this skill measured near-zero" while the dot right next to it said "not yet
+assessed." A contradiction on the same chart. Both radars now build the score polygon from ONLY the
+assessed axes, skipping unassessed ones so the line jumps straight to the next assessed point rather
+than dipping to the centre. `tsc --noEmit` + `npm run build` clean.
+
+Reconciled ISS-059/060 in both trackers.
 
 ## Session log — 2026-09-22 continued (Tier 2: why grammar/live_interaction never score)
 

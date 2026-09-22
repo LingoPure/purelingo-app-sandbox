@@ -197,11 +197,24 @@ severity tags are a triage starting point, to be confirmed in scoping.
       if not, investigate persistence. (Daniel §04.)
 - [ ] **ISS-058** `[MED]`: CEFR-18 micro-levels visible on the completed Dashboard are not carried into
       My Programme or spoken by Aria's plan-agent explanation. (Daniel §02.)
-- [ ] **ISS-059** `[MED]`: No distinction shown between role-minimum gap and target-level gap — 5 of 6
+- [x] **ISS-059** `[MED]`: No distinction shown between role-minimum gap and target-level gap — 5 of 6
       role gaps display `0` while C1 remains a stated goal, reading as contradictory. Show both gap
-      types separately and explain how each influences practice. (Daniel §04.)
-- [ ] **ISS-060** `[MED]`: Missing/insufficient evidence must render as "Not assessed" / "Insufficient
-      evidence" — never silently collapse to a zero score or "no gap." (Daniel §02.)
+      types separately and explain how each influences practice. (Daniel §04.) Fixed `678ea53` —
+      `computeGap()` (`rubric.ts`) already returns `roleFloorGap`/`targetGap` separately, and
+      `/plan` (`plan-delivery.ts`/`plan/page.tsx`) renders both labeled distinctly ("Gap vs role
+      baseline" / "Gap vs target"). Checkbox reconciled 2026-09-22 — same gap as ISS-047/048/050,
+      code landed, tracker wasn't updated.
+- [x] **ISS-060** `[MED]`: Missing/insufficient evidence must render as "Not assessed" / "Insufficient
+      evidence" — never silently collapse to a zero score or "no gap." (Daniel §02.) Data layer was
+      already correct (`computeGap` returns `null`/`assessed:false` for a missing score; Dashboard's
+      `ScoreBar` and `/plan` both render "—"/"Not yet assessed", never a numeric 0). **Fixed
+      2026-09-22**: the one real remaining gap was the RADAR CHARTS (`GapRadar`, `TRadar`) — an
+      unassessed skill's per-dot marker was already distinct (hollow/dashed, landed `678ea53`), but
+      the FILLED polygon still plotted that axis through 0, so the shape's silhouette read as "this
+      skill measured near-zero" even though the dot beside it said "not yet assessed" — a
+      contradiction on the same chart. Both radars now build the filled polygon from ONLY the
+      assessed axes, skipping unassessed ones entirely, so the fill agrees with the dot instead of
+      contradicting it. `tsc --noEmit` + `npm run build` clean.
 - [x] **ISS-061** `[MED]`: Live Interaction capability needs its 12 supporting telemetry signals (Tone
       Alignment, Adaptive Shifting, Frame Integrity, Semantic Continuity, Repair Behaviour, Cognitive
       Load Alignment, Response Latency, Turn-Taking Behaviour, Hierarchy Sensitivity, Cultural
