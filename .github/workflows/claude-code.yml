@@ -195,6 +195,14 @@ jobs:
           git checkout -- .claude/settings.json 2>/dev/null || true
           git clean -f .claude/ 2>/dev/null || true
 
+          # The "Inject session context" step prepends an ephemeral recap block
+          # into CLAUDE.md to help THIS run only — it must never become permanent
+          # repo content. Strip it back out (by its own markers) before committing,
+          # so a stale recap can't accumulate/duplicate across every dispatched run.
+          if [ -f CLAUDE.md ] && grep -q '<!-- SESSION CONTEXT - Injected by Easy Claude Code -->' CLAUDE.md; then
+            sed -i '/<!-- SESSION CONTEXT - Injected by Easy Claude Code -->/,/<!-- END SESSION CONTEXT -->/d' CLAUDE.md
+          fi
+
           if git diff --quiet && git diff --cached --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo "No changes to commit"
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
