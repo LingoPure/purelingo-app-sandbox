@@ -662,3 +662,107 @@ export async function loadStudentDetail(
     },
   };
 }
+
+// ─── Pending join requests (self-setup "join existing org", ISS-049 follow-up) ─
+
+export type PendingJoinRequest = {
+  membershipId: string;
+  userId: string;
+  studentName: string | null;
+  studentEmail: string | null;
+  organisationId: string;
+  organisationName: string;
+  requestedAt: string;
+  /** Roles belonging to the SAME employer as the requested org — the approve
+   *  dropdown must only offer these, never a role from an unrelated org. */
+  availableRoles: { id: string; name: string }[];
+};
+
+/**
+ * Self-setup users who hit a name collision on an existing organisation and
+ * were routed into a pending request instead of silently spinning up a
+ * duplicate org (see self-setup.ts). Global across all organisations —
+ * this console has no per-employer auth scoping today (same shape as every
+ * other loader in this file), so an admin sees every pending request and
+ * approves the ones that are theirs.
+ */
+export async function loadPendingJoinRequests(): Promise<PendingJoinRequest[]> {
+  const supabase = adminSupabase();
+
+  const { data: memberships } = await supabase
+    .from("organisation_memberships")
+    .select("id, user_id, organisation_id, invited_at, created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true })
+    .returns<
+      {
+        id: string;
+        user_id: string;
+        organisation_id: string;
+        invited_at: string | null;
+        created_at: string;
+      }[]
+    >();
+
+  if (!memberships || memberships.length === 0) return [];
+
+  const orgIds = Array.from(new Set(memberships.map((m) => m.organisation_id)));
+  const userIds = Array.from(new Set(memberships.map((m) => m.user_id)));
+
+  const [orgsRes, studentsRes, employersRes] = await Promise.all([
+    supabase
+      .from("organisations")
+      .select("id, name")
+      .in("id", orgIds)
+      .returns<{ id: string; name: string }[]>(),
+    supabase
+      .from("students")
+      .select("id, name, email")
+      .in("id", userIds)
+      .returns<{ id: string; name: string | null; email: string | null }[]>(),
+    supabase
+      .from("employers")
+      .select("id, organisation_id")
+      .in("organisation_id", orgIds)
+      .returns<{ id: string; organisation_id: string }[]>(),
+  ]);
+
+  const orgById = new Map((orgsRes.data ?? []).map((o) => [o.id, o]));
+  const studentById = new Map((studentsRes.data ?? []).map((s) => [s.id, s]));
+  const employerByOrgId = new Map(
+    (employersRes.data ?? []).map((e) => [e.organisation_id, e.id])
+  );
+
+  const employerIds = Array.from(new Set(employerByOrgId.values()));
+  const { data: roleRows } = employerIds.length
+    ? await supabase
+        .from("roles")
+        .select("id, name, employer_id")
+        .in("employer_id", employerIds)
+        .eq("is_archived", false)
+        .returns<{ id: string; name: string; employer_id: string }[]>()
+    : { data: [] as { id: string; name: string; employer_id: string }[] };
+
+  const rolesByEmployerId = new Map<string, { id: string; name: string }[]>();
+  for (const r of roleRows ?? []) {
+    const bucket = rolesByEmployerId.get(r.employer_id) ?? [];
+    bucket.push({ id: r.id, name: r.name });
+    rolesByEmployerId.set(r.employer_id, bucket);
+  }
+
+  return memberships.map((m) => {
+    const org = orgById.get(m.organisation_id);
+    const student = studentById.get(m.user_id);
+    const employerId = employerByOrgId.get(m.organisation_id);
+    return {
+      membershipId: m.id,
+      userId: m.user_id,
+      studentName: student?.name ?? null,
+      studentEmail: student?.email ?? null,
+      organisationId: m.organisation_id,
+      organisationName: org?.name ?? "Unknown organisation",
+      requestedAt: m.invited_at ?? m.created_at,
+      availableRoles: employerId ? rolesByEmployerId.get(employerId) ?? [] : [],
+    };
+  });
+}

@@ -44,17 +44,35 @@ type SelfSetupFailure = {
   error: string;
 };
 
-type SelfSetupSuccess = {
+/**
+ * A slug collision means an organisation with this name already exists —
+ * a matching name alone must never grant membership (Daniel §03), so this
+ * is a REQUEST, not a join. It records a `pending` organisation_memberships
+ * row against the EXISTING org and stops — no new employer/role/baselines,
+ * and no employer_id/role_id on the student, until an admin of that org
+ * approves it (see /employer join-requests).
+ */
+type SelfSetupPending = {
   ok: true;
+  pending: true;
+  organisationId: string;
+  organisationName: string;
+};
+
+type SelfSetupCreated = {
+  ok: true;
+  pending: false;
   organisationId: string;
   employerId: string;
   roleId: string;
 };
 
+type SelfSetupSuccess = SelfSetupPending | SelfSetupCreated;
+
 export type SelfSetupResult = SelfSetupFailure | SelfSetupSuccess;
 
 /**
- * Execute the self-setup write path (steps 1–6).
+ * Execute the self-setup write path.
  *
  * Called by the POST handler after auth + zod validation are done.
  * Returns a discriminated result so the route can map the step to the
@@ -72,14 +90,52 @@ export async function runSelfSetup(
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "") || "org";
 
+  // 0. Does an organisation with this exact normalised slug already exist?
+  // Checked BEFORE attempting to create one (a real lookup, not catching
+  // the unique-violation) because the two cases need different handling:
+  // a genuine name collision routes into the pending-join request below,
+  // not a silent duplicate org with a suffixed slug (ISS-049 follow-up —
+  // "a matching name alone must not grant membership; separate
+  // organisations may share a display name" only applies once we've
+  // established this ISN'T a coincidence — same normalised slug is treated
+  // as the same organisation, by construction).
+  const { data: existingOrg } = await admin
+    .from("organisations")
+    .select("id, name")
+    .eq("slug", slugBase)
+    .maybeSingle();
+
+  if (existingOrg) {
+    const { error: pendingError } = await admin
+      .from("organisation_memberships")
+      .insert({
+        user_id: userId,
+        organisation_id: existingOrg.id,
+        role: "student",
+        status: "pending",
+        invited_at: new Date().toISOString(),
+      });
+    // A repeat submit against the same org hits the (user_id, organisation_id)
+    // unique constraint — treat as "request already sent", not an error.
+    if (pendingError && pendingError.code !== "23505") {
+      return { ok: false, step: "membership", error: pendingError.message };
+    }
+    return {
+      ok: true,
+      pending: true,
+      organisationId: existingOrg.id,
+      organisationName: existingOrg.name,
+    };
+  }
+
   // 1. Organisation (self-created — no owner membership).
   //
   // `organisations.slug` is a URL-safe internal identifier, not something
-  // the user ever sees or chooses directly — so a slug collision (e.g. two
-  // people at "Prelabz" both self-setting-up, or a repeat test run) should
-  // never surface as a raw Postgres error (ISS-049). Retry with a short
-  // random suffix instead of failing; only give up if that keeps colliding,
-  // which given the suffix space is effectively unreachable in practice.
+  // the user ever sees or chooses directly — so a slug collision here means
+  // two self-setups raced for the same brand-new name between the lookup
+  // above and this insert. Retry with a short random suffix instead of
+  // failing; only give up if that keeps colliding, which given the suffix
+  // space is effectively unreachable in practice.
   let org: { id: string } | null = null;
   let orgError: { message: string; code?: string } | null = null;
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -175,6 +231,7 @@ export async function runSelfSetup(
 
   return {
     ok: true,
+    pending: false,
     organisationId: org.id,
     employerId: employer.id,
     roleId: roleRow.id,

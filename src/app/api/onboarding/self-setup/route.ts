@@ -68,5 +68,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: result.error }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  if (result.pending) {
+    return NextResponse.json({
+      ok: true,
+      pending: true,
+      organisationName: result.organisationName,
+    });
+  }
+
+  return NextResponse.json({ ok: true, pending: false });
 }

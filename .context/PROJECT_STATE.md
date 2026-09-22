@@ -1,7 +1,41 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-21 (Phase 2 SHIPPED — code pushed + deployed, 0058 migration applied)
+**Updated:** 2026-09-22 (ISS-047 reconciled + ISS-049 join-flow closed; Vercel deploy-SHA still unverified)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-22 (ISS-047 doc reconciliation, DB verification, ISS-049 join flow)
+
+- **ISS-047 (B2.3 vs B1) reconciled, not re-fixed** — the code fix landed as a side effect of
+  `678ea53` (Phase 2 taxonomy migration) but was never marked resolved in the trackers. Verified
+  against Daniel's real production `gap_scores` (speaking 672/listening 685/writing 590/reading 541,
+  avg 622) — both Dashboard and `/plan` now agree on B2/B2.3. `ISSUE_LOG.md` + `ISSUES_TRACKER.md`
+  updated with the evidence.
+- **DB-side Phase 2 verification closed** — queried live `gap_scores` (70 rows) directly via the
+  Supabase REST API (service-role, read-only): zero rows on any old skill name, all correctly
+  renamed. **New confirmed finding**: `grammar` and `live_interaction` have **zero rows anywhere**
+  in the live DB — no student has ever received either new-dimension score. Stronger than the prior
+  "unverified" framing; the write path for the two new primary dimensions has never fired in prod.
+- **Deploy-SHA verification still blocked** — same structural gap as last session (no Vercel CLI
+  link, MCP scoped to the stale `corporate-ai-solutions`/`lingo-pure-ai` project, no QA test
+  credentials in `.env.local` to drive an authenticated live check). `vercel login` was attempted
+  twice this session; the device-auth code expired before the browser confirmation completed both
+  times. **Next session: re-run `vercel login`, confirm the browser step within the code's window,
+  then link `purelingo-app-sandbox` under `dev-lingo-pure`/`lingopure-cloud`.**
+- **ISS-049 follow-up shipped — the real "join existing org" flow.** `runSelfSetup()` now looks up
+  the normalised slug BEFORE inserting; a match creates a `pending` `organisation_memberships` row
+  against the EXISTING org (no duplicate org/employer/role/baselines, no `students.employer_id`/
+  `role_id` until approved — "a matching name alone must not grant membership" per Daniel's review).
+  Self-setup UI shows a "Request sent — waiting for approval" state instead of routing into
+  discovery. New "Pending join requests" card on `/employer` (`PATCH`/`DELETE
+  /api/employer/join-requests/[id]`) lets an admin assign a role — scoped to that org's own roles
+  only, never a cross-org role — and approve, or decline (deletes the pending row, no tombstone).
+  15/15 `tests/org/self-setup.test.ts` (3 new), `npx tsc --noEmit` clean, `npm run build` clean.
+  **Not independently verified live** (no QA credentials to drive a real self-setup → collision →
+  approve walkthrough in a browser this session).
+- **Housekeeping**: caught and flagged a mid-session mistake — an overly broad env-var grep printed
+  a live `VERCEL_OIDC_TOKEN` into the conversation transcript while looking up the app URL. Dev-scoped
+  and short-lived, for the stale project, so low practical exposure, but flagged to Dennis directly
+  rather than quietly moving on. No further env dumps for the rest of the session.
 
 ## Session log — 2026-09-21 continued #3 (Phase 2 SHIPPED)
 

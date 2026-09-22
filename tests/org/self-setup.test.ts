@@ -25,6 +25,13 @@ type MockConfig = {
    * succeeds. 0/undefined = never collides.
    */
   orgSlugCollisions?: number;
+  /**
+   * Simulates the pre-insert slug lookup finding an existing organisation
+   * (the "join request" branch). undefined = no existing org (the create
+   * path runs as before).
+   */
+  existingOrg?: { id: string; name: string } | null;
+  /** Roles available to the mocked employer's org (for approve-flow tests elsewhere). */
 };
 
 function makeAdmin(config: MockConfig = {}) {
@@ -37,6 +44,20 @@ function makeAdmin(config: MockConfig = {}) {
     updates,
     from(table: string) {
       return {
+        select(_cols: string) {
+          return {
+            eq(_col: string, _val: unknown) {
+              return {
+                async maybeSingle() {
+                  if (table === "organisations") {
+                    return { data: config.existingOrg ?? null, error: null };
+                  }
+                  return { data: null, error: null };
+                },
+              };
+            },
+          };
+        },
         insert(payload: unknown) {
           inserts.push({ table, payload });
 
@@ -119,6 +140,8 @@ test("happy path: creates org → employer → role → baselines → student li
 
   assert.equal(result.ok, true);
   if (!result.ok) return; // TS narrowing
+  assert.equal(result.pending, false);
+  if (result.pending) return; // TS narrowing
   assert.equal(result.organisationId, "org-99");
   assert.equal(result.employerId, "emp-99");
   assert.equal(result.roleId, "role-99");
@@ -334,4 +357,70 @@ test("all 6 SELF_SETUP_SKILLS are seeded with the values from input.baselines", 
     assert.ok(row, `missing baseline: ${skill}`);
     assert.equal(row.min_score, baselines[skill]);
   }
+});
+
+// ── Existing-org collision → pending join request (ISS-049 follow-up) ──────────
+
+test("org name matches an existing org → pending join request, no org/employer/role/baseline writes", async () => {
+  const { chain, admin } = makeAdmin({
+    existingOrg: { id: "org-existing", name: "Prelabz" },
+  });
+
+  const result = await runSelfSetup(admin, makeInput({ orgName: "Prelabz", userId: "user-77" }));
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.pending, true);
+  if (!result.pending) return;
+  assert.equal(result.organisationId, "org-existing");
+  assert.equal(result.organisationName, "Prelabz");
+
+  // Only the pending membership row is written — no duplicate org, no
+  // employer, no role, no baselines, and the student row is untouched
+  // (employer_id/role_id stay null until an admin approves).
+  assert.deepEqual(chain.inserts.map((r) => r.table), ["organisation_memberships"]);
+  assert.equal(chain.updates.length, 0);
+
+  const memInsert = chain.inserts[0].payload as {
+    user_id: string;
+    organisation_id: string;
+    role: string;
+    status: string;
+  };
+  assert.equal(memInsert.user_id, "user-77");
+  assert.equal(memInsert.organisation_id, "org-existing");
+  assert.equal(memInsert.role, "student");
+  assert.equal(memInsert.status, "pending");
+});
+
+test("repeat join request against the same org (23505 on the membership unique constraint) is still reported as pending, not an error", async () => {
+  const { admin } = makeAdmin({
+    existingOrg: { id: "org-existing", name: "Prelabz" },
+    insertError: {
+      table: "organisation_memberships",
+      message: 'duplicate key value violates unique constraint "organisation_memberships_user_id_organisation_id_key"',
+      code: "23505",
+    },
+  });
+
+  const result = await runSelfSetup(admin, makeInput({ orgName: "Prelabz" }));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.pending, true);
+});
+
+test("a genuine (non-collision) error creating the pending membership surfaces as a failure", async () => {
+  const { admin } = makeAdmin({
+    existingOrg: { id: "org-existing", name: "Prelabz" },
+    insertError: {
+      table: "organisation_memberships",
+      message: "RLS denied",
+    },
+  });
+
+  const result = await runSelfSetup(admin, makeInput({ orgName: "Prelabz" }));
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.equal(result.step, "membership");
+  assert.equal(result.error, "RLS denied");
 });

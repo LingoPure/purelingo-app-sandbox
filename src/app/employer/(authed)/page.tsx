@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { SeedButton } from "./seed-button";
+import { PendingJoinRequests } from "./pending-join-requests";
 
 export const dynamic = "force-dynamic";
 import {
@@ -9,15 +10,17 @@ import {
   summariseCohort,
   loadActivityFeed,
   loadCoverageByRole,
+  loadPendingJoinRequests,
   type RoleCoverage,
 } from "@/lib/employer/data";
 import { SKILL_KEYS, SKILL_LABELS as SKILL_LABEL } from "@/lib/scoring/rubric";
 
 export default async function EmployerOverviewPage() {
-  const [students, activity, roleCoverage] = await Promise.all([
+  const [students, activity, roleCoverage, joinRequests] = await Promise.all([
     loadCohortStudents(),
     loadActivityFeed(10),
     loadCoverageByRole(),
+    loadPendingJoinRequests(),
   ]);
   const summary = summariseCohort(students);
 
@@ -47,6 +50,8 @@ export default async function EmployerOverviewPage() {
         </div>
         {summary.studentCount < 5 && <SeedButton />}
       </div>
+
+      <PendingJoinRequests requests={joinRequests} />
 
       <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
         <MetricTile label="Active students" value={summary.studentCount} />

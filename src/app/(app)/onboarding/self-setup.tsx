@@ -197,6 +197,7 @@ export function SelfSetup() {
   const [nativeLanguage, setNativeLanguage] = useState<LanguageCode>("en");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [pendingOrgName, setPendingOrgName] = useState<string | null>(null);
 
   const selectedRole = ROLES.find((r) => r.key === roleKey);
 
@@ -222,8 +223,36 @@ export function SelfSetup() {
         setError(data.error ?? `Setup failed (${res.status})`);
         return;
       }
+      if (data.pending) {
+        // An organisation with this name already exists — a matching name
+        // alone doesn't grant membership, so this is a request, not a join.
+        // Stay on this screen rather than routing into discovery, which
+        // this student hasn't been cleared for yet.
+        setPendingOrgName(data.organisationName ?? orgName.trim());
+        return;
+      }
       router.push("/onboarding/session");
     });
+  }
+
+  if (pendingOrgName) {
+    return (
+      <section className="rounded-lg border border-cream bg-paper p-6">
+        <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+          Request sent
+        </p>
+        <h2 className="mb-2 font-serif text-2xl text-navy">
+          Waiting for approval
+        </h2>
+        <p className="max-w-prose text-sm text-mute">
+          An organisation called <span className="font-medium text-ink">{pendingOrgName}</span> already
+          exists, so we&rsquo;ve sent a request to join it rather than creating a
+          second one. Once an admin there approves you and assigns your role,
+          you&rsquo;ll be able to start your discovery session. If you meant to
+          set up a new, separate organisation, use a different name.
+        </p>
+      </section>
+    );
   }
 
   return (

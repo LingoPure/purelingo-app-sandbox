@@ -108,10 +108,17 @@ Per-issue audit trail (raised → action → resolved): `docs/ISSUE_LOG.md`. Not
 severity tags are a triage starting point, to be confirmed in scoping.
 
 ### Critical
-- [ ] **ISS-047** `[CRITICAL]`: Score inconsistency — Dashboard shows overall **B2.3**, My Programme
+- [x] **ISS-047** `[CRITICAL]`: Score inconsistency — Dashboard shows overall **B2.3**, My Programme
       shows **B1**, from the *same* six `gap_scores` rows. Trace both pages to the one saved
       assessment/mapping; make the programme consume whichever result is canonical. (Daniel §04,
-      Review Section 06 screenshot.)
+      Review Section 06 screenshot.) Fixed `678ea53` (landed alongside the taxonomy migration, not
+      as its own commit) — `/plan` and Dashboard now both derive the overall band from the same live
+      `gap_scores` rows via the same `scoreToCefrBand`/`scoreToLp18` functions (`rubric.ts`, now the
+      documented single source for that conversion); Dashboard's frozen `profile.overall_cefr`
+      snapshot is only a fallback when no live scores exist. Re-run against Daniel's own six scores
+      (avg 623.5) and both pages now land on B2/B2.3, matching Dashboard's original figure — so `/plan`'s
+      B1 was the divergent one. **Live verification still pending** — folds into the deploy-SHA +
+      `gap_scores` DB check already open from Phase 2 (see PROJECT_STATE.md).
 - [ ] **ISS-048** `[CRITICAL]`: Six capability dimensions don't match Dan's reference framework.
       Sandbox shows *Speaking, Listening, Writing, Reading intent, Vocabulary, Presenting*; required
       per Dan's LP-18 spec is *Reading, Writing, Speaking, Grammar, Listening, Live Interaction*.
@@ -126,8 +133,12 @@ severity tags are a triage starting point, to be confirmed in scoping.
       retry. (Daniel §03, Review Section 08 screenshot.) Fixed `8218c2e` — `runSelfSetup()` retries
       the insert with a random slug suffix on a `23505` unique-violation (up to 5 attempts) and
       returns a friendly message, never the raw Postgres text, on the non-recoverable path; covered
-      by `tests/org/self-setup.test.ts`. **Not done**: the real "join existing org" flow (name
-      match ≠ membership) — still just silently mints a second organisation with a suffixed slug.
+      by `tests/org/self-setup.test.ts`. **Join flow added this session**: a normalised-slug lookup
+      runs before any insert; a match creates a `pending` `organisation_memberships` row against the
+      existing org instead of a duplicate — no employer/role/baseline writes and no student
+      employer_id/role_id until an admin approves via the new "Pending join requests" card on
+      `/employer` (approve assigns a role scoped to that org, or decline). 15/15 tests, clean
+      `tsc`/build.
 - [x] **ISS-050** `[HIGH]`: Target inconsistency — dashboard target badge shows **C2.1** while the
       skill target line and My Programme both show **C1**. Confirm whether these are legitimately
       different targets (e.g. pre- vs post-discovery re-target) or a bug. (Daniel §02/§04.) Fixed
