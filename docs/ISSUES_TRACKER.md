@@ -166,9 +166,10 @@ severity tags are a triage starting point, to be confirmed in scoping.
 ### Low
 - [ ] **ISS-056** `[LOW]`: Intro video duration label wrong — heading states "60s," actual clip is
       0:26. (Daniel §03, Review Section 07 screenshot.)
-- [ ] **ISS-057** `[LOW]`: Copy bugs — placeholder string `"for your role as your role"`; "Learning
+- [x] **ISS-057** `[LOW]`: Copy bugs — placeholder string `"for your role as your role"`; "Learning
       style" should read "Learning preferences"; a pre-assessment programme/commitment CTA appeared
-      with N/A scores, unlabeled as sample data. (Daniel §03/§04.)
+      with N/A scores, unlabeled as sample data. (Daniel §03/§04.) First two fixed `e5e89e0`; third
+      (N/A sample labeling + gap-driven duration instead of a fixed 16 weeks) fixed `45fc6be`.
 - [ ] **ISS-062** `[LOW]`: Radar chart — labels clipped at the left edge; ambiguous paired band/score
       display (e.g. "C1.1 alongside B2" on the same row) needs an explained convention. (Daniel
       §02/§07 + screenshot.)
@@ -182,7 +183,7 @@ severity tags are a triage starting point, to be confirmed in scoping.
 
 ## Phase 10 — Raised 2026-09-21 (mid-session, relayed by Dennis)
 
-- [ ] **ISS-064** `[MED]`: No email is sent when a student's improvement programme is generated or
+- [x] **ISS-064** `[MED]`: No email is sent when a student's improvement programme is generated or
       committed. Confirmed by reading `src/app/api/plan/delivery/route.ts` — `GET` builds the plan,
       `POST` only writes `plan_status`/`plan_committed_at` to `students`; neither path calls
       `@caistech/email-send` or any Resend transport. Stephen Munich and Shamini both expected an
@@ -192,7 +193,7 @@ severity tags are a triage starting point, to be confirmed in scoping.
       a programme summary sent on plan generation/commitment. (Dennis, relaying Stephen Munich +
       Shamini, 2026-09-21.) **Scope clarified 2026-09-21 (see ISS-065) — folds into that broader
       reframing rather than a standalone "just add an email" fix.**
-- [ ] **ISS-065** `[MED]`: Sales-funnel reframing of the plan-delivery closing moment. Dennis clarified
+- [x] **ISS-065** `[MED]`: Sales-funnel reframing of the plan-delivery closing moment. Dennis clarified
       the discovery→battery→plan flow is a **free self-assessment / lead-gen step**, not the live
       enrolled product — the generated programme is a **sample/preview**, not active or executed.
       Three surfaces currently say or imply otherwise and need reframing: (1) `/plan` page's
