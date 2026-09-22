@@ -138,9 +138,18 @@ severity tags are a triage starting point, to be confirmed in scoping.
       badge.
 
 ### High
-- [ ] **ISS-051** `[HIGH]`: Auth — magic-link login shows "Email link is invalid or has expired" on
+- [x] **ISS-051** `[HIGH]`: Auth — magic-link login shows "Email link is invalid or has expired" on
       mobile. Repro + smoke-test against the current Supabase auth config (redirect allowlist / token
-      expiry). (Shamini, `WhatsApp Image 2026-09-19 at 23.31.05.jpeg`.)
+      expiry). (Shamini, `WhatsApp Image 2026-09-19 at 23.31.05.jpeg`.) Fixed `7fbb3b9` — root cause
+      was structural, not config: `/auth/callback` was a server Route Handler, but Supabase's hosted
+      `/auth/v1/verify` redirects back with the session in the URL **fragment**
+      (`#access_token=...`), which a server can never see (browsers don't send fragments in the HTTP
+      request). Converted to a client page handling all 4 link shapes (fragment tokens, fragment
+      error, `?code=` PKCE, `?token_hash=&type=`). Affected 5 flows sharing this callback (student
+      magic-link, signup confirmation, password reset, investor login, investor admin login) — all
+      silently broken, not just Shamini's report. Verified live end-to-end with a real headless
+      browser: fresh link → `/dashboard`; a re-clicked/pre-fetched link → clean error + working retry
+      instead of a dead end.
 - [ ] **ISS-052** `[HIGH]`: Live transcription missing — completed turns render after the fact, but no
       interim/live transcript appears while the student is speaking, and no mic-input-level indicator
       is shown. Determine whether the ConvAI/STT path exposes partial transcripts that the UI drops,
