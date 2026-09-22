@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LingoPure 3D Communication Telemetry Geometry</title>
+<style>
+:root{
+  --bg:#06090f; --panel:#0b111a; --line:#1d2a38; --text:#eef6ff; --muted:#8ca0b3;
+  --gold:#ffbf24; --cyan:#29d3ff; --green:#7fe35a; --purple:#a879ff; --red:#ff5269;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:radial-gradient(circle at 50% 35%,#101521 0,#070a10 45%,#030509 100%);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif;overflow:hidden}
+.app{height:100%;display:grid;grid-template-columns:285px 1fr 320px;grid-template-rows:auto 1fr;gap:12px;padding:14px}
+header{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:4px 2px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:34px;border:4px solid #ff9c16;border-radius:6px;position:relative}
+.logo:after{content:"";position:absolute;left:8px;bottom:-12px;border:7px solid transparent;border-top-color:#ff9c16;transform:rotate(-10deg)}
+h1{margin:0;font-size:clamp(20px,2.3vw,34px);letter-spacing:.02em}
+.subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+.scoreBox{border:1px solid rgba(255,191,36,.55);border-radius:12px;padding:9px 16px;background:rgba(255,191,36,.04);text-align:center;min-width:170px}
+.scoreBox b{display:block;color:var(--gold);font-size:28px}.scoreBox span{font-size:11px;color:#d8cba4}
+.panel{background:linear-gradient(180deg,rgba(13,20,30,.96),rgba(7,11,18,.97));border:1px solid var(--line);border-radius:14px;box-shadow:0 14px 40px rgba(0,0,0,.3);min-height:0}
+.left,.right{padding:13px;overflow:auto}
+.viewer{position:relative;overflow:hidden}
+canvas{width:100%;height:100%;display:block;cursor:grab}
+canvas.dragging{cursor:grabbing}
+.help{position:absolute;left:14px;bottom:12px;color:#7890a4;font-size:11px;background:rgba(4,8,13,.65);border:1px solid #1d3042;border-radius:8px;padding:7px 9px;pointer-events:none}
+.legend{position:absolute;right:14px;top:12px;display:flex;flex-direction:column;gap:5px;font-size:11px;color:#9db0bf;background:rgba(4,8,13,.7);border:1px solid #1d3042;border-radius:9px;padding:8px 10px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#b9d4e8;margin:2px 0 10px}
+.tabs{display:flex;gap:7px;margin-bottom:10px}
+.tab{flex:1;border:1px solid #25394d;background:#0a1521;color:#9db0c0;border-radius:8px;padding:8px;font-weight:700;cursor:pointer}
+.tab.active{border-color:var(--gold);color:#fff;background:rgba(255,191,36,.08)}
+.controls{display:flex;flex-direction:column;gap:8px}
+.control{border:1px solid #1a2b3c;border-radius:9px;padding:8px;background:#08121d}
+.controlHead{display:flex;justify-content:space-between;gap:8px;font-size:11px;margin-bottom:5px}
+input[type=range]{width:100%;accent-color:var(--gold)}
+button{border:1px solid #29465e;background:#0b1a29;color:#e6f4ff;border-radius:8px;padding:8px 10px;cursor:pointer}
+button:hover{border-color:var(--gold)}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.metricGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric{border:1px solid #1d3143;border-radius:10px;padding:10px;background:#08131e}
+.metric small{color:var(--muted)}.metric strong{display:block;font-size:23px;margin-top:2px}
+.card{border:1px solid #1d3143;border-radius:10px;padding:11px;background:#08131e;margin-bottom:10px}
+.card p{margin:6px 0 0;color:#aebfcd;font-size:12px;line-height:1.45}
+#selectedName{font-size:18px;color:var(--gold);margin:2px 0}
+.bar{height:8px;background:#101c28;border-radius:999px;overflow:hidden;margin-top:7px}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--gold));width:70%}
+.flow{display:flex;flex-direction:column;gap:7px}
+.step{display:flex;gap:8px;align-items:center;border:1px solid #1b3041;border-radius:8px;padding:8px;background:#07121c;font-size:11px}
+.num{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#102a3d;color:#8adeff;font-weight:800}
+@media(max-width:1000px){.app{grid-template-columns:230px 1fr;grid-template-rows:auto 1fr auto}.right{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.right>*{margin:0}}
+@media(max-width:720px){html,body{overflow:auto}.app{height:auto;grid-template-columns:1fr;grid-template-rows:auto 620px auto auto}.viewer{grid-row:2}.left,.right{grid-column:auto}.right{display:block}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand"><div class="logo"></div><div><h1>LINGOPURE 3D COMMUNICATION GEOMETRY</h1><div class="subtitle">6 core capabilities • 12 telemetry dimensions • dynamic convergence field</div></div></div>
+  <div class="scoreBox"><b id="lpIndex">680</b><span>LP-1000 Communication Intelligence Index</span></div>
+</header>
+
+<aside class="panel left">
+  <div class="tabs"><button class="tab active" id="coreTab">Core 6</button><button class="tab" id="telTab">Telemetry 12</button></div>
+  <h2 id="controlTitle">Core capability values</h2>
+  <div class="controls" id="controls"></div>
+  <div class="buttons">
+    <button onclick="preset('balanced')">Balanced</button>
+    <button onclick="preset('high')">High convergence</button>
+    <button onclick="preset('drift')">Drift scenario</button>
+    <button onclick="preset('random')">Randomize</button>
+    <button onclick="resetView()">Reset view</button>
+    <button onclick="toggleSpin()" id="spinBtn">Pause rotation</button>
+  </div>
+</aside>
+
+<main class="panel viewer">
+  <canvas id="canvas"></canvas>
+  <div class="legend">
+    <span><i class="dot" style="background:#7fe35a"></i>Core capability geometry</span>
+    <span><i class="dot" style="background:#ffbf24"></i>Telemetry geometry</span>
+    <span><i class="dot" style="background:#29d3ff"></i>Convergence field</span>
+    <span><i class="dot" style="background:#ff5269"></i>Instability vectors</span>
+  </div>
+  <div class="help">Drag to rotate • Mouse wheel to zoom • Click any node • Double-click to reset</div>
+</main>
+
+<aside class="panel right">
+  <h2>Selected node</h2>
+  <div class="card">
+    <div id="selectedName">Communication Convergence</div>
+    <small id="selectedType">Central state</small>
+    <p id="selectedDesc">The central volume grows when capability and telemetry evidence align, and contracts when drift or instability increases.</p>
+    <div class="bar"><i id="selectedBar"></i></div>
+    <p><b id="selectedValue">74%</b></p>
+  </div>
+  <h2>Current state</h2>
+  <div class="metricGrid">
+    <div class="metric"><small>Core capability</small><strong id="coreMetric">72%</strong></div>
+    <div class="metric"><small>Telemetry stability</small><strong id="telMetric">68%</strong></div>
+    <div class="metric"><small>Convergence</small><strong id="convMetric" style="color:#7fe35a">Stable</strong></div>
+    <div class="metric"><small>Drift risk</small><strong id="driftMetric" style="color:#ffbf24">Low</strong></div>
+  </div>
+  <h2 style="margin-top:13px">Interpretation pipeline</h2>
+  <div class="flow">
+    <div class="step"><span class="num">1</span><div><b>Observe</b><br><span class="subtitle">Video, audio, text, interaction, context</span></div></div>
+    <div class="step"><span class="num">2</span><div><b>Triangulate</b><br><span class="subtitle">Cross-check signals across modes</span></div></div>
+    <div class="step"><span class="num">3</span><div><b>Calibrate</b><br><span class="subtitle">Compare against LP-18 expectation</span></div></div>
+    <div class="step"><span class="num">4</span><div><b>Map geometry</b><br><span class="subtitle">Model capability, telemetry and drift</span></div></div>
+    <div class="step"><span class="num">5</span><div><b>Validate convergence</b><br><span class="subtitle">Confirm intended meaning was preserved</span></div></div>
+  </div>
+</aside>
+</div>
+
+<script>
+const core=[
+ ["Listening",76,"Ability to understand spoken information and preserve meaning."],
+ ["Reading",72,"Ability to decode, interpret and retain written meaning."],
+ ["Writing",68,"Ability to structure and express intended meaning clearly."],
+ ["Grammar",64,"Accuracy and structural control supporting interpretation."],
+ ["Spoken Interaction",78,"Ability to participate, respond and coordinate meaning."],
+ ["Context Awareness",70,"Ability to track shared frame, roles, goals and situation."]
+];
+const telemetry=[
+ ["Tone Alignment",78,"Whether emotional delivery, formality and interpersonal tone support intended meaning."],
+ ["Adaptive Shifting",62,"Whether communication dynamically adapts to audience, objective and situation."],
+ ["Cultural Continuity",71,"Whether intended meaning is preserved across cultural context."],
+ ["Frame Integrity",76,"Whether participants remain within the same communication frame."],
+ ["Repair Behaviour",72,"How effectively misunderstanding is detected and repaired."],
+ ["Hierarchy Sensitivity",68,"Whether role, authority and social distance are handled appropriately."],
+ ["Cognitive Load Alignment",64,"Whether complexity matches the receiver's processing capacity."],
+ ["Response Latency",59,"Whether response timing supports natural conversational flow."],
+ ["Semantic Continuity",74,"Whether intended meaning remains coherent throughout interaction."],
+ ["Turn-Taking Behaviour",61,"Whether participation remains balanced and collaborative."],
+ ["Hesitation Markers",55,"Whether pauses and uncertainty support or weaken communication."],
+ ["Drift Detection",77,"How quickly emerging divergence is identified and corrected."]
+];
+
+let active="core", spin=true;
+let rotX=-0.22,rotY=0.42,zoom=1,drag=false,lastX=0,lastY=0;
+let selected={name:"Communication Convergence",type:"Central state",value:74,desc:"The central volume grows when capability and telemetry evidence align, and contracts when drift or instability increases."};
+const canvas=document.getElementById("canvas"),ctx=canvas.getContext("2d");
+let DPR=window.devicePixelRatio||1, W=0,H=0,hit=[];
+function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0)}
+window.addEventListener("resize",resize);resize();
+
+function avg(a){return a.reduce((s,x)=>s+x[1],0)/a.length}
+function variance(a){let m=avg(a);return a.reduce((s,x)=>s+(x[1]-m)**2,0)/a.length}
+function rot(p){
+ let [x,y,z]=p;
+ let cy=Math.cos(rotY),sy=Math.sin(rotY),cx=Math.cos(rotX),sx=Math.sin(rotX);
+ let x1=x*cy+z*sy,z1=-x*sy+z*cy;
+ let y1=y*cx-z1*sx,z2=y*sx+z1*cx;
+ return [x1,y1,z2];
+}
+function project(p){
+ let [x,y,z]=rot(p), f=620/(620-z*zoom);
+ return [W/2+x*zoom*f,H/2+y*zoom*f,f,z];
+}
+function nodePositions(){
+ let cores=[],tels=[];
+ for(let i=0;i<6;i++){
+   let a=i*Math.PI*2/6-Math.PI/2, r=145*(core[i][1]/100);
+   cores.push([Math.cos(a)*r,Math.sin(a)*r,Math.sin(a*2)*58]);
+ }
+ for(let i=0;i<12;i++){
+   let a=i*Math.PI*2/12-Math.PI/2, r=235*(telemetry[i][1]/100);
+   let z=Math.sin(a*3)*95 + (telemetry[i][1]-65)*1.8;
+   tels.push([Math.cos(a)*r,Math.sin(a)*r,z]);
+ }
+ return {cores,tels};
+}
+function line(a,b,color,width=1,alpha=.5,dash=[]){
+ let A=project(a),B=project(b);ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=alpha;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();ctx.restore();
+}
+function glowNode(p,r,color,label,obj){
+ let q=project(p),rad=r*q[2];
+ ctx.save();ctx.shadowBlur=18;ctx.shadowColor=color;ctx.fillStyle=color;ctx.beginPath();ctx.arc(q[0],q[1],rad,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+ ctx.fillStyle="#081019";ctx.beginPath();ctx.arc(q[0],q[1],Math.max(2,rad-3),0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=color;ctx.font="600 11px Segoe UI";ctx.textAlign=q[0]<W/2?"right":"left";ctx.textBaseline="middle";
+ let off=q[0]<W/2?-12:12;ctx.fillText(label,q[0]+off,q[1]);ctx.restore();
+ hit.push({x:q[0],y:q[1],r:Math.max(10,rad+5),obj});
+}
+function poly(points,color,fill){
+ let ps=points.map(project);ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.shadowBlur=12;ctx.shadowColor=color;ctx.fillStyle=fill;ctx.beginPath();ctx.moveTo(ps[0][0],ps[0][1]);ps.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+}
+function drawSphere(radius,color,alpha){
+ let q=project([0,0,0]),r=radius*q[2]*zoom;
+ let g=ctx.createRadialGradient(q[0]-r*.25,q[1]-r*.25,r*.05,q[0],q[1],r);
+ g.addColorStop(0,"rgba(255,255,255,.75)");g.addColorStop(.12,color);g.addColorStop(1,"rgba(0,0,0,0)");
+ ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.shadowBlur=30;ctx.shadowColor=color;ctx.beginPath();ctx.arc(q[0],q[1],r,0,Math.PI*2);ctx.fill();ctx.restore();
+ hit.push({x:q[0],y:q[1],r:r,obj:{name:"Communication Convergence",type:"Central state",value:convergence(),desc:"The central volume grows when capability and telemetry evidence align, and contracts when drift or instability increases."}});
+}
+function convergence(){
+ let ca=avg(core),ta=avg(telemetry),align=Math.max(0,100-Math.sqrt(variance(telemetry))*2.1);
+ return Math.max(0,Math.min(100,Math.round(ca*.38+ta*.42+align*.20)));
+}
+function draw(){
+ ctx.clearRect(0,0,W,H);hit=[];
+ if(spin&&!drag)rotY+=0.0028;
+ const {cores,tels}=nodePositions(),conv=convergence();
+ // soft depth grid
+ for(let rr of [90,150,220,290]){
+   let ring=[];for(let i=0;i<64;i++){let a=i/64*Math.PI*2;ring.push([Math.cos(a)*rr,Math.sin(a)*rr,0])}
+   for(let i=0;i<ring.length;i++)line(ring[i],ring[(i+1)%ring.length],"#416071",.7,.13,[3,8]);
+ }
+ // radial axes and triangulation web
+ tels.forEach(p=>line([0,0,0],p,"#ffbf24",1,.18,[6,8]));
+ for(let i=0;i<tels.length;i++){
+   line(tels[i],tels[(i+1)%12],"#ffbf24",1.3,.45);
+   line(tels[i],tels[(i+3)%12],"#ffbf24",.8,.12,[5,8]);
+ }
+ cores.forEach(p=>line([0,0,0],p,"#7fe35a",1,.28));
+ for(let i=0;i<cores.length;i++){line(cores[i],cores[(i+1)%6],"#7fe35a",1.6,.55)}
+ // instability vectors for lowest telemetry
+ telemetry.map((x,i)=>[x[1],i]).sort((a,b)=>a[0]-b[0]).slice(0,3).forEach(([v,i])=>line(cores[i%6],tels[i],"#ff5269",2,.65));
+ poly(tels,"#ffbf24","rgba(255,191,36,.035)");
+ poly(cores,"#7fe35a","rgba(127,227,90,.06)");
+ drawSphere(32+conv*.42,conv>72?"#29d3ff":conv>55?"#ffbf24":"#ff5269",.9);
+ tels.forEach((p,i)=>glowNode(p,5,"#ffbf24",telemetry[i][0],{name:telemetry[i][0],type:"Telemetry dimension",value:telemetry[i][1],desc:telemetry[i][2]}));
+ cores.forEach((p,i)=>glowNode(p,6,"#7fe35a",core[i][0],{name:core[i][0],type:"Core capability",value:core[i][1],desc:core[i][2]}));
+ updateMetrics();
+ requestAnimationFrame(draw);
+}
+function updateMetrics(){
+ let ca=Math.round(avg(core)),ta=Math.round(avg(telemetry)),c=convergence(),risk=Math.round(100-(ta*.65+Math.max(0,100-Math.sqrt(variance(telemetry))*2.1)*.35));
+ document.getElementById("coreMetric").textContent=ca+"%";
+ document.getElementById("telMetric").textContent=ta+"%";
+ document.getElementById("lpIndex").textContent=c*10;
+ let state=c>=72?"Stable":c>=55?"Variable":"Unstable";
+ document.getElementById("convMetric").textContent=state;
+ document.getElementById("convMetric").style.color=c>=72?"#7fe35a":c>=55?"#ffbf24":"#ff5269";
+ document.getElementById("driftMetric").textContent=risk<22?"Low":risk<40?"Moderate":"High";
+}
+function renderControls(){
+ let arr=active==="core"?core:telemetry;
+ document.getElementById("controlTitle").textContent=active==="core"?"Core capability values":"Telemetry dimension values";
+ document.getElementById("controls").innerHTML=arr.map((x,i)=>`<div class="control"><div class="controlHead"><b>${i+1}. ${x[0]}</b><span id="v${i}">${x[1]}</span></div><input type="range" min="0" max="100" value="${x[1]}" oninput="setValue(${i},this.value)"></div>`).join("");
+}
+function setValue(i,v){let arr=active==="core"?core:telemetry;arr[i][1]=+v;document.getElementById("v"+i).textContent=v}
+coreTab.onclick=()=>{active="core";coreTab.classList.add("active");telTab.classList.remove("active");renderControls()}
+telTab.onclick=()=>{active="telemetry";telTab.classList.add("active");coreTab.classList.remove("active");renderControls()}
+function preset(type){
+ if(type==="random"){core.forEach(x=>x[1]=Math.round(45+Math.random()*50));telemetry.forEach(x=>x[1]=Math.round(35+Math.random()*60))}
+ else if(type==="high"){core.forEach(x=>x[1]=Math.round(84+Math.random()*12));telemetry.forEach(x=>x[1]=Math.round(82+Math.random()*14))}
+ else if(type==="balanced"){[74,72,69,67,76,71].forEach((v,i)=>core[i][1]=v);telemetry.forEach(x=>x[1]=Math.round(65+Math.random()*17))}
+ else{[78,74,70,64,69,60].forEach((v,i)=>core[i][1]=v);[78,57,61,54,49,58,42,37,51,44,39,32].forEach((v,i)=>telemetry[i][1]=v)}
+ renderControls()
+}
+function resetView(){rotX=-.22;rotY=.42;zoom=1}
+function toggleSpin(){spin=!spin;document.getElementById("spinBtn").textContent=spin?"Pause rotation":"Resume rotation"}
+canvas.addEventListener("pointerdown",e=>{drag=true;lastX=e.clientX;lastY=e.clientY;canvas.classList.add("dragging");canvas.setPointerCapture(e.pointerId)})
+canvas.addEventListener("pointermove",e=>{if(!drag)return;rotY+=(e.clientX-lastX)*.008;rotX+=(e.clientY-lastY)*.008;lastX=e.clientX;lastY=e.clientY})
+canvas.addEventListener("pointerup",e=>{drag=false;canvas.classList.remove("dragging")})
+canvas.addEventListener("wheel",e=>{e.preventDefault();zoom=Math.max(.55,Math.min(1.8,zoom*(e.deltaY>0?.92:1.08)))},{passive:false})
+canvas.addEventListener("dblclick",resetView)
+canvas.addEventListener("click",e=>{
+ let r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+ let h=hit.slice().sort((a,b)=>Math.hypot(x-a.x,y-a.y)-Math.hypot(x-b.x,y-b.y)).find(h=>Math.hypot(x-h.x,y-h.y)<=h.r);
+ if(h){selected=h.obj;document.getElementById("selectedName").textContent=selected.name;document.getElementById("selectedType").textContent=selected.type;document.getElementById("selectedDesc").textContent=selected.desc;document.getElementById("selectedValue").textContent=Math.round(selected.value)+"%";document.getElementById("selectedBar").style.width=selected.value+"%"}
+});
+renderControls();draw();
+</script>
+</body>
+</html>
