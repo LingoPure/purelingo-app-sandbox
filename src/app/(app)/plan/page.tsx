@@ -177,8 +177,16 @@ export default async function PlanPage() {
       {/* Programme phases */}
       <section aria-label="Programme" className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">
-          16-week programme
+          Sample {plan.totalWeeks}-week programme
         </h2>
+        {plan.currentLevel === "N/A" && (
+          <p className="max-w-prose rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            You haven&apos;t completed your assessment yet, so this is a generic
+            sample based on typical requirements for your role — not scores of
+            your own. Finish the assessment to see a programme personalised to
+            your results.
+          </p>
+        )}
         {plan.phases.map((phase, idx) => (
           <div
             key={phase.name}

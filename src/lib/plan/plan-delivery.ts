@@ -27,7 +27,11 @@ import {
   scoreToCefrBand,
   computeGap,
 } from "@/lib/scoring/rubric";
-import { generateLessonPlan, type PlanRecommendation } from "@/lib/lessons/plan-generator";
+import {
+  generateLessonPlan,
+  type PlanRecommendation,
+  type MicroLessonType,
+} from "@/lib/lessons/plan-generator";
 
 export type SkillProfile = {
   skill: AnySkillKey;
@@ -159,8 +163,11 @@ export async function buildPlan(
   // 5. Generate lesson recommendations
   const recommendations = await generateLessonPlan(supabase, studentId);
 
-  // 6. Build phased programme
-  const phases = buildPhases(skills, recommendations);
+  // 6. Build phased programme — duration, phase count, and per-skill
+  // frequency are all derived from the student's actual gap profile
+  // (estimateTotalWeeks/buildPhases below), not a fixed template.
+  const totalWeeks = estimateTotalWeeks(skills);
+  const phases = buildPhases(skills, recommendations, totalWeeks);
 
   return {
     studentName,
@@ -174,67 +181,202 @@ export async function buildPlan(
     supportingSkills,
     recommendations,
     phases,
-    totalWeeks: 16,
+    totalWeeks,
     // ISS-064/065: this is a free sample, not something the student has
     // enrolled in — the copy must never imply a commitment was made.
     nextStepStatement:
-      `This is a preview of what a personalised ${phases.length}-phase, 16-week ` +
+      `This is a preview of what a personalised ${phases.length}-phase, ${totalWeeks}-week ` +
       `programme could look like to reach ${targetLevel} for your role as ${roleName}. ` +
       `Nothing has been booked — if this looks useful, the next step is a quick call.`,
   };
 }
 
+/**
+ * How many LP18 points/week a student typically closes with consistent
+ * multi-skill practice. A first-pass planning heuristic (LP18 spans ~1000
+ * points across 18 CEFR sub-bands, so ~55 points/band; a few skills worked
+ * concurrently at a realistic pace lands around this rate) — recalibrate
+ * against real completion data once enough students have been through a
+ * full programme.
+ */
+const POINTS_PER_WEEK_ESTIMATE = 40;
+/** Fallback used only when nothing is assessed yet — the UI labels this an illustrative sample. */
+const NA_SAMPLE_WEEKS = 16;
+/** Every skill already at/above target — a light maintenance cadence, not a full remediation programme. */
+const MAINTENANCE_WEEKS = 4;
+const MIN_PROGRAMME_WEEKS = 8;
+const MAX_PROGRAMME_WEEKS = 24;
+
+/**
+ * Total programme length, derived from how far the student actually is
+ * from their target level (sum of positive targetGap across assessed
+ * skills) — not a fixed 16 weeks for everyone.
+ */
+function estimateTotalWeeks(skills: SkillProfile[]): number {
+  const assessed = skills.filter((s) => s.assessed);
+  if (assessed.length === 0) return NA_SAMPLE_WEEKS;
+
+  const totalGap = assessed.reduce((sum, s) => sum + Math.max(0, s.targetGap ?? 0), 0);
+  if (totalGap <= 0) return MAINTENANCE_WEEKS;
+
+  const roundedToTwo = Math.round(totalGap / POINTS_PER_WEEK_ESTIMATE / 2) * 2;
+  return Math.min(MAX_PROGRAMME_WEEKS, Math.max(MIN_PROGRAMME_WEEKS, roundedToTwo));
+}
+
+function phaseCountFor(totalWeeks: number): number {
+  if (totalWeeks <= 6) return 1;
+  if (totalWeeks <= 12) return 2;
+  if (totalWeeks <= 20) return 3;
+  return 4;
+}
+
+function phaseNamesFor(count: number): string[] {
+  switch (count) {
+    case 1:
+      return ["Focused sprint"];
+    case 2:
+      return ["Foundation & Habits", "Consolidation & Confidence"];
+    case 4:
+      return [
+        "Foundation & Habits",
+        "Deepening & Challenge",
+        "Intensive Practice",
+        "Consolidation & Confidence",
+      ];
+    default:
+      return ["Foundation & Habits", "Deepening & Challenge", "Consolidation & Confidence"];
+  }
+}
+
+/** Splits totalWeeks into `count` contiguous 1-indexed week ranges; the last phase absorbs any remainder. */
+function splitWeeks(totalWeeks: number, count: number): { start: number; end: number }[] {
+  const base = Math.floor(totalWeeks / count);
+  const ranges: { start: number; end: number }[] = [];
+  let cursor = 1;
+  for (let i = 0; i < count; i++) {
+    const isLast = i === count - 1;
+    const len = isLast ? totalWeeks - cursor + 1 : base;
+    const end = cursor + len - 1;
+    ranges.push({ start: cursor, end });
+    cursor = end + 1;
+  }
+  return ranges;
+}
+
+function frequencyLabel(priority: PlanRecommendation["priority"]): string {
+  switch (priority) {
+    case "critical":
+      return "3× per week";
+    case "recommended":
+      return "2× per week";
+    default:
+      return "1× per week";
+  }
+}
+
+const MICRO_LESSON_ACTIVITY_LABEL: Record<MicroLessonType, string> = {
+  email_sprint: "Email sprints",
+  speak_score: "Speak & score",
+};
+
+/**
+ * Builds the phased programme. Duration/phase-count come from
+ * estimateTotalWeeks (the caller); WHICH activities appear and how often
+ * come from the student's actual recommendations — the widest gaps get the
+ * most reps, and a skill with no gap gets no scheduled practice.
+ *
+ * When nothing is assessed yet (generateLessonPlan returns every rec as
+ * "optional" — no score to size a gap from), falls back to a generic
+ * illustrative shape. That's fine: the UI labels the whole section a
+ * sample in that case (see the plan/page.tsx N/A banner).
+ */
 function buildPhases(
   skills: SkillProfile[],
-  recs: PlanRecommendation[]
+  recs: PlanRecommendation[],
+  totalWeeks: number
 ): PlanPhase[] {
-  const criticals = recs.filter((r) => r.priority === "critical");
-  const recommended = recs.filter((r) => r.priority === "recommended");
+  const phaseCount = phaseCountFor(totalWeeks);
+  const names = phaseNamesFor(phaseCount);
+  const ranges = splitWeeks(totalWeeks, phaseCount);
 
-  return [
-    {
-      name: "Foundation & Habits",
-      weeks: "Weeks 1–4",
-      activities: [
-        { type: "Email sprints", frequency: "3× per week", skill: "writing" },
-        { type: "Speak & score", frequency: "2× per week", skill: "speaking" },
-        ...(criticals.some((r) => r.kind === "class")
-          ? [{ type: "Live tutor session", frequency: "1× per week", skill: "listening" }]
-          : []),
-      ],
-      rationale:
-        "Build the daily practice habit. Email sprints and speaking sprints are calibrated to your gap profile — " +
-        "they adapt as you improve. This phase establishes the routine.",
-    },
-    {
-      name: "Deepening & Challenge",
-      weeks: "Weeks 5–10",
-      activities: [
-        { type: "Email sprints", frequency: "3× per week", skill: "writing" },
-        { type: "Speak & score", frequency: "2× per week", skill: "speaking" },
-        { type: "Live tutor session", frequency: "1× per week", skill: "all" },
-        ...(recommended.length > 0
-          ? [{ type: "Targeted gap closers", frequency: "as assigned", skill: "varies" }]
-          : []),
-      ],
-      rationale:
-        "Increase complexity and challenge. Live tutor sessions add real-time feedback and " +
-        "conversation practice that self-serve lessons can't replicate.",
-    },
-    {
-      name: "Consolidation & Confidence",
-      weeks: "Weeks 11–16",
-      activities: [
-        { type: "Email sprints", frequency: "2× per week", skill: "writing" },
-        { type: "Speak & score", frequency: "2× per week", skill: "speaking" },
-        { type: "Live tutor session", frequency: "1× per week", skill: "all" },
-        { type: "Role-play simulation", frequency: "2× during phase", skill: "speaking" },
-      ],
-      rationale:
-        "Consolidate gains with role-specific scenarios and a re-assessment at week 16. " +
-        "This phase focuses on confidence and real-world application.",
-    },
-  ];
+  const useGenericSample = skills.every((s) => !s.assessed);
+  const actionableRecs = recs.filter((r) => r.priority !== "optional");
+  const microLessonRecs = actionableRecs.filter(
+    (r): r is PlanRecommendation & { lessonType: MicroLessonType } =>
+      r.kind === "micro_lesson" && r.lessonType != null
+  );
+  const classRecs = actionableRecs.filter((r) => r.kind === "class");
+  const anyCriticalClass = classRecs.some((r) => r.priority === "critical");
+  const anySpeakingFocus = actionableRecs.some(
+    (r) => r.skill === "speaking" || r.skill === "live_interaction"
+  );
+  const priorityRecSkillLabels = Array.from(
+    new Set([...microLessonRecs, ...classRecs].map((r) => r.skillLabel.toLowerCase()))
+  );
+  const skillList = priorityRecSkillLabels.length > 0 ? priorityRecSkillLabels.join(", ") : "your priority skills";
+
+  return ranges.map(({ start, end }, idx) => {
+    const isFirst = idx === 0;
+    const isLast = idx === phaseCount - 1;
+    const activities: PlanPhase["activities"] = [];
+
+    if (useGenericSample) {
+      activities.push({ type: "Email sprints", frequency: "3× per week", skill: "writing" });
+      activities.push({ type: "Speak & score", frequency: "2× per week", skill: "speaking" });
+      if (!isFirst || phaseCount === 1) {
+        activities.push({ type: "Live tutor session", frequency: "1× per week", skill: "all" });
+      }
+      if (isLast) {
+        activities.push({ type: "Role-play simulation", frequency: "2× during phase", skill: "speaking" });
+      }
+    } else {
+      for (const rec of microLessonRecs) {
+        activities.push({
+          type: MICRO_LESSON_ACTIVITY_LABEL[rec.lessonType],
+          frequency: frequencyLabel(rec.priority),
+          skill: rec.skill,
+        });
+      }
+      if (classRecs.length > 0 && (anyCriticalClass || !isFirst)) {
+        activities.push({
+          type: "Live tutor session",
+          frequency: anyCriticalClass ? "1× per week" : "1× per fortnight",
+          skill: "all",
+        });
+      }
+      if (isLast && anySpeakingFocus) {
+        activities.push({ type: "Role-play simulation", frequency: "2× during phase", skill: "speaking" });
+      }
+    }
+
+    let rationale: string;
+    if (useGenericSample) {
+      rationale = isFirst
+        ? "Build the daily practice habit. Email sprints and speaking sprints are calibrated to your gap profile — " +
+          "they adapt as you improve. This phase establishes the routine."
+        : isLast
+          ? "Consolidate gains with role-specific scenarios and a re-assessment at the end of the programme. " +
+            "This phase focuses on confidence and real-world application."
+          : "Increase complexity and challenge. Live tutor sessions add real-time feedback and " +
+            "conversation practice that self-serve lessons can't replicate.";
+    } else {
+      rationale = isFirst
+        ? `Build the daily practice habit around your biggest gaps: ${skillList}. Frequency scales with how ` +
+          "far each skill is from your target — the widest gaps get the most reps."
+        : isLast
+          ? `Consolidate gains with real-world scenarios and a re-assessment at the end of the programme, ` +
+            `applying ${skillList} under pressure.`
+          : `Increase complexity and challenge across ${skillList}. Live tutor sessions add real-time feedback ` +
+            "that self-serve lessons can't replicate.";
+    }
+
+    return {
+      name: names[idx],
+      weeks: start === end ? `Week ${start}` : `Weeks ${start}–${end}`,
+      activities,
+      rationale,
+    };
+  });
 }
 
 /**
@@ -243,6 +385,8 @@ function buildPhases(
  * "consultant mode" rather than "assessor mode".
  */
 export function compilePlanPrompt(plan: PlanData): string {
+  const noneAssessedYet = plan.currentLevel === "N/A";
+
   const skillSummary = plan.skills
     .map((s) => {
       if (!s.assessed) {
@@ -291,7 +435,7 @@ You've assessed their English across 6 skill dimensions. Your job now is to:
 4. Invite them to book a call if this looks useful — never push for a yes/no commitment
 5. Close warmly — remind them this is a preview and there's a real person to talk to next
 
-## THE SAMPLE PROGRAMME (16 weeks)
+## THE SAMPLE PROGRAMME (${plan.totalWeeks} weeks)
 
 ${phaseSummary}
 
@@ -309,11 +453,12 @@ ${priorityItems}
 6. **If they have questions**, answer briefly but don't oversell — redirect to booking a call for anything specific to their situation.
 7. **Close warmly** — "You're at ${plan.currentLevel}, aiming for ${plan.targetLevel} for your role. Hope this gave you a useful picture of what's possible."
 
+${noneAssessedYet ? "## IMPORTANT — NO SCORES YET\n\nThis student hasn't completed their assessment, so every skill above is unassessed. Say so plainly early on — this sample programme is a generic illustration based on typical requirements for their role, not something built from their own results. Encourage them to finish the assessment to get a version personalised to their actual scores.\n" : ""}
 ## RULES
 
 - Be warm and professional — you're a consultant, not a teacher
 - Use their name naturally (not every sentence)
-- Reference their ACTUAL scores, not vague estimates
+- Reference their ACTUAL scores, not vague estimates${noneAssessedYet ? " — if none exist yet, say so, don't invent them" : ""}
 - Be specific about the sample programme — week-by-week, activity-by-frequency
 - Never ask for a commitment or a yes/no decision — this is a free preview, not an enrolment
 - Invite them to book a call if they're interested — don't push if they're not
@@ -331,7 +476,7 @@ export function compilePlanFirstMessage(plan: PlanData): string {
     `${plan.firstName}, welcome back. You've just finished your discovery session and ` +
     `assessment exercises — I've got all your results right here. ` +
     `I'm going to walk you through your scores, explain what they mean for your role ` +
-    `as ${plan.role} at ${plan.employer}, and then show you a sample 16-week programme ` +
-    `for what it could look like to reach ${plan.targetLevel}. Ready to see how you did?`
+    `as ${plan.role} at ${plan.employer}, and then show you a sample ${plan.totalWeeks}-week ` +
+    `programme for what it could look like to reach ${plan.targetLevel}. Ready to see how you did?`
   );
 }
