@@ -1,7 +1,70 @@
 # PROJECT_STATE — LingoPure WOW Phase
 
-**Updated:** 2026-09-23 (ISS-066 CRITICAL — discovery agent context injection was completely dead; fixed)
+**Updated:** 2026-09-29 (ClassIn Student Portal 1A requirements doc for Thảo/Mei; HLD/LLD refreshed to today)
 **Scope doc:** `docs/WOW_PHASE_SCOPE.md` (approved + eng-reviewed; §11 locks all decisions)
+
+## Session log — 2026-09-29 (ClassIn requirements doc for Thảo/Mei; HLD/LLD refresh)
+
+Not a code session — a requirements/analysis pass triggered by a 7-day ClassIn expiry notice (received
+28 Sep) and a Trello task from Thảo: define exactly what LingoPure needs from ClassIn to complete and
+operate Student Portal 1A, get Mei written coverage/cost confirmation from ClassIn, and flag scope/cost
+choices for Thảo's approval. No package purchased or committed to.
+
+**Reconciled the requirements draft against the real repo, not just the product-flow description.**
+Walked `src/lib/classin/*`, `src/app/api/classin/*`, the `classin_sessions`/`students` schema, and
+`docs/AUDIT_REPORT.md` (10 Jul) — which already reviewed EEO's public developer docs — instead of
+guessing at ClassIn's API shape. Findings that changed the draft materially:
+- **UC4 (Join Class) may be the wrong architecture.** The repo builds an in-app iframe embed
+  (`lib/classin/embed.ts`), but EEO's public docs only document a launch/deep-link into ClassIn's own
+  client ("Invoke the ClassIn Client" / "Get The login Client Url") — no stated in-app embed. Flagged
+  as the first question to ClassIn, ahead of coverage/cost.
+- **Nothing calls real ClassIn anywhere yet** — student mapping, lesson creation, teacher assignment,
+  and cancel/reschedule are all unbuilt; the demo "Schedule a class" button invents a random
+  `classin_class_id` rather than calling ClassIn. UC5 (attendance) is the one piece that's fully wired
+  end-to-end already — `score-session.ts`/`session-rubric.ts` throw a structured `ClassinUnavailableError`
+  pending creds, with a working manual "paste transcript" fallback.
+- **The actual "[LD] Create ClassIn API coverage matrix" Trello card** (`trello.com/c/MCbzjmLC`) turned
+  out to be the *spec* for a matrix (16 categories, a 5-state output scale), not a filled one — nobody's
+  answered it. Rebuilt the doc's coverage-mapping section around that card's own categories/scale as a
+  candidate first pass, rather than inventing a different shape.
+- **Data governance finding, not just a coverage gap:** EEO's public Privacy Policy states PRC data
+  residency + a de-identification clause letting EEO use anonymised data indefinitely; the actual
+  enterprise agreement/DPA was never available for review. Folded into a new vendor question and kept
+  separate from the in-class-behaviour-data product decision so it doesn't get bundled into the renewal
+  by default.
+
+**Mapped ClassIn onto the existing personalisation pipeline** (this was the more consequential finding —
+ClassIn isn't just "does Join Class work," it's the third data source into a gap-driven personalisation
+engine that's already live for two of three inputs). Traced: discovery call → canonical `gap_scores`
+(`set-canonical.ts`, shared by every scoring source) → `plan-generator.ts` (stateless, re-derived every
+dashboard load) and `curriculum-engine.ts`/`curriculum-reset.ts` (the versioned 16-week `/plan`
+programme, which resets on new evidence — currently only lesson completions + workplace/BPO
+observations, **not** ClassIn sessions). `score-session.ts` already writes into the identical canonical
+layer ClassIn would need, with `source='session'` — the wiring exists, the product decisions about how
+far to trust it don't. Wrote up 8 of those decisions (IQ1–IQ8: trust threshold on mixed-track recordings,
+certification-eligibility stakes, whether ClassIn should trigger a full plan reset vs. just the daily
+dashboard, teacher consent, transcript retention, score-provenance sequencing, latency promise,
+UI transparency) as a separate section so they don't get mistaken for vendor questions.
+
+**Deliverables** (both in `~/Downloads`, not this repo):
+- `ClassIn_Requirements_Student_Portal_1A_DRAFT.md` (v0.4) — the full working doc: 8 use cases, 1A/Later
+  split, the coverage-matrix mapping reconciled against the real `[LD]` card, a 17+1-item open-questions
+  register, Mei's vendor summary, and the 8 internal personalisation-pipeline questions.
+- `ClassIn_Requirements_Summary_for_Mei_Thao.md` — a shorter cover memo for the two of them: background
+  on why this isn't just a renewal, Part A (questions for Mei to send ClassIn), Part B (the internal
+  questions, framed for Thảo's approval visibility).
+
+**HLD/LLD refreshed to today** (were dated 2026-09-19/09-16 against a repo at 2026-09-23 — see the
+"2026-09-29" note in each doc's §11/status line for the walked-through corrections): ISS-066
+(primeContext), ISS-058 (CEFR-18 on `/plan`), ISS-059/060 (radar-fill), ISS-048 Tier 2 (baseline
+backfill) folded in, plus one real pre-existing staleness bug caught along the way — both docs still
+described the discovery scorer as writing 6 `gap_scores` rows under the pre-migration key names;
+it's been 8 (6 primary + 2 supporting, `grammar`/`live_interaction` genuinely new) since the 2026-09-21
+taxonomy migration, and neither doc's verification pass had caught it.
+
+**Still open:** a gap analysis comparing `LingoPure Current Services — Pre-BPO — 2026-09-28.xlsx`
+(the live, 100%-teacher-led-on-ClassIn business today) against this repo's future/AI-personalised
+direction — requested by Dennis mid-session, in progress, not yet delivered.
 
 ## Session log — 2026-09-23 (ISS-066 — the discovery agent's context injection never worked, for anyone, ever)
 

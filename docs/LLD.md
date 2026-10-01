@@ -2,7 +2,7 @@
 
 > **Document type:** Implementation reference (living document)
 > **Repo:** `caistech/LingoPureAI`
-> **Status:** `PARTIALLY VERIFIED — 2026-09-19` (§1 scoring + §2 content-admin verified; C0–C7 blocks verified below vs their schemas/loaders; §9 plan delivery added)
+> **Status:** `PARTIALLY VERIFIED — 2026-09-23` (§1 scoring + §2 content-admin verified; C0–C7 blocks verified below vs their schemas/loaders; §10 plan delivery updated; §1 taxonomy corrected to the real 6+2 dimension set; discovery-agent context-injection fix (ISS-066) + baseline backfill (ISS-048 Tier 2) folded into §1)
 > **Owner:** Dennis McMahon · **Audience:** Minh (ongoing dev), Dennis (review)
 > **Companion doc:** `docs/HLD.md` (architecture overview)
 
@@ -37,7 +37,7 @@ Describes **how each feature is actually implemented** — schemas, endpoints, j
 ## 1. Discovery scoring — LP-18 / LP-1000 engine
 
 **Module:** Discovery / Scoring
-**Status:** `[V]` — verified 2026-07-10 against the deployed engine.
+**Status:** `[V]` — verified 2026-07-10 against the deployed engine; taxonomy + context-injection sections re-verified 2026-09-23.
 
 ### Purpose
 `[V]` Turn a **spoken discovery-session transcript** into a **CEFR-aligned six-dimension skill profile** on a 0–1000 scale (the "LP-1000" rescale of the LP-18 framework), computed by **one AI rubric applied to every learner** — so placement is consistent by construction, not subject to teacher-to-teacher variance. *(Engine: `src/lib/scoring/score-discovery.ts`; rubric: `src/lib/scoring/rubric.ts`.)*
@@ -46,20 +46,22 @@ Describes **how each feature is actually implemented** — schemas, endpoints, j
 - **ElevenLabs ConvAI post-call webhook** — `src/app/api/convai/webhook/route.ts`: upserts `discovery_sessions` (`convai_conversation_id`, `transcript_json`, `completed_at`), sets `students.discovery_status='complete'`, and triggers scoring.
 - **Manual re-score** — `POST /api/scoring/discovery` (idempotent; reads `discovery_sessions.transcript_json`, re-runs the engine).
 - Session start/token — `onboarding/discovery-session.tsx` + `api/convai/token`.
+- **`ariaDiscoveryConfig.primeContext(subjectId)`** (`aria-discovery-config.ts`, added 2026-09-23, ISS-066) — loads the student/role/employer rows server-side and returns `SYSTEM_PROMPT` with every `{{role_name}}`/`{{target_level}}`/`{{employer_name}}`/`{{student_name}}`/`{{native_language}}` placeholder substituted, pushed via `session.promptOverride` at connect. **Before this fix, no injection path existed at all** — `discovery-session.tsx` computed these values but never passed them anywhere, so every discovery call ever run scored a transcript in which Aria's prompt still contained the literal, unfilled placeholders. Only trusts a stored `target_level` once a prior discovery session has genuinely completed for that student (`students.target_level` defaults to `'B2'` at the schema level, so presence alone doesn't mean it was ever really stated).
 
 ### Data model `[V]`
 - **`discovery_sessions`** (`0001`, unique-convai in `0003`): `student_id`, `convai_conversation_id`, `transcript_json jsonb`, `profile_json jsonb`, `status`, `completed_at`.
-- **`gap_scores`** (`0001`): `student_id`, `skill` (CHECK — exactly six values), `score` (0–1000 after `0011`), `target` (default 800), `source` (`discovery|lesson|session|exam`), `unique(student_id, skill)`.
+- **`gap_scores`** (`0001`): `student_id`, `skill` (CHECK — eight values as of the 2026-09-21 taxonomy migration, ISS-048), `score` (0–1000 after `0011`), `target` (default 800), `source` (`discovery|lesson|session|exam`), `unique(student_id, skill, source)` (relaxed from `(student_id, skill)` by `0017` — see `set-canonical.ts`).
 - **`gap_score_history`** (`0019`): append-only longitudinal series `(student_id, skill, score, target, source, scored_at)`.
 - **Battery** (`0016`/`0017`): structured Phase-0b task battery; `set-canonical.ts`/`reconcile.ts` mark battery-sourced skill rows canonical over voice-sourced ones.
-- **The six canonical skills** (DB `CHECK` + `rubric.ts` `SKILL_KEYS`): `speaking_fluency`, `listening_comprehension`, `writing_formal`, `reading_intent`, `business_vocabulary`, `presentation_delivery`. **This is the single enforced taxonomy** — competing dimension lists in docs/forms are legacy.
+- **`role_baselines`** — per-role, per-skill target. All 19 existing roles were missing rows for `grammar`/`live_interaction` until migration `0060` (ISS-048 Tier 2, 2026-09-22) backfilled them (preset-matched where a self-setup role name matched, flat 800 default otherwise); live-verified 19/19.
+- **The eight scored dimensions** (DB `CHECK` + `rubric.ts` `SKILL_KEYS`/`SUPPORTING_SKILL_KEYS`) — **six primary**: `speaking`, `listening`, `writing`, `reading`, `grammar`, `live_interaction`; **two supporting** (shown as secondary signals, not headline bars): `business_vocabulary`, `presentation_delivery`. **Corrected 2026-09-23** — this section previously listed six keys under the pre-migration names (`speaking_fluency`, `listening_comprehension`, `writing_formal`, `reading_intent`) and omitted `grammar`/`live_interaction` entirely; `grammar` and `live_interaction` are genuinely new dimensions, not renames of anything.
 
 ### Core logic `[V]` — `scoreDiscoverySession` (`score-discovery.ts`)
 1. Inputs: `studentId`, `conversationId`, `transcript` (array of `{role, message, time_in_call_secs?}`).
 2. Model: **`claude-sonnet-4-6`** (`MODEL`, line 45) — chosen as "prescriptive rubric + strict schema, Opus overkill" (docstring).
-3. Prompt: `SYSTEM_PROMPT` (`rubric.ts`) scores "Aria" (the AI coach) vs. the student across the whole transcript; explicitly reads **hesitation, self-correction, recovery** for `speaking_fluency`.
-4. Output is forced through a **strict Zod schema** (`GapScoresSchema` — one `SubScore` per skill) via `anthropic.messages.parse(... output_config: zodOutputFormat)` — no free-text parsing.
-5. Writes **6 `gap_scores` rows** (`source='discovery'`) + `profile_json` on the session; `setCanonicalGapScores` applies canonical/non-canonical precedence; baselines loaded via `loadBaselinesForStudent`.
+3. Prompt: `SYSTEM_PROMPT` (`rubric.ts`) scores "Aria" (the AI coach) vs. the student across the whole transcript; explicitly reads **hesitation, self-correction, recovery** for `speaking`.
+4. Output is forced through a **strict Zod schema** (`GapScoresSchema` — one `SubScore` per dimension, all eight required) via `anthropic.messages.parse(... output_config: zodOutputFormat)` — no free-text parsing. `overall_cefr` is calibrated on the six primary dimensions only, explicitly excluding the two supporting measures.
+5. Writes **8 `gap_scores` rows** (`source='discovery'`) + `profile_json` on the session; `setCanonicalGapScores` applies canonical/non-canonical precedence; baselines loaded via `loadBaselinesForStudent`. The live-class scorer (`score-session.ts`, §3) writes into the identical canonical layer with `source='session'` — same helper, same table, same precedence rule.
 6. Returns token usage (input/output/cache read/write) for observability.
 
 ### External calls `[V]`
@@ -68,19 +70,23 @@ Describes **how each feature is actually implemented** — schemas, endpoints, j
 ### Confidence / flags surfaced to user `[V]`
 - Scores on a **0–1000 scale** (rationale in `0011`: a 100-pt scale "reads as noise"); CEFR bands `A1–C2` (`rubric.ts` `CEFR_BANDS`); per-skill `target` (default 800) drives the dashboard gap radar.
 - **Degrade-don't-fake:** translation/scoring failures fall back rather than fabricate (`i18n/translate.ts` batch fallback; scoring surfaces typed errors).
+- **Unassessed skills render as "Not assessed," never a zero (ISS-060, fixed 2026-09-22)** — the dot/label already did this on both radar charts (`gap-radar.tsx`, `telemetry/radar.tsx`), but the filled polygon behind the dot still plotted the axis through 0, so the chart's overall shape contradicted the dot next to it. Both radars now build the fill polygon from only the assessed axes.
 
 ### Known gaps `[V]`
-1. **No score-row provenance** — rows lack `model_id`/`rubric_version`/`prompt_hash`/`extraction_method` (only `source`). *(`AUDIT_REPORT.md` §A6 — Minh's to fix.)*
+1. **No score-row provenance** — rows lack `model_id`/`rubric_version`/`prompt_hash`/`extraction_method` (only `source`). *(`AUDIT_REPORT.md` §A6 — Minh's to fix. Still open as of 2026-09-23; worth fixing before a fourth scoring source, ClassIn sessions, starts writing into the same table for real.)*
 2. **No audio retained** — transcript only; audio discarded at the ConvAI webhook (§A7).
 3. **Discrete micro-signals** (latency-ms, hesitation, repair as individual rows) are *consumed* by the rubric but **not emitted** as rows — the "session layer" is unbuilt.
+4. **ISS-066 fix not yet re-verified live** — the `primeContext` fix (above) takes effect on deploy with no ElevenLabs-side push needed, but nobody has run a real live voice call through the fixed path yet to close the loop end-to-end (2026-09-23).
 
 ### Verify (Claude Code)
 - [x] `[V]` `MODEL = claude-sonnet-4-6` (`score-discovery.ts:45`); output via strict Zod schema.
-- [x] `[V]` 6 canonical skills = DB `CHECK` (`0001`) == `rubric.ts SKILL_KEYS`.
+- [x] `[V]` **Eight scored dimensions** (six primary + two supporting) = DB `CHECK` (`0001`, updated by the 2026-09-21 taxonomy migration) == `rubric.ts SKILL_KEYS`/`SUPPORTING_SKILL_KEYS`. *(Corrected 2026-09-23 — this line previously said "6 canonical skills".)*
 - [x] `[V]` 0–1000 scale (`0011`); `gap_score_history` append-only (`0019`).
 - [x] `[V]` Webhook persists `transcript_json` + triggers scoring (`api/convai/webhook`).
 - [x] `[V]` **Baseline scale unified on LP-18 0–1000 (2026-09-19)** — `role_baselines.min_score`, `gap_scores.target`, the self-setup seed (`self-setup.tsx` ROLES) and the self-setup API validation (`api/onboarding/self-setup/route.ts`, max 1000) now all agree. A prior 0–100 vs 0–1000 mismatch made every `gap = max(0, target−score) = 0`.
 - [x] `[V]` **Webhook identity is server-derived** — `handlePlanAgentPostCall` verifies the anon token via `verifyAnonSessionToken` before using it as `student_id` (fixes `invalid input syntax for type uuid` when no `convai_voice_bindings` row exists).
+- [x] `[V]` **`grammar`/`live_interaction` role-baseline backfill (migration `0060`, ISS-048 Tier 2, 2026-09-22)** — live-verified 19/19 roles; scoring pipeline separately re-verified against a synthetic transcript (model correctly isolated grammar-specific errors and live_interaction repair behaviour as distinct dimensions, not schema-compliant filler).
+- [x] `[V]` **`primeContext` injection wired (ISS-066, 2026-09-23)** — verified against two real student rows (a completed student, a never-assessed student), not just compiled. Live voice-call re-confirmation still outstanding (see Known gaps).
 - [ ] `[?]` Battery reconciliation edge cases (`reconcile.ts`) — not exhaustively traced.
 
 ---
@@ -302,6 +308,7 @@ Turn the post-assessment gap profile into a **3-phase, 16-week improvement progr
 - `buildPlan` (`lib/plan/plan-delivery.ts`) derives the 3 phases from the canonical `gap_scores` row: **Ahead–Maintain** (≥85% target), **Develop–Consolidate** (50–84%), **Build–Close** (<50%) per phase bucket; base week count from `gap_scores.target ≈ 800`; modality mix (lessons/classes/coaching) is rolled per phase.
 - Baseline scale is LP-18 0–1000 uniformly (see §1 fix) so "Gap vs role baseline" and the phase buckets mean what they show.
 - Battery submit (`battery-runner.tsx:167`) now redirects to `/plan` instead of `/lessons`.
+- **`/plan` now renders the LP-18 micro-band on screen (ISS-058, 2026-09-22)** — `plan-delivery.ts` already computed `lp18Band` per skill and `currentLp18` overall, and the voice agent's prompt (`compilePlanPrompt()`) already spoke it; `plan/page.tsx` was the only place it was missing. Added next to the CEFR letter in the header and next to each skill's score, matching the Dashboard `ScoreBar` convention.
 
 ### External calls
 - ElevenLabs plan agent (conversational), Anthropic (`buildPlan` text derivation), Supabase.
