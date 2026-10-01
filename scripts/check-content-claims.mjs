@@ -37,6 +37,7 @@ const ROOTS = [
   "src/app/demo",
   "src/app/about",
   "src/app/pricing",
+  "src/components/quick-walkthrough", // feeds both /demo and the homepage preview
 ];
 
 function walk(dir) {

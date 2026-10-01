@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LanguagePill } from "@/components/i18n/language-pill";
 import { getDict } from "@/lib/i18n";
+import { QuickWalkthrough } from "@/components/demo/QuickWalkthrough";
 
 export default async function LandingPage() {
   const { lang, t } = await getDict();
@@ -70,6 +71,10 @@ export default async function LandingPage() {
             title="Measurable Gap, Closing"
             body="A skill profile scored from your own voice — speaking, listening, vocabulary and more — re-measured as you learn. CEFR certification via TrackTest."
           />
+        </div>
+
+        <div className="mt-16 max-w-4xl">
+          <QuickWalkthrough />
         </div>
       </main>
 

@@ -3,6 +3,7 @@ import type { HomeContent } from "@/content/home";
 import type { PublicTestimonial, PublicLogo } from "@/content/resolve";
 import { Anno, Stage, EmptySlot } from "@/components/marketing/AnnotationLayer";
 import { SectionGate, SpecOnly } from "@/components/marketing/CanvasGates";
+import { MktQuickWalkthrough } from "@/components/marketing/QuickWalkthrough";
 import type { LanguageCode } from "@/lib/i18n/dictionary";
 import { MarketingHomeCopy } from "./promo-copy";
 
@@ -50,6 +51,17 @@ export function MarketingHomeView({
             ))}
           </div>
           <p className="micro">{copy.hero.micro(hero.micro)}</p>
+        </div>
+      </section>
+
+      {/* PREVIEW — not part of the original 10-stage canvas being drafted;
+          a finished, working feature (not under editorial review), so it
+          always renders and skips the Stage/Anno review plumbing. Lets a
+          visitor see the sandbox flow in ~30s before committing to the
+          ~30-minute real assessment. */}
+      <section id="preview">
+        <div className="wrap">
+          <MktQuickWalkthrough />
         </div>
       </section>
 
