@@ -13,9 +13,10 @@ export function useWalkthroughPlayer() {
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  const [started, setStarted] = useState(false);
   const [index, setIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
-  const [playing, setPlaying] = useState(() => !prefersReducedMotion());
+  const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,14 +39,22 @@ export function useWalkthroughPlayer() {
   }, []);
 
   useEffect(() => {
-    if (!playing || reducedMotion) return;
+    if (!started || !playing || reducedMotion) return;
     timerRef.current = setTimeout(advance, STEP_MS);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [playing, index, reducedMotion, advance]);
+  }, [started, playing, index, reducedMotion, advance]);
+
+  const start = () => {
+    setStarted(true);
+    setIndex(0);
+    setFinished(false);
+    setPlaying(!reducedMotion);
+  };
 
   const goTo = (i: number) => {
+    setStarted(true);
     setIndex(i);
     setFinished(false);
     setPlaying(!reducedMotion);
@@ -62,6 +71,8 @@ export function useWalkthroughPlayer() {
   const togglePlaying = () => setPlaying((p) => !p);
 
   return {
+    started,
+    start,
     index,
     step: WALKTHROUGH_STEPS[index],
     playing,

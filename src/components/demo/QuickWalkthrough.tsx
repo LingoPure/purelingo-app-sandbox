@@ -9,6 +9,7 @@ import {
   STEP_MS,
 } from "@/components/quick-walkthrough/content";
 import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player";
+import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
 
 /**
  * A ~30-second auto-advancing preview of the sandbox flow (signup → voice
@@ -24,21 +25,19 @@ import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player"
  * content + player state via src/components/quick-walkthrough/.
  */
 export function QuickWalkthrough() {
-  const { index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying, pause, resume } =
+  const { started, start, index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying } =
     useWalkthroughPlayer();
 
   return (
     <section
       aria-label="30-second preview of the sandbox assessment"
       className="rounded-xl border border-cream bg-paper p-5 shadow-sm sm:p-8"
-      onMouseEnter={() => !reducedMotion && !finished && pause()}
-      onMouseLeave={() => !reducedMotion && !finished && resume()}
     >
       <div className="mb-5 flex items-center justify-between gap-3">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
           Watch how it works · 30 seconds
         </p>
-        {!reducedMotion && (
+        {started && !reducedMotion && (
           <button
             type="button"
             onClick={togglePlaying}
@@ -51,66 +50,106 @@ export function QuickWalkthrough() {
         )}
       </div>
 
-      {/* Progress segments */}
-      <div className="mb-6 grid grid-cols-4 gap-2" role="tablist" aria-label="Preview steps">
-        {WALKTHROUGH_STEPS.map((s, i) => (
-          <button
-            key={s.title}
-            type="button"
-            role="tab"
-            aria-selected={i === index}
-            aria-label={`${s.tag}: ${s.title}`}
-            onClick={() => goTo(i)}
-            className="min-h-11 overflow-hidden rounded-full bg-cream"
-          >
-            <span
-              className="block h-1.5 rounded-full bg-teal transition-all"
-              style={{
-                width: i < index || finished ? "100%" : i === index ? "100%" : "0%",
-                transitionDuration:
-                  i === index && playing && !reducedMotion ? `${STEP_MS}ms` : "200ms",
-                transitionTimingFunction: "linear",
-              }}
-            />
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 md:items-center">
-        <div>
-          <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-gold">
-            {step.tag}
-          </p>
-          <h3 className="mb-2 font-serif text-2xl text-navy">{step.title}</h3>
-          <p className="text-base leading-relaxed text-mute">{step.body}</p>
-        </div>
-
-        <div className="flex min-h-[220px] items-center justify-center rounded-lg bg-mist p-4">
-          <StepVisual index={index} />
-        </div>
-      </div>
-
-      {finished && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-cream pt-5">
-          <p className="text-base text-mute">
-            That&apos;s the whole idea — it&apos;s free to try yourself.
-          </p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={replay}
-              className="min-h-11 rounded-md border border-navy/20 px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
-            >
-              Watch again
-            </button>
-            <Link
-              href="/signup"
-              className="min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
-            >
-              Start your real assessment
-            </Link>
+      {!started ? (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="flex gap-2" aria-hidden="true">
+            {WALKTHROUGH_STEPS.map((s, i) => (
+              <span
+                key={s.title}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-cream bg-mist text-navy"
+              >
+                <StepThumb index={i} size={18} />
+              </span>
+            ))}
           </div>
+          <button
+            type="button"
+            onClick={start}
+            className="flex min-h-14 items-center gap-3 rounded-full bg-navy px-7 py-3 text-base font-medium text-paper hover:bg-navy-deep"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs" aria-hidden="true">
+              ▶
+            </span>
+            Watch the 30-second demo
+          </button>
+          <p className="max-w-sm text-sm text-mute">
+            See the whole flow — signup, talking to Aria, your skill profile, your plan — before you
+            try it yourself.
+          </p>
         </div>
+      ) : (
+        <>
+          {/* Progress segments */}
+          <div className="mb-6 grid grid-cols-4 gap-2" role="tablist" aria-label="Preview steps">
+            {WALKTHROUGH_STEPS.map((s, i) => (
+              <button
+                key={s.title}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`${s.tag}: ${s.title}`}
+                onClick={() => goTo(i)}
+                className="flex min-h-11 flex-col items-center gap-1.5"
+              >
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full border ${
+                    i === index ? "border-gold text-gold bg-paper" : "border-cream text-mute bg-mist"
+                  }`}
+                >
+                  <StepThumb index={i} size={16} />
+                </span>
+                <span className="block h-1.5 w-full overflow-hidden rounded-full bg-cream">
+                  <span
+                    className="block h-full rounded-full bg-teal transition-all"
+                    style={{
+                      width: i < index || finished ? "100%" : i === index ? "100%" : "0%",
+                      transitionDuration:
+                        i === index && playing && !reducedMotion ? `${STEP_MS}ms` : "200ms",
+                      transitionTimingFunction: "linear",
+                    }}
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 md:items-center">
+            <div>
+              <p className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-gold">
+                {step.tag}
+              </p>
+              <h3 className="mb-2 font-serif text-2xl text-navy">{step.title}</h3>
+              <p className="text-base leading-relaxed text-mute">{step.body}</p>
+            </div>
+
+            <div className="flex min-h-[220px] items-center justify-center rounded-lg bg-mist p-4">
+              <StepVisual index={index} />
+            </div>
+          </div>
+
+          {finished && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-cream pt-5">
+              <p className="text-base text-mute">
+                That&apos;s the whole idea — it&apos;s free to try yourself.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={replay}
+                  className="min-h-11 rounded-md border border-navy/20 px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
+                >
+                  Watch again
+                </button>
+                <Link
+                  href="/signup"
+                  className="min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
+                >
+                  Start your real assessment
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

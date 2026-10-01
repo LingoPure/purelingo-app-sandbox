@@ -61,6 +61,7 @@ export function MarketingHomeView({
           ~30-minute real assessment. */}
       <section id="preview">
         <div className="wrap">
+          <h2 className="preview-headline">Check out how the demo works — below</h2>
           <MktQuickWalkthrough />
         </div>
       </section>

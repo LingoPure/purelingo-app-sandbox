@@ -9,6 +9,7 @@ import {
   STEP_MS,
 } from "@/components/quick-walkthrough/content";
 import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player";
+import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
 
 /**
  * Marketing-canvas variant of the ~30-second sandbox preview — styled with
@@ -20,21 +21,16 @@ import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player"
  * under review.
  */
 export function MktQuickWalkthrough() {
-  const { index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying, pause, resume } =
+  const { started, start, index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying } =
     useWalkthroughPlayer();
 
   return (
-    <div
-      className="preview-card"
-      aria-label="30-second preview of the sandbox assessment"
-      onMouseEnter={() => !reducedMotion && !finished && pause()}
-      onMouseLeave={() => !reducedMotion && !finished && resume()}
-    >
+    <div className="preview-card" aria-label="30-second preview of the sandbox assessment">
       <div className="preview-head">
         <p className="eyebrow" style={{ marginBottom: 0 }}>
           Watch how it works · 30 seconds
         </p>
-        {!reducedMotion && (
+        {started && !reducedMotion && (
           <button
             type="button"
             onClick={togglePlaying}
@@ -47,56 +43,83 @@ export function MktQuickWalkthrough() {
         )}
       </div>
 
-      <div className="preview-bars" role="tablist" aria-label="Preview steps">
-        {WALKTHROUGH_STEPS.map((s, i) => (
-          <button
-            key={s.title}
-            type="button"
-            role="tab"
-            aria-selected={i === index}
-            aria-label={`${s.tag}: ${s.title}`}
-            onClick={() => goTo(i)}
-            className="preview-bar"
-          >
-            <span className="preview-bar-track">
-              <span
-                className="preview-bar-fill"
-                style={{
-                  width: i < index || finished ? "100%" : i === index ? "100%" : "0%",
-                  transition:
-                    i === index && playing && !reducedMotion
-                      ? `width ${STEP_MS}ms linear`
-                      : "width 200ms linear",
-                }}
-              />
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <div className="preview-body">
-        <div>
-          <p className="preview-step-tag">{step.tag}</p>
-          <h3 className="preview-step-title">{step.title}</h3>
-          <p className="preview-step-body">{step.body}</p>
-        </div>
-        <div className="preview-visual">
-          <StepVisual index={index} />
-        </div>
-      </div>
-
-      {finished && (
-        <div className="preview-done">
-          <p>That&apos;s the whole idea — it&apos;s free to try yourself.</p>
-          <div style={{ display: "flex", gap: 12 }}>
-            <button type="button" onClick={replay} className="btn btn--ghost">
-              Watch again
-            </button>
-            <Link href="/signup" className="btn">
-              Start your real assessment
-            </Link>
+      {!started ? (
+        <div className="preview-cover">
+          <div className="preview-cover-thumbs" aria-hidden="true">
+            {WALKTHROUGH_STEPS.map((s, i) => (
+              <span key={s.title} className="preview-cover-thumb">
+                <StepThumb index={i} size={18} />
+              </span>
+            ))}
           </div>
+          <button type="button" onClick={start} className="preview-cover-play">
+            <span className="preview-cover-play-icon" aria-hidden="true">
+              ▶
+            </span>
+            Watch the 30-second demo
+          </button>
+          <p className="preview-cover-caption">
+            See the whole flow — signup, talking to Aria, your skill profile, your plan — before you
+            try it yourself.
+          </p>
         </div>
+      ) : (
+        <>
+          <div className="preview-bars" role="tablist" aria-label="Preview steps">
+            {WALKTHROUGH_STEPS.map((s, i) => (
+              <button
+                key={s.title}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`${s.tag}: ${s.title}`}
+                onClick={() => goTo(i)}
+                className="preview-bar"
+              >
+                <span className="preview-bar-thumb">
+                  <StepThumb index={i} />
+                </span>
+                <span className="preview-bar-track">
+                  <span
+                    className="preview-bar-fill"
+                    style={{
+                      width: i < index || finished ? "100%" : i === index ? "100%" : "0%",
+                      transition:
+                        i === index && playing && !reducedMotion
+                          ? `width ${STEP_MS}ms linear`
+                          : "width 200ms linear",
+                    }}
+                  />
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="preview-body">
+            <div>
+              <p className="preview-step-tag">{step.tag}</p>
+              <h3 className="preview-step-title">{step.title}</h3>
+              <p className="preview-step-body">{step.body}</p>
+            </div>
+            <div className="preview-visual">
+              <StepVisual index={index} />
+            </div>
+          </div>
+
+          {finished && (
+            <div className="preview-done">
+              <p>That&apos;s the whole idea — it&apos;s free to try yourself.</p>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="button" onClick={replay} className="btn btn--ghost">
+                  Watch again
+                </button>
+                <Link href="/signup" className="btn">
+                  Start your real assessment
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
