@@ -9,6 +9,7 @@ import {
   STEP_MS,
 } from "@/components/quick-walkthrough/content";
 import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player";
+import { useWalkthroughNarration } from "@/components/quick-walkthrough/use-narration";
 import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
 
 /**
@@ -21,25 +22,42 @@ import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
  * under review.
  */
 export function MktQuickWalkthrough() {
-  const { started, start, index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying } =
+  const { started, start, index, step, playing, finished, reducedMotion, playToken, goTo, replay, togglePlaying } =
     useWalkthroughPlayer();
+  const { muted, toggleMuted } = useWalkthroughNarration({ playToken, finished });
 
   return (
-    <div className="preview-card" aria-label="30-second preview of the sandbox assessment">
+    <div className="preview-card" aria-label="30-second preview of the sandbox assessment, narrated by Aria">
       <div className="preview-head">
-        <p className="eyebrow" style={{ marginBottom: 0 }}>
-          Watch how it works · 30 seconds
-        </p>
-        {started && !reducedMotion && (
-          <button
-            type="button"
-            onClick={togglePlaying}
-            disabled={finished}
-            className="preview-play"
-            aria-label={playing ? "Pause preview" : "Play preview"}
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
+        <div>
+          <p className="eyebrow" style={{ marginBottom: 0 }}>
+            Watch how it works · 30 seconds
+          </p>
+          <p className="preview-voice-badge">🔊 Narrated out loud by Aria, LingoPure&apos;s voice agent</p>
+        </div>
+        {started && (
+          <div style={{ display: "flex", gap: 8 }}>
+            {!reducedMotion && (
+              <button
+                type="button"
+                onClick={togglePlaying}
+                disabled={finished}
+                className="preview-play"
+                aria-label={playing ? "Pause preview" : "Play preview"}
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleMuted}
+              className="preview-play"
+              aria-label={muted ? "Unmute Aria's narration" : "Mute Aria's narration"}
+              aria-pressed={muted}
+            >
+              {muted ? "🔇" : "🔊"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -114,7 +132,7 @@ export function MktQuickWalkthrough() {
                   Watch again
                 </button>
                 <Link href="/signup" className="btn">
-                  Start your real assessment
+                  Start Free Assessment
                 </Link>
               </div>
             </div>

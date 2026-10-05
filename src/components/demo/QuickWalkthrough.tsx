@@ -9,6 +9,7 @@ import {
   STEP_MS,
 } from "@/components/quick-walkthrough/content";
 import { useWalkthroughPlayer } from "@/components/quick-walkthrough/use-player";
+import { useWalkthroughNarration } from "@/components/quick-walkthrough/use-narration";
 import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
 
 /**
@@ -25,28 +26,45 @@ import { StepThumb } from "@/components/quick-walkthrough/StepThumb";
  * content + player state via src/components/quick-walkthrough/.
  */
 export function QuickWalkthrough() {
-  const { started, start, index, step, playing, finished, reducedMotion, goTo, replay, togglePlaying } =
+  const { started, start, index, step, playing, finished, reducedMotion, playToken, goTo, replay, togglePlaying } =
     useWalkthroughPlayer();
+  const { muted, toggleMuted } = useWalkthroughNarration({ playToken, finished });
 
   return (
     <section
-      aria-label="30-second preview of the sandbox assessment"
+      aria-label="30-second preview of the sandbox assessment, narrated by Aria"
       className="rounded-xl border border-cream bg-paper p-5 shadow-sm sm:p-8"
     >
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
-          Watch how it works · 30 seconds
-        </p>
-        {started && !reducedMotion && (
-          <button
-            type="button"
-            onClick={togglePlaying}
-            disabled={finished}
-            className="min-h-11 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-navy hover:bg-mist disabled:opacity-40"
-            aria-label={playing ? "Pause preview" : "Play preview"}
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-gold">
+            Watch how it works · 30 seconds
+          </p>
+          <p className="mt-1 text-xs text-mute">🔊 Narrated out loud by Aria, LingoPure&apos;s voice agent</p>
+        </div>
+        {started && (
+          <div className="flex items-center gap-2">
+            {!reducedMotion && (
+              <button
+                type="button"
+                onClick={togglePlaying}
+                disabled={finished}
+                className="min-h-11 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-navy hover:bg-mist disabled:opacity-40"
+                aria-label={playing ? "Pause preview" : "Play preview"}
+              >
+                {playing ? "Pause" : "Play"}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={toggleMuted}
+              className="min-h-11 min-w-11 rounded-md px-3 py-2 text-sm font-medium text-navy hover:bg-mist"
+              aria-label={muted ? "Unmute Aria's narration" : "Mute Aria's narration"}
+              aria-pressed={muted}
+            >
+              {muted ? "🔇" : "🔊"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -144,7 +162,7 @@ export function QuickWalkthrough() {
                   href="/signup"
                   className="min-h-11 rounded-md bg-navy px-4 py-2 text-sm font-medium text-paper hover:bg-navy-deep"
                 >
-                  Start your real assessment
+                  Start Free Assessment
                 </Link>
               </div>
             </div>

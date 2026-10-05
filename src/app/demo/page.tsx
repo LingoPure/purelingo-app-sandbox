@@ -53,6 +53,12 @@ export default async function LandingPage() {
               {t("home.ctaSecondary")}
             </Link>
           </div>
+          <a
+            href="#preview"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm text-teal underline underline-offset-2 hover:text-navy"
+          >
+            👀 See how it works — watch the 30-second preview below
+          </a>
         </div>
 
         <div className="mt-24 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -73,7 +79,13 @@ export default async function LandingPage() {
           />
         </div>
 
-        <div className="mt-16 max-w-4xl">
+        <div className="mt-16 max-w-4xl" id="preview">
+          <h2 className="mb-2 text-center font-serif text-3xl text-navy">
+            Check out how the demo works — below
+          </h2>
+          <p className="mb-6 text-center text-sm text-mute">
+            Press play and Aria — LingoPure&apos;s voice agent — talks you through it, start to finish.
+          </p>
           <QuickWalkthrough />
         </div>
       </main>

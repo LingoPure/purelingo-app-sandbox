@@ -51,6 +51,9 @@ export function MarketingHomeView({
             ))}
           </div>
           <p className="micro">{copy.hero.micro(hero.micro)}</p>
+          <a href="#preview" className="preview-jump-link">
+            👀 See how it works — watch the 30-second preview below
+          </a>
         </div>
       </section>
 
@@ -62,6 +65,9 @@ export function MarketingHomeView({
       <section id="preview">
         <div className="wrap">
           <h2 className="preview-headline">Check out how the demo works — below</h2>
+          <p className="preview-subhead">
+            Press play and Aria — LingoPure&apos;s voice agent — talks you through it, start to finish.
+          </p>
           <MktQuickWalkthrough />
         </div>
       </section>

@@ -18,6 +18,10 @@ export function useWalkthroughPlayer() {
   const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
   const [playing, setPlaying] = useState(false);
   const [finished, setFinished] = useState(false);
+  // Bumped by start()/replay() only — a fresh playthrough, as distinct from
+  // goTo() (manual scrubbing). The narration hook watches this to know when
+  // to (re)play the intro line, without replaying on every tab click.
+  const [playToken, setPlayToken] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -51,6 +55,7 @@ export function useWalkthroughPlayer() {
     setIndex(0);
     setFinished(false);
     setPlaying(!reducedMotion);
+    setPlayToken((t) => t + 1);
   };
 
   const goTo = (i: number) => {
@@ -64,6 +69,7 @@ export function useWalkthroughPlayer() {
     setIndex(0);
     setFinished(false);
     setPlaying(!reducedMotion);
+    setPlayToken((t) => t + 1);
   };
 
   const pause = () => setPlaying(false);
@@ -78,6 +84,7 @@ export function useWalkthroughPlayer() {
     playing,
     finished,
     reducedMotion,
+    playToken,
     goTo,
     replay,
     pause,
