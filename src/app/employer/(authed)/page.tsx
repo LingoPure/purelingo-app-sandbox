@@ -1,8 +1,11 @@
 // @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { SeedButton } from "./seed-button";
 import { PendingJoinRequests } from "./pending-join-requests";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 
 export const dynamic = "force-dynamic";
 import {
@@ -16,11 +19,17 @@ import {
 import { SKILL_KEYS, SKILL_LABELS as SKILL_LABEL } from "@/lib/scoring/rubric";
 
 export default async function EmployerOverviewPage() {
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer");
+  }
+  const employerId = auth.admin.employerId;
+
   const [students, activity, roleCoverage, joinRequests] = await Promise.all([
-    loadCohortStudents(),
-    loadActivityFeed(10),
-    loadCoverageByRole(),
-    loadPendingJoinRequests(),
+    loadCohortStudents(employerId),
+    loadActivityFeed(employerId, 10),
+    loadCoverageByRole(employerId),
+    loadPendingJoinRequests(employerId),
   ]);
   const summary = summariseCohort(students);
 

@@ -1,8 +1,10 @@
 // @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { GapRadar } from "@/components/dashboard/gap-radar";
 import { loadStudentDetail } from "@/lib/employer/data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { SKILL_KEYS, SKILL_LABELS as SKILL_LABEL } from "@/lib/scoring/rubric";
 import type { PlanRecommendation } from "@/lib/lessons/plan-generator";
 
@@ -11,8 +13,12 @@ export default async function StudentDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer/students");
+  }
   const { id } = await params;
-  const detail = await loadStudentDetail(id);
+  const detail = await loadStudentDetail(auth.admin.employerId, id);
   if (!detail) notFound();
 
   const {

@@ -1,11 +1,14 @@
 /**
  * Role-management data layer (employer admin side).
  *
- * Two read shapes:
- *   - loadRolesIndex()  → list view (id, name, description, baselines, student count)
- *   - loadRoleDetail()  → edit view (full + assigned students)
+ * Two read shapes, both scoped to the CALLING employer (passed explicitly —
+ * never resolved implicitly, so an unscoped query can't creep back in):
+ *   - loadRolesIndex(employerId)  → list view (id, name, description, baselines, student count)
+ *   - loadRoleDetail(employerId, roleId)  → edit view (full + assigned students)
  *
- * All reads use the service-role client. The /employer/* gate handles auth.
+ * All reads use the service-role client. The /employer/* gate handles auth;
+ * each page resolves its own employerId via requireEmployerAdmin() and
+ * passes it in here.
  */
 
 import { adminSupabase } from "./data";
@@ -64,6 +67,7 @@ export async function resolveActiveEmployerId(): Promise<string | null> {
 }
 
 export async function loadRolesIndex(
+  employerId: string,
   includeArchived = false
 ): Promise<RoleIndexRow[]> {
   const supabase = adminSupabase();
@@ -71,6 +75,7 @@ export async function loadRolesIndex(
   let rolesQuery = supabase
     .from("roles")
     .select("id, name, description, is_archived")
+    .eq("employer_id", employerId)
     .order("is_archived", { ascending: true })
     .order("name", { ascending: true });
   if (!includeArchived) rolesQuery = rolesQuery.eq("is_archived", false);
@@ -86,6 +91,7 @@ export async function loadRolesIndex(
     supabase
       .from("students")
       .select("role_id")
+      .eq("employer_id", employerId)
       .not("role_id", "is", null)
       .returns<{ role_id: string }[]>(),
   ]);
@@ -119,6 +125,7 @@ export async function loadRolesIndex(
 }
 
 export async function loadRoleDetail(
+  employerId: string,
   roleId: string
 ): Promise<RoleDetail | null> {
   const supabase = adminSupabase();
@@ -128,6 +135,7 @@ export async function loadRoleDetail(
       .from("roles")
       .select("id, employer_id, name, description, is_archived")
       .eq("id", roleId)
+      .eq("employer_id", employerId)
       .maybeSingle(),
     supabase
       .from("role_baselines")

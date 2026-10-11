@@ -1,8 +1,10 @@
 // @explanatory-header-exempt — nested workflow page; entry-point header lives on the parent surface
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { RoleForm } from "../role-form";
 import { loadRoleDetail } from "@/lib/employer/roles-data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +13,12 @@ export default async function EditRolePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer/roles");
+  }
   const { id } = await params;
-  const role = await loadRoleDetail(id);
+  const role = await loadRoleDetail(auth.admin.employerId, id);
   if (!role) notFound();
 
   return (

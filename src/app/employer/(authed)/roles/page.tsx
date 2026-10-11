@@ -1,6 +1,9 @@
 // @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { loadRolesIndex } from "@/lib/employer/roles-data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { SKILL_KEYS } from "@/lib/scoring/rubric";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +18,11 @@ const SKILL_LABEL: Record<string, string> = {
 };
 
 export default async function RolesIndexPage() {
-  const roles = await loadRolesIndex();
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer/roles");
+  }
+  const roles = await loadRolesIndex(auth.admin.employerId);
 
   return (
     <div className="flex flex-col gap-6">

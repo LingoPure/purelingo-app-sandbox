@@ -37,8 +37,8 @@ export default async function InviteStaffPage() {
   const employerId = auth.admin.employerId;
 
   const [roles, picks, defaultLang] = await Promise.all([
-    loadRolesIndex(),
-    loadEmployerStaffPicks(),
+    loadRolesIndex(employerId),
+    loadEmployerStaffPicks(employerId),
     loadEmployerDefaultLang(employerId),
   ]);
 

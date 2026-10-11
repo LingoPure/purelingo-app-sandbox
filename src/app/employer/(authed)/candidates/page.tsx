@@ -45,7 +45,7 @@ export default async function CandidatesPage() {
       .select("id, candidate_name, candidate_email, status, role_id, student_id, created_at, expires_at, roles(name)")
       .eq("employer_id", employerId)
       .order("created_at", { ascending: false }),
-    loadRolesIndex(),
+    loadRolesIndex(employerId),
   ]);
 
   // "Completed" is derived at read time from the linked student having a

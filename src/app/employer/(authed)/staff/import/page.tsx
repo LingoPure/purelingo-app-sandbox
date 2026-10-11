@@ -1,12 +1,19 @@
 // @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { loadRolesIndex } from "@/lib/employer/roles-data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { ImportClient } from "./import-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function StaffImportPage() {
-  const roles = await loadRolesIndex();
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer/staff/import");
+  }
+  const roles = await loadRolesIndex(auth.admin.employerId);
   const roleNames = roles.map((r) => r.name);
 
   return (

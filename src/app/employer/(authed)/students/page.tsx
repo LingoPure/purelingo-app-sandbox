@@ -1,12 +1,19 @@
 // @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { loadCohortStudents } from "@/lib/employer/data";
+import { requireEmployerAdmin } from "@/lib/employer/auth";
 import { StudentsTable, type RosterRow } from "./students-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function StudentsPage() {
-  const students = await loadCohortStudents();
+  const auth = await requireEmployerAdmin();
+  if (auth instanceof NextResponse) {
+    redirect("/login?redirectTo=/employer/students");
+  }
+  const students = await loadCohortStudents(auth.admin.employerId);
   const rows: RosterRow[] = students.map((s) => ({
     id: s.id,
     name: s.name,

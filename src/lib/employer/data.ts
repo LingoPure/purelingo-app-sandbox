@@ -124,36 +124,50 @@ const CERT_RANK: Record<string, number> = {
   C2: 6,
 };
 
-export async function loadCohortStudents(): Promise<CohortStudent[]> {
+export async function loadCohortStudents(
+  employerId: string
+): Promise<CohortStudent[]> {
   const supabase = adminSupabase();
-  const [studentsRes, scoresRes, lessonsRes, classesRes, certsRes] =
-    await Promise.all([
-      supabase
-        .from("students")
-        .select(
-          "id, name, email, target_level, discovery_status, created_at, xp, streak_days"
-        )
-        .order("created_at", { ascending: false })
-        .returns<StudentRow[]>(),
-      supabase
-        .from("gap_scores")
-        .select("student_id, skill, score")
-        .returns<ScoreRow[]>(),
-      supabase
-        .from("micro_lessons")
-        .select("student_id, status, xp_awarded, type, completed_at")
-        .returns<LessonAggRow[]>(),
-      supabase
-        .from("classin_sessions")
-        .select("student_id, status, scheduled_at, teacher_name, transcribed_at")
-        .returns<ClassAggRow[]>(),
-      supabase
-        .from("certifications")
-        .select("student_id, level, status, issued_at")
-        .returns<CertRow[]>(),
-    ]);
+  const studentsRes = await supabase
+    .from("students")
+    .select(
+      "id, name, email, target_level, discovery_status, created_at, xp, streak_days"
+    )
+    .eq("employer_id", employerId)
+    .order("created_at", { ascending: false })
+    .returns<StudentRow[]>();
 
   const students = studentsRes.data ?? [];
+  // Downstream tables key by student_id, not employer_id — scope the fan-out
+  // to THIS employer's student ids rather than pulling every row in the
+  // table (the leak this function used to have: no filter at all, so every
+  // employer admin saw every other employer's cohort).
+  const studentIds = students.map((s) => s.id);
+  if (studentIds.length === 0) return [];
+
+  const [scoresRes, lessonsRes, classesRes, certsRes] = await Promise.all([
+    supabase
+      .from("gap_scores")
+      .select("student_id, skill, score")
+      .in("student_id", studentIds)
+      .returns<ScoreRow[]>(),
+    supabase
+      .from("micro_lessons")
+      .select("student_id, status, xp_awarded, type, completed_at")
+      .in("student_id", studentIds)
+      .returns<LessonAggRow[]>(),
+    supabase
+      .from("classin_sessions")
+      .select("student_id, status, scheduled_at, teacher_name, transcribed_at")
+      .in("student_id", studentIds)
+      .returns<ClassAggRow[]>(),
+    supabase
+      .from("certifications")
+      .select("student_id, level, status, issued_at")
+      .in("student_id", studentIds)
+      .returns<CertRow[]>(),
+  ]);
+
   const scores = scoresRes.data ?? [];
   const lessons = lessonsRes.data ?? [];
   const classes = classesRes.data ?? [];
@@ -258,11 +272,14 @@ export type StaffPick = {
   native_language: string | null;
 };
 
-export async function loadEmployerStaffPicks(): Promise<StaffPick[]> {
+export async function loadEmployerStaffPicks(
+  employerId: string
+): Promise<StaffPick[]> {
   const supabase = adminSupabase();
   const { data, error } = await supabase
     .from("students")
     .select("id, name, email, role_id, target_level, native_language")
+    .eq("employer_id", employerId)
     .order("name", { ascending: true })
     .returns<
       {
@@ -339,37 +356,52 @@ export function summariseCohort(students: CohortStudent[]): CohortSummary {
 }
 
 /**
- * Coverage rollup keyed by role. One row per non-archived role across all
- * employers (the demo is single-tenant so we don't filter by employer here —
- * when multi-tenant lands this becomes loadCoverageByRole(employerId)).
+ * Coverage rollup keyed by role, scoped to ONE employer's roles + students.
  *
  * The headline number is "% of students at this role meeting EVERY baseline" —
  * a whole-bar pass rate. The worst-skill callout points the employer at the
  * skill where their cohort is most under-covered for that role.
  */
-export async function loadCoverageByRole(): Promise<RoleCoverage[]> {
+export async function loadCoverageByRole(
+  employerId: string
+): Promise<RoleCoverage[]> {
   const supabase = adminSupabase();
 
-  const [rolesRes, baselinesRes, studentsRes, scoresRes] = await Promise.all([
+  const [rolesRes, studentsRes] = await Promise.all([
     supabase
       .from("roles")
       .select("id, name, description")
+      .eq("employer_id", employerId)
       .eq("is_archived", false)
       .order("name", { ascending: true })
       .returns<{ id: string; name: string; description: string | null }[]>(),
     supabase
-      .from("role_baselines")
-      .select("role_id, skill, min_score")
-      .returns<{ role_id: string; skill: string; min_score: number }[]>(),
-    supabase
       .from("students")
       .select("id, role_id")
+      .eq("employer_id", employerId)
       .not("role_id", "is", null)
       .returns<{ id: string; role_id: string | null }[]>(),
-    supabase
-      .from("gap_scores")
-      .select("student_id, skill, score")
-      .returns<ScoreRow[]>(),
+  ]);
+
+  const roleIds = (rolesRes.data ?? []).map((r) => r.id);
+  const [baselinesRes, scoresRes] = await Promise.all([
+    roleIds.length
+      ? supabase
+          .from("role_baselines")
+          .select("role_id, skill, min_score")
+          .in("role_id", roleIds)
+          .returns<{ role_id: string; skill: string; min_score: number }[]>()
+      : Promise.resolve({ data: [] as { role_id: string; skill: string; min_score: number }[] }),
+    (() => {
+      const ids = (studentsRes.data ?? []).map((s) => s.id);
+      return ids.length
+        ? supabase
+            .from("gap_scores")
+            .select("student_id, skill, score")
+            .in("student_id", ids)
+            .returns<ScoreRow[]>()
+        : Promise.resolve({ data: [] as ScoreRow[] });
+    })(),
   ]);
 
   const roles = rolesRes.data ?? [];
@@ -464,13 +496,29 @@ export async function loadCoverageByRole(): Promise<RoleCoverage[]> {
   });
 }
 
-export async function loadActivityFeed(limit = 12): Promise<ActivityEvent[]> {
+export async function loadActivityFeed(
+  employerId: string,
+  limit = 12
+): Promise<ActivityEvent[]> {
   const supabase = adminSupabase();
-  const [discoveryRes, classRes, lessonRes, studentsRes] = await Promise.all([
+  const studentsRes = await supabase
+    .from("students")
+    .select("id, name")
+    .eq("employer_id", employerId)
+    .returns<{ id: string; name: string | null }[]>();
+
+  const studentIds = (studentsRes.data ?? []).map((s) => s.id);
+  const nameById = new Map(
+    (studentsRes.data ?? []).map((s) => [s.id, s.name ?? "Student"])
+  );
+  if (studentIds.length === 0) return [];
+
+  const [discoveryRes, classRes, lessonRes] = await Promise.all([
     supabase
       .from("discovery_sessions")
       .select("student_id, completed_at, status")
       .eq("status", "complete")
+      .in("student_id", studentIds)
       .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(20)
       .returns<DiscoveryRow[]>(),
@@ -478,6 +526,7 @@ export async function loadActivityFeed(limit = 12): Promise<ActivityEvent[]> {
       .from("classin_sessions")
       .select("student_id, status, scheduled_at, teacher_name, transcribed_at")
       .eq("status", "completed")
+      .in("student_id", studentIds)
       .order("scheduled_at", { ascending: false, nullsFirst: false })
       .limit(20)
       .returns<ClassAggRow[]>(),
@@ -485,18 +534,11 @@ export async function loadActivityFeed(limit = 12): Promise<ActivityEvent[]> {
       .from("micro_lessons")
       .select("student_id, status, xp_awarded, type, completed_at")
       .eq("status", "completed")
+      .in("student_id", studentIds)
       .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(20)
       .returns<LessonAggRow[]>(),
-    supabase
-      .from("students")
-      .select("id, name")
-      .returns<{ id: string; name: string | null }[]>(),
   ]);
-
-  const nameById = new Map(
-    (studentsRes.data ?? []).map((s) => [s.id, s.name ?? "Student"])
-  );
 
   const events: ActivityEvent[] = [];
 
@@ -585,11 +627,15 @@ export type StudentDetail = {
 };
 
 export async function loadStudentDetail(
+  employerId: string,
   studentId: string
 ): Promise<StudentDetail | null> {
   const supabase = adminSupabase();
 
-  const cohort = await loadCohortStudents();
+  // Scoping the cohort lookup to this employer is also the ownership check:
+  // a studentId belonging to a DIFFERENT employer simply won't be found,
+  // same as a genuinely missing id.
+  const cohort = await loadCohortStudents(employerId);
   const student = cohort.find((s) => s.id === studentId);
   if (!student) return null;
 
@@ -681,18 +727,28 @@ export type PendingJoinRequest = {
 /**
  * Self-setup users who hit a name collision on an existing organisation and
  * were routed into a pending request instead of silently spinning up a
- * duplicate org (see self-setup.ts). Global across all organisations —
- * this console has no per-employer auth scoping today (same shape as every
- * other loader in this file), so an admin sees every pending request and
- * approves the ones that are theirs.
+ * duplicate org (see self-setup.ts). Scoped to the CALLING employer's own
+ * organisation — an admin approves only requests to join their own company.
  */
-export async function loadPendingJoinRequests(): Promise<PendingJoinRequest[]> {
+export async function loadPendingJoinRequests(
+  employerId: string
+): Promise<PendingJoinRequest[]> {
   const supabase = adminSupabase();
+
+  const { data: employerRow } = await supabase
+    .from("employers")
+    .select("id, organisation_id")
+    .eq("id", employerId)
+    .maybeSingle();
+  const organisationId = (employerRow as { organisation_id: string | null } | null)
+    ?.organisation_id;
+  if (!organisationId) return [];
 
   const { data: memberships } = await supabase
     .from("organisation_memberships")
     .select("id, user_id, organisation_id, invited_at, created_at")
     .eq("status", "pending")
+    .eq("organisation_id", organisationId)
     .order("created_at", { ascending: true })
     .returns<
       {
@@ -706,54 +762,34 @@ export async function loadPendingJoinRequests(): Promise<PendingJoinRequest[]> {
 
   if (!memberships || memberships.length === 0) return [];
 
-  const orgIds = Array.from(new Set(memberships.map((m) => m.organisation_id)));
   const userIds = Array.from(new Set(memberships.map((m) => m.user_id)));
 
-  const [orgsRes, studentsRes, employersRes] = await Promise.all([
+  const [orgRes, studentsRes, roleRows] = await Promise.all([
     supabase
       .from("organisations")
       .select("id, name")
-      .in("id", orgIds)
-      .returns<{ id: string; name: string }[]>(),
+      .eq("id", organisationId)
+      .maybeSingle()
+      .returns<{ id: string; name: string } | null>(),
     supabase
       .from("students")
       .select("id, name, email")
       .in("id", userIds)
       .returns<{ id: string; name: string | null; email: string | null }[]>(),
     supabase
-      .from("employers")
-      .select("id, organisation_id")
-      .in("organisation_id", orgIds)
-      .returns<{ id: string; organisation_id: string }[]>(),
+      .from("roles")
+      .select("id, name")
+      .eq("employer_id", employerId)
+      .eq("is_archived", false)
+      .returns<{ id: string; name: string }[]>(),
   ]);
 
-  const orgById = new Map((orgsRes.data ?? []).map((o) => [o.id, o]));
+  const org = orgRes.data;
   const studentById = new Map((studentsRes.data ?? []).map((s) => [s.id, s]));
-  const employerByOrgId = new Map(
-    (employersRes.data ?? []).map((e) => [e.organisation_id, e.id])
-  );
-
-  const employerIds = Array.from(new Set(employerByOrgId.values()));
-  const { data: roleRows } = employerIds.length
-    ? await supabase
-        .from("roles")
-        .select("id, name, employer_id")
-        .in("employer_id", employerIds)
-        .eq("is_archived", false)
-        .returns<{ id: string; name: string; employer_id: string }[]>()
-    : { data: [] as { id: string; name: string; employer_id: string }[] };
-
-  const rolesByEmployerId = new Map<string, { id: string; name: string }[]>();
-  for (const r of roleRows ?? []) {
-    const bucket = rolesByEmployerId.get(r.employer_id) ?? [];
-    bucket.push({ id: r.id, name: r.name });
-    rolesByEmployerId.set(r.employer_id, bucket);
-  }
+  const availableRoles = (roleRows.data ?? []).map((r) => ({ id: r.id, name: r.name }));
 
   return memberships.map((m) => {
-    const org = orgById.get(m.organisation_id);
     const student = studentById.get(m.user_id);
-    const employerId = employerByOrgId.get(m.organisation_id);
     return {
       membershipId: m.id,
       userId: m.user_id,
@@ -762,7 +798,7 @@ export async function loadPendingJoinRequests(): Promise<PendingJoinRequest[]> {
       organisationId: m.organisation_id,
       organisationName: org?.name ?? "Unknown organisation",
       requestedAt: m.invited_at ?? m.created_at,
-      availableRoles: employerId ? rolesByEmployerId.get(employerId) ?? [] : [],
+      availableRoles,
     };
   });
 }
