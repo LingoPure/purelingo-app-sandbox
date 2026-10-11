@@ -10,7 +10,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+// scripts/update-env-local.mjs -> scripts/.. = the project root. (This was
+// previously "..", ".." — one level too many — which silently wrote every
+// agent id this helper ever upserted into the PARENT of every project
+// directory instead of this repo's own .env.local. See the incident note
+// in CHANGELOG/commit history: it had been writing into a DIFFERENT
+// project's real, pulled .env.local that happened to be one level up.)
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_PATH = resolve(ROOT, ".env.local");
 
 /**
