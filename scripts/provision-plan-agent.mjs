@@ -60,10 +60,16 @@ async function main() {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not set in env");
 
-  const site =
+  // Strip a trailing slash — provisionVoiceAgent's own webhook-URL builder
+  // already does this defensively (baseUrl.replace(/\/$/, '')), but
+  // createConversationTools does NOT, so NEXT_PUBLIC_APP_URL carrying a
+  // trailing slash (it does, in this env) bakes a literal double slash into
+  // every tool URL. Same fix as provision-voice-tutor-agent.mjs.
+  const site = (
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.NEXT_PUBLIC_APP_URL ??
-    "https://purelingo-app-sandbox.vercel.app";
+    "https://purelingo-app-sandbox.vercel.app"
+  ).replace(/\/$/, "");
   const host = new URL(site).host;
 
   console.log(`Provisioning "${AGENT_NAME}" → ${site}/api/convai/webhook …`);
