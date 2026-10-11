@@ -156,11 +156,17 @@ export async function POST(request: NextRequest) {
     const admin = adminSupabase();
     try {
       const { out } = await scoreTaskResponse(admin, responseId);
-      await reconcileBatteryScore(admin, user.id, taskType, {
-        score: out.score,
-        cefr_band: out.cefr_band,
-        evidence: out.evidence,
-      });
+      await reconcileBatteryScore(
+        admin,
+        user.id,
+        taskType,
+        {
+          score: out.score,
+          cefr_band: out.cefr_band,
+          evidence: out.evidence,
+        },
+        out.scoring_model
+      );
       console.log(
         `[battery/submit] scored ${taskType} for ${user.id} → ${out.score} (${out.cefr_band})`
       );

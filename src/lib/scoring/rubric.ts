@@ -65,6 +65,21 @@ export const SKILL_LABELS: Record<AnySkillKey, string> = {
   presentation_delivery: "Presenting",
 };
 
+/**
+ * RUBRIC_VERSION — bump whenever the band-mapping logic below changes
+ * (scoreToCefrBand / scoreToLp18 / CEFR_TARGET_FLOOR / LP18_PLACEMENT_SCORE_90).
+ * Threaded into gap_scores.rubric_version (migration 0061) so a score
+ * produced under one mapping version is distinguishable from one produced
+ * under a later, corrected version — see R6 in
+ * docs/audit/platform-state-2026-10-11.md.
+ *
+ * 2.0.0 — fixed scoreToLp18 (was an even 18-way split of 0-1000, ignoring
+ * CEFR band width entirely; now derives from scoreToCefrBand's own bands,
+ * split into thirds, per the documented source — see the comment on
+ * scoreToLp18 below for the citation).
+ */
+export const RUBRIC_VERSION = "2.0.0";
+
 export const CEFR_BANDS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 export type CefrBand = (typeof CEFR_BANDS)[number];
 
@@ -79,19 +94,18 @@ export const LP18_BANDS = [
 
 export type Lp18Band = (typeof LP18_BANDS)[number];
 
-export function scoreToLp18(score: number): Lp18Band {
-  // 18 levels across 1000 points: each level is ~55.5 points wide.
-  // C2.3 is capped at 1000.
-  const idx = Math.min(17, Math.max(0, Math.floor(score / 1000 * 18)));
-  return LP18_BANDS[idx];
-}
-
 /**
  * Canonical score → CEFR-letter mapping. Mirrors the SCALE section of
  * SYSTEM_PROMPT below exactly (0-199 A1 ... 900-1000 C2) — this is the ONE
  * place that conversion happens. Do not re-derive a different score→band
  * scheme elsewhere (e.g. a 5-bucket "B2+/B2/B1/A2/A1" scheme) — Dashboard
  * and /plan must agree by construction, not by coincidence.
+ *
+ * These specific boundaries (200/200/200/200/100/100-wide bands, C1/C2
+ * compressed relative to A1-B2) are not an invented convenience — they
+ * match the Council-of-Europe-relative proportions LingoPure's own source
+ * documentation uses for its CEFR sub-level framework (see scoreToLp18
+ * below). Do not "even out" these widths.
  */
 export function scoreToCefrBand(score: number): CefrBand {
   if (score >= 900) return "C2";
@@ -106,6 +120,7 @@ export function scoreToCefrBand(score: number): CefrBand {
  * The entry-point score for each CEFR band, per the same SCALE section.
  * Used to compute a gap against a CEFR *aspiration* target (e.g. "C1"),
  * distinct from the role-floor gap (`gap_scores.target`, a raw number).
+ * Also doubles as each band's floor for scoreToLp18's width calculation.
  */
 export const CEFR_TARGET_FLOOR: Record<CefrBand, number> = {
   A1: 0,
@@ -115,6 +130,75 @@ export const CEFR_TARGET_FLOOR: Record<CefrBand, number> = {
   C1: 800,
   C2: 900,
 };
+
+/** Each CEFR band's [min, max) width on the 0-1000 scale, derived from
+ *  CEFR_TARGET_FLOOR so there is exactly one place band boundaries live. */
+const CEFR_BAND_MAX: Record<CefrBand, number> = {
+  A1: CEFR_TARGET_FLOOR.A2,
+  A2: CEFR_TARGET_FLOOR.B1,
+  B1: CEFR_TARGET_FLOOR.B2,
+  B2: CEFR_TARGET_FLOOR.C1,
+  C1: CEFR_TARGET_FLOOR.C2,
+  C2: 1000,
+};
+
+/**
+ * Score → LP-18 micro-level.
+ *
+ * Source: "we split each CEFR band into 3 precise micro-levels" —
+ * docs/LingoPure main documents/LP 18 CEFR FRAMEWORK/
+ * Appendices-D - CEFR IP sub-levels.pdf (p.3). The derivation is a CEFR
+ * band split into thirds, NOT an even 18-way split of the full 0-1000
+ * range — those two are different for every score above 666.7, which is
+ * exactly why this function used to disagree with scoreToCefrBand (a 700
+ * read "B2" from one and "C1.1" from the other, live, on the dashboard
+ * and in the placement-report email). Fixed 2026-10-11 (RUBRIC_VERSION
+ * 2.0.0) — this now derives from scoreToCefrBand's own bands, so the two
+ * cannot disagree by construction.
+ *
+ * A thin 0-90 placement score with non-linear spacing is ALSO documented
+ * (see LP18_PLACEMENT_SCORE_90 below) — that is a separate, secondary
+ * display number per the source guide, not an alternate derivation of the
+ * sub-level itself.
+ */
+export function scoreToLp18(score: number): Lp18Band {
+  const band = scoreToCefrBand(score);
+  const min = CEFR_TARGET_FLOOR[band];
+  const max = CEFR_BAND_MAX[band];
+  const width = max - min;
+  const positionInBand = Math.min(width, Math.max(0, score - min));
+  const third = Math.min(2, Math.floor((positionInBand / width) * 3));
+  return `${band}.${third + 1}` as Lp18Band;
+}
+
+/**
+ * LP-18's documented, NON-LINEAR 0-90 placement score per micro-level.
+ * Source: docs/LingoPure main documents/LP 18 CEFR FRAMEWORK/
+ * LP-18 Assessment-&-Placement-Guide-For-Teachers-Marketing-sales (1).pdf
+ * (p.5-6) — a real, deliberate table, not evenly spaced: 5-point steps
+ * through A1-B1, a 10-point jump at B1->B2 and B2->C1 (those boundaries
+ * matter more in practice), and the three C2 sub-levels compressed to 1
+ * point apart (distinctions get harder to resolve at the top). Do not
+ * "clean up" this spacing — it is the documented spec, not an artifact.
+ *
+ * This is a SECONDARY display number ("a student assessed at B1.2 may
+ * receive an LP-18 placement score of approximately 40/90" — the guide's
+ * own wording). The LP-18 label (e.g. "B1.2") from scoreToLp18 is the
+ * primary, CEFR-traceable artifact; this number is illustrative framing
+ * for students/parents/companies, not a measurement in its own right.
+ */
+export const LP18_PLACEMENT_SCORE_90: Record<Lp18Band, number> = {
+  "A1.1": 5, "A1.2": 10, "A1.3": 15,
+  "A2.1": 20, "A2.2": 25, "A2.3": 30,
+  "B1.1": 35, "B1.2": 40, "B1.3": 45,
+  "B2.1": 55, "B2.2": 60, "B2.3": 65,
+  "C1.1": 75, "C1.2": 80, "C1.3": 85,
+  "C2.1": 88, "C2.2": 89, "C2.3": 90,
+};
+
+export function scoreToLp18PlacementScore90(score: number): number {
+  return LP18_PLACEMENT_SCORE_90[scoreToLp18(score)];
+}
 
 export type GapResult = {
   /** Gap vs the role-floor value (gap_scores.target) — "good enough for the job". */
@@ -218,6 +302,11 @@ export type GapScoresOutput = z.infer<typeof GapScoresSchema>;
  * so repeat scorings hit the prompt cache (every byte before it must also be
  * stable — keep this file's exports deterministic).
  */
+
+/** Bump whenever SYSTEM_PROMPT's text changes. Threaded into
+ *  gap_scores.prompt_version (migration 0061) alongside RUBRIC_VERSION. */
+export const DISCOVERY_PROMPT_VERSION = "1.0.0";
+
 export const SYSTEM_PROMPT = `You are LingoPure's gap-scoring engine. Your job is to read a discovery-session transcript between Aria (an AI coach) and a B2B Vietnamese / Southeast Asian business-English student, and produce a calibrated CEFR-aligned profile.
 
 You are not a teacher. You are not coaching the student. You are scoring them, accurately and conservatively, so that LingoPure can build a learning plan that closes the gap to the level they need.

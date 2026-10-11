@@ -16,6 +16,11 @@ export type LatestCert = {
   level: string;
   status: string;
   issued_at: string | null;
+  /** True when this result came from the self-graded demo path
+   *  (src/app/api/certifications/[id]/simulate/route.ts), not an
+   *  administered TrackTest exam. Must gate the "certificate" language —
+   *  see src/app/exam/[id]/page.tsx for the matching fix. */
+  simulated: boolean;
 } | null;
 
 type Props = {
@@ -30,8 +35,36 @@ export function CertificationCard({
   latestCert,
   pendingCertId,
 }: Props) {
-  // Branch 1 — already certified at some level.
+  // Branch 1 — already certified at some level. "Certified"/"certificate"
+  // language is reserved for a REAL TrackTest result — a simulated one
+  // shows the internal-placement framing instead (same gate as the /exam
+  // page; LingoPure's own LP-18 docs: "does not provide official
+  // certification... remains the responsibility of TrackTest").
   if (latestCert?.status === "passed") {
+    if (latestCert.simulated) {
+      return (
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gold/30 bg-gold/5 p-6">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">
+              Internal placement · {latestCert.level}
+            </p>
+            <h3 className="mt-1 font-serif text-lg text-navy">
+              LP-18 placement estimate at {latestCert.level}
+            </h3>
+            <p className="mt-1 max-w-xl text-sm text-mute">
+              Based on your current gap profile, not an administered TrackTest exam — view the
+              details for what a real certification would require.
+            </p>
+          </div>
+          <Link
+            href={`/exam/${latestCert.id}`}
+            className="rounded-md border border-gold/40 bg-paper px-4 py-2 text-sm font-medium text-navy hover:bg-mist"
+          >
+            View details
+          </Link>
+        </section>
+      );
+    }
     return (
       <section className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-teal/30 bg-teal/5 p-6">
         <div>

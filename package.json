@@ -14,6 +14,10 @@
     "test:hr:db": "bash scripts/hr-db-verify.sh",
     "test:org": "tsx --test tests/org/*.test.ts",
     "test:plan": "tsx --test tests/plan/*.test.ts",
+    "test:whiteboard": "tsx --test tests/whiteboard/*.test.ts",
+    "test:scoring": "tsx --test tests/scoring/*.test.ts",
+    "test:lessons": "tsx --test tests/lessons/*.test.ts",
+    "test:classin": "tsx --test tests/classin/*.test.ts",
     "test:org:db": "bash scripts/org-db-verify.sh",
     "test:hr:integration": "bash scripts/hr-integration-test.sh",
     "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",
@@ -49,6 +53,7 @@
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "roughjs": "^4.6.6",
     "server-only": "^0.0.1",
     "xlsx": "^0.18.5",
     "zod": "^4.4.1"

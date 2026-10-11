@@ -19,10 +19,11 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   SESSION_SYSTEM_PROMPT,
+  SESSION_PROMPT_VERSION,
   SessionScoresSchema,
   type SessionScoresOutput,
 } from "./session-rubric";
-import { SKILL_KEYS, SUPPORTING_SKILL_KEYS } from "./rubric";
+import { SKILL_KEYS, SUPPORTING_SKILL_KEYS, RUBRIC_VERSION } from "./rubric";
 import { setCanonicalGapScores } from "./set-canonical";
 
 // Session scoring can update ANY of the 8 dimensions the model actually
@@ -94,6 +95,9 @@ export async function scoreSession(
         score: sub.score,
         target: 800,
         source: "session" as const,
+        model: ANTHROPIC_MODEL,
+        promptVersion: SESSION_PROMPT_VERSION,
+        rubricVersion: RUBRIC_VERSION,
       },
     ];
   });

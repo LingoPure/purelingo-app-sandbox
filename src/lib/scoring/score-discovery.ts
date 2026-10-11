@@ -20,6 +20,8 @@ import {
   GapScoresSchema,
   SKILL_KEYS,
   SYSTEM_PROMPT,
+  DISCOVERY_PROMPT_VERSION,
+  RUBRIC_VERSION,
   type GapScoresOutput,
 } from "./rubric";
 import { loadBaselinesForStudent } from "./baselines";
@@ -108,6 +110,9 @@ export async function scoreDiscoverySession(
       score: parsed[skill].score,
       target: baselines[skill],
       source: "discovery",
+      model: ANTHROPIC_MODEL,
+      promptVersion: DISCOVERY_PROMPT_VERSION,
+      rubricVersion: RUBRIC_VERSION,
     }))
   );
 

@@ -1,0 +1,133 @@
+{
+  "id": "repair-reformulation",
+  "title": "Repair and reformulation",
+  "lp18Sublevel": "LP18_SUBLEVEL_TBD",
+  "taxonomyRefs": [],
+  "provenance": {
+    "source": "static",
+    "schemaVersion": "1.0.0"
+  },
+  "steps": [
+    {
+      "id": "step-1",
+      "narration": "Today we're looking at repair and reformulation — what to do when you hear yourself making a mistake mid-sentence, instead of just pushing through it.",
+      "actions": [
+        { "type": "heading", "id": "h-intro", "text": "Repair and reformulation", "level": 1 },
+        {
+          "type": "text_block",
+          "id": "goal",
+          "spans": [
+            { "text": "Goal: notice when a sentence is breaking down mid-way, and restart it cleanly instead of pushing through the error." }
+          ]
+        },
+        {
+          "type": "definition_list",
+          "id": "defs-1",
+          "title": "Two terms",
+          "items": [
+            { "term": "Repair", "definition": "Noticing a sentence is breaking down and fixing it while you're still speaking." },
+            { "term": "Reformulation", "definition": "Restarting the same idea in a cleaner, simpler way instead of abandoning it." }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step-2",
+      "narration": "Here's how the framework we calibrate against describes this skill formally.",
+      "actions": [
+        { "type": "source_embed", "id": "cefr-note", "sourceId": "cefr-companion-repair-reformulation" }
+      ]
+    },
+    {
+      "id": "step-3",
+      "narration": "Compare these two ways of recovering from the same stumble.",
+      "actions": [
+        {
+          "type": "contrast",
+          "id": "contrast-1",
+          "leftLabel": "Pushing through",
+          "left": "We shipped, I mean, we will be shipping, uh, the order is going out, um, sometime this, uh, week probably.",
+          "rightLabel": "Clean restart",
+          "right": "Let me put that more simply here: the order ships this week."
+        }
+      ]
+    },
+    {
+      "id": "step-4",
+      "narration": "Notice the repair phrase she uses to signal the restart, and the actual content she delivers once she's through it.",
+      "actions": [
+        {
+          "type": "text_block",
+          "id": "restart-text",
+          "spans": [
+            { "text": "Clean restart — let me put that more simply here: the order ships this week." }
+          ]
+        },
+        { "type": "highlight", "targetId": "restart-text", "match": "let me put that more simply" },
+        { "type": "circle", "targetId": "restart-text", "match": "the order ships this week" }
+      ]
+    },
+    {
+      "id": "step-5",
+      "narration": "These are reusable signals that tell the listener a restart is coming, not a brand-new topic.",
+      "actions": [
+        {
+          "type": "phrase_bank",
+          "id": "phrases-1",
+          "title": "Reformulation phrases",
+          "phrases": [
+            "Let me put that more simply",
+            "What I mean is",
+            "To put it another way",
+            "Let me rephrase that",
+            "In other words"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step-6",
+      "narration": "Here's the practical difference, broken down.",
+      "actions": [
+        {
+          "type": "table",
+          "id": "table-1",
+          "title": "Push through vs. restart",
+          "columns": ["Approach", "Effect on listener", "When to use"],
+          "rows": [
+            ["Push through", "Listener has to untangle several false starts", "Rarely — only for a very short slip"],
+            ["Clean restart", "Listener hears one clear version", "Whenever you notice the sentence breaking down"]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step-7",
+      "narration": "Quick check — pick the response that shows a clean restart.",
+      "actions": [
+        {
+          "type": "quick_check",
+          "id": "check-1",
+          "prompt": "Which response demonstrates a clean restart?",
+          "mode": "choice",
+          "options": [
+            "We shipped, I mean, we will be, uh, shipping...",
+            "Let me put that more simply: the order ships this week."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "step-8",
+      "narration": "Now try it yourself. Give a one-sentence project update, then deliberately restart it cleanly using one of the phrases above.",
+      "actions": [
+        {
+          "type": "quick_check",
+          "id": "check-2",
+          "prompt": "Say a one-sentence project update, then restart it cleanly using one of the phrases above.",
+          "mode": "spoken"
+        }
+      ]
+    }
+  ]
+}

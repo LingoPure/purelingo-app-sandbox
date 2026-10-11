@@ -9,8 +9,11 @@ import {
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
+import { scoreVoiceTutorSession } from "@/lib/scoring/score-voice-tutor";
 import { awardXp } from "@/lib/gamification/award";
 import { ariaMemoryExtractor } from "@/lib/onboarding/aria-memory";
+import { resolveVoiceTutorAgentId } from "@/lib/voice-tutor/resolve-agent";
+import type { AnySkillKey } from "@/lib/scoring/rubric";
 import {
   INVESTOR_MORGAN_AGENT_ID,
   morganMemoryExtractor,
@@ -166,6 +169,113 @@ async function handlePlanAgentPostCall(payload: PostCallPayload) {
   return NextResponse.json({ ok: true });
 }
 
+/**
+ * AI voice-tutor post-call: score the one drilled skill and close out the
+ * ai_voice_tutor_sessions row. Identity uses the same token-verification
+ * fallback /api/plan/session relies on — no explicit convai_voice_bindings
+ * bind step for this agent, since the session is short and single-purpose.
+ *
+ * Simplification, stated plainly: the pending session row is matched by
+ * "most recent pending row for this student" rather than a passed session
+ * id, since ElevenLabs doesn't hand server tools the conversation id at
+ * dynamic-variable-fill time (the same constraint that forced one-agent-
+ * per-user identity elsewhere in this codebase). Fine in practice — a
+ * session connects within seconds of being created — but a student who
+ * somehow had two pending sessions at once could have them mismatched.
+ */
+async function handleVoiceTutorPostCall(payload: PostCallPayload) {
+  const supabase = adminSupabase();
+  const conversationId = payload.data.conversation_id;
+
+  let userId: string | null = null;
+  const token =
+    payload.data.conversation_initiation_client_data?.dynamic_variables?.user_id;
+  if (token) {
+    const sessionSecret = process.env.DISCOVERY_SESSION_SECRET;
+    if (sessionSecret) {
+      const claims = verifyAnonSessionToken(sessionSecret, token);
+      if (claims?.sid) userId = claims.sid;
+    }
+  }
+
+  if (!userId) {
+    console.warn(
+      "[convai/webhook:voice-tutor] no verifiable identity — ignoring",
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "missing_identity" });
+  }
+
+  const { data: sessionRow } = await supabase
+    .from("ai_voice_tutor_sessions")
+    .select("id, target_skill")
+    .eq("student_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!sessionRow) {
+    console.warn(
+      "[convai/webhook:voice-tutor] no pending session row found for",
+      userId,
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "no_pending_session" });
+  }
+
+  const { id: sessionId, target_skill: targetSkill } = sessionRow as {
+    id: string;
+    target_skill: string;
+  };
+
+  const startMs = payload.data.metadata.start_time_unix_secs * 1000;
+  const endMs =
+    (payload.data.metadata.end_time_unix_secs ??
+      payload.data.metadata.start_time_unix_secs +
+        payload.data.metadata.call_duration_secs) * 1000;
+
+  await supabase
+    .from("ai_voice_tutor_sessions")
+    .update({
+      elevenlabs_conversation_id: conversationId,
+      status: payload.data.status === "done" ? "complete" : "failed",
+      started_at: new Date(startMs).toISOString(),
+      completed_at: new Date(endMs).toISOString(),
+    })
+    .eq("id", sessionId);
+
+  if (payload.data.status !== "done") {
+    return NextResponse.json({ ok: true, scored: false, reason: "call_not_done" });
+  }
+
+  try {
+    const transcript = payload.data.transcript.map((t) => ({
+      role: t.role,
+      message: t.message,
+    }));
+    await scoreVoiceTutorSession(supabase, {
+      studentId: userId,
+      targetSkill: targetSkill as AnySkillKey,
+      transcript,
+    });
+    await supabase
+      .from("ai_voice_tutor_sessions")
+      .update({ scored_at: new Date().toISOString() })
+      .eq("id", sessionId);
+    console.log(
+      `[convai/webhook:voice-tutor] scored ${userId} on ${targetSkill} (session ${sessionId})`
+    );
+  } catch (err) {
+    console.error(
+      "[convai/webhook:voice-tutor] scoring failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 async function handleInvestorMorganPostCall(payload: PostCallPayload) {
   const supabase = adminSupabase();
   const conversationId = payload.data.conversation_id;
@@ -302,6 +412,13 @@ export async function POST(request: NextRequest) {
     (await resolvePlanAgentId(adminSupabase()))
   ) {
     return handlePlanAgentPostCall(payload);
+  }
+
+  // AI voice-tutor agent: score the one drilled skill, never the full
+  // discovery pipeline.
+  const voiceTutorAgentId = await resolveVoiceTutorAgentId();
+  if (voiceTutorAgentId && payload.data.agent_id === voiceTutorAgentId) {
+    return handleVoiceTutorPostCall(payload);
   }
 
   const conversationId = payload.data.conversation_id;

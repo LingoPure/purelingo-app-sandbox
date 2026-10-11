@@ -21,6 +21,10 @@ import {
   type SkillKey,
   type CefrBand,
 } from "@/lib/scoring/rubric";
+import {
+  computeCommunicationConvergenceIndex,
+  cciToBand,
+} from "@/lib/scoring/cci";
 import { readClassinCredentials } from "@/lib/classin/token";
 import { bilingualize, type Bilingual } from "@/lib/i18n/translate";
 import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
@@ -138,7 +142,7 @@ export default async function DashboardPage() {
       .eq("student_id", user!.id),
     supabase
       .from("certifications")
-      .select("id, level, status, issued_at, created_at")
+      .select("id, level, status, issued_at, created_at, result_json")
       .eq("student_id", user!.id)
       .order("created_at", { ascending: false }),
     supabase
@@ -152,6 +156,7 @@ export default async function DashboardPage() {
   const student = studentResult.data;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
+  const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
 
   // Live overall band/LP-18, from the SAME source (live gap_scores) and the
   // SAME formula (scoreToCefrBand/scoreToLp18) the Skills list below already
@@ -159,8 +164,15 @@ export default async function DashboardPage() {
   // battery reconciliation can leave stale relative to the canonical rows
   // (ISS-047). profile_json is still used for the narrative summary/target_why,
   // which have no live equivalent.
-  const liveAssessedScores = scores
-    .map((s) => s.score)
+  //
+  // Restricted to the SIX PRIMARY skills — matching the scope the model's
+  // own `overall_cefr` field uses (rubric.ts GapScoresSchema: "do not factor
+  // in business_vocabulary or presentation_delivery") and what plan-delivery
+  // ts already does. Averaging in the 2 supporting dims here (as this used
+  // to) silently produced a DIFFERENT "overall" CEFR than the one the model
+  // itself reported and /plan computes — see finding B,
+  // docs/audit/platform-state-2026-10-11.md.
+  const liveAssessedScores = SKILL_KEYS.map((k) => scoreMap.get(k)?.score)
     .filter((s): s is number => s != null);
   const liveAvgScore =
     liveAssessedScores.length > 0
@@ -169,6 +181,18 @@ export default async function DashboardPage() {
   const liveOverallBand: CefrBand | null =
     liveAvgScore != null ? scoreToCefrBand(liveAvgScore) : null;
   const liveOverallLp18 = liveAvgScore != null ? scoreToLp18(liveAvgScore) : null;
+
+  // LP-1000 — a SEPARATE metric from the CEFR/LP-18 placement above (see
+  // src/lib/scoring/cci.ts doc comment). Computed from Dan's documented 5
+  // core signals, not the same 6 used for the CEFR band.
+  const liveCci = computeCommunicationConvergenceIndex({
+    listening: scoreMap.get("listening")?.score,
+    reading: scoreMap.get("reading")?.score,
+    writing: scoreMap.get("writing")?.score,
+    grammar: scoreMap.get("grammar")?.score,
+    live_interaction: scoreMap.get("live_interaction")?.score,
+  });
+  const liveCciBand = liveCci != null ? cciToBand(liveCci) : null;
 
   // One target level, read once, used everywhere on this page (badge + the
   // "Target line" caption below) so they can't diverge (ISS-050). Prefer the
@@ -191,6 +215,7 @@ export default async function DashboardPage() {
     status: string;
     issued_at: string | null;
     created_at: string;
+    result_json: { simulated?: boolean } | null;
   }[];
   const nudges = (nudgesResult.data ?? []) as {
     id: string;
@@ -205,7 +230,15 @@ export default async function DashboardPage() {
   const pending = certs.find(
     (c) => c.status === "scheduled" || c.status === "in_progress"
   );
-  const latestCert: LatestCert = latestPassed ?? null;
+  const latestCert: LatestCert = latestPassed
+    ? {
+        id: latestPassed.id,
+        level: latestPassed.level,
+        status: latestPassed.status,
+        issued_at: latestPassed.issued_at,
+        simulated: latestPassed.result_json?.simulated ?? false,
+      }
+    : null;
   const pendingCertId = pending?.id ?? null;
 
   const eligibilityScores = Object.fromEntries(
@@ -220,7 +253,6 @@ export default async function DashboardPage() {
     eligibilityScores as Parameters<typeof computeEligibility>[0]
   );
 
-  const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
   const radarSkills = SKILLS.map((s) => {
     const row = scoreMap.get(s.key);
     return {
@@ -298,6 +330,13 @@ export default async function DashboardPage() {
         {hasScores && (
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
+              href="/practice"
+              title="A short AI voice drill with Aria — reinforcement practice on your biggest current gap, available any time."
+              className="rounded-md border border-teal/50 bg-teal/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-navy transition hover:bg-teal/20"
+            >
+              Practice now
+            </Link>
+            <Link
               href="/dashboard/journey"
               title="Journey view — how your communication state develops across 2K assessments, with evidence, focus behaviours and drift alerts."
               className="rounded-md border border-gold/50 bg-gold/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-navy transition hover:bg-gold/20"
@@ -368,6 +407,7 @@ export default async function DashboardPage() {
                 "C2.1 target" bug (ISS-050): a CEFR letter spans 3 micro-bands,
                 so there is no single correct sub-band to invent for a goal. */}
             <CefrBadge label="Target" band={targetLevel} tone="target" />
+            {liveCci != null && <CciBadge score={liveCci} band={liveCciBand!} />}
           </div>
           <BilingualText
             text={summaryBilingual}
@@ -711,6 +751,32 @@ function CefrBadge({
           {band}
         </span>
       )}
+    </span>
+  );
+}
+
+/**
+ * LP-1000 — deliberately a DIFFERENT badge from CefrBadge, not a third
+ * rendering of the same number. It answers "how stable is this person's
+ * communication across signals", not "what CEFR level are they at" — see
+ * src/lib/scoring/cci.ts. Showing it alongside the CEFR badges without
+ * implying they're the same measurement is the whole point of keeping
+ * them visually distinct (gold accent vs teal/navy) rather than merging
+ * into one combined pill.
+ */
+function CciBadge({ score, band }: { score: number; band: string }) {
+  return (
+    <span
+      title="LP-1000 — a separate index of how stable your communication is across signals, not a CEFR level."
+      className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/5 px-3 py-1 text-gold"
+    >
+      <span className="font-mono text-[10px] uppercase tracking-[0.22em]">
+        LP-1000
+      </span>
+      <span className="font-serif text-base">{score}</span>
+      <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-mute sm:inline">
+        {band}
+      </span>
     </span>
   );
 }

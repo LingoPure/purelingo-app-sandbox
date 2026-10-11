@@ -1,0 +1,107 @@
+/* Whiteboard lesson player — visual + animation primitives.
+ * Scoped under .wb-root so nothing here leaks into the rest of the app. */
+
+.wb-root {
+  --wb-ink: #16181d;
+  --wb-accent: #4338ca; /* indigo */
+  --wb-board-bg: #fbfaf7; /* off-white */
+  --wb-dot: #d9d6cc;
+  --wb-highlight: rgba(250, 204, 21, 0.55); /* translucent yellow */
+  --wb-mark-pending-bg: #fef3f2;
+  --wb-mark-pending-border: #b91c1c;
+}
+
+.wb-ink-text {
+  font-family: var(--font-handwriting), cursive;
+}
+
+.wb-board-surface {
+  background-color: var(--wb-board-bg);
+  background-image: radial-gradient(circle, var(--wb-dot) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+/* "Write on" reveal for a freshly-placed block. */
+.wb-write-on {
+  animation: wb-write-on 420ms ease-out both;
+}
+
+@keyframes wb-write-on {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.4;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+/* Per-line "write on" for text_block lines — staggered via --wb-line-delay. */
+.wb-write-on-line {
+  animation: wb-write-on 350ms ease-out both;
+  animation-delay: var(--wb-line-delay, 0ms);
+}
+
+.wb-rough-draw {
+  stroke-dasharray: var(--wb-dash-len, 400);
+  stroke-dashoffset: var(--wb-dash-len, 400);
+  animation: wb-rough-draw 500ms ease-out forwards;
+  animation-delay: var(--wb-draw-delay, 0ms);
+}
+
+@keyframes wb-rough-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wb-highlight-sweep {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: wb-highlight-sweep 320ms ease-out both;
+}
+
+@keyframes wb-highlight-sweep {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.wb-pulse {
+  animation: wb-pulse 900ms ease-out;
+}
+
+@keyframes wb-pulse {
+  0%,
+  100% {
+    filter: none;
+  }
+  30% {
+    filter: drop-shadow(0 0 0 var(--wb-accent)) brightness(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--wb-accent)) brightness(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-pulse {
+    animation: none !important;
+  }
+  .wb-write-on,
+  .wb-write-on-line,
+  .wb-highlight-sweep {
+    animation: none !important;
+    clip-path: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .wb-rough-draw {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}

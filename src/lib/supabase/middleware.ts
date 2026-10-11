@@ -8,6 +8,7 @@ const PROTECTED_PREFIXES = [
   "/profile",
   "/lessons",
   "/exam",
+  "/practice",
   // /employer/* is gated by Supabase auth — anyone signed-in passes the
   // middleware; the layout component checks employer_admins for the
   // actual authorisation step.

@@ -164,7 +164,31 @@ function ResultPanel({
         )}
       </div>
 
-      {passed && (
+      {passed && result.simulated && (
+        // This result was self-graded against the student's own gap_scores
+        // (src/app/api/certifications/[id]/simulate/route.ts), not an
+        // administered TrackTest exam — showing "internationally
+        // recognised CEFR certification" here would be exactly the claim
+        // LingoPure's own LP-18 documentation says must never be made for
+        // anything other than a real TrackTest result (docs/LingoPure main
+        // documents/LP 18 CEFR FRAMEWORK/LP-18 Assessment-&-Placement-
+        // Guide-For-Teachers-Marketing-sales (1).pdf: "LP-18 does not
+        // replace CEFR and does not provide official certification.
+        // Official CEFR certification remains the responsibility of
+        // TrackTest.").
+        <div className="rounded-lg border border-gold/30 bg-gold/5 p-6 text-center">
+          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.25em] text-gold">
+            LingoPure internal placement
+          </p>
+          <h3 className="font-serif text-3xl text-navy">{level}</h3>
+          <p className="mt-2 text-sm text-mute">
+            An internal estimate based on your current gap profile — not an official
+            TrackTest certificate. Real TrackTest certification requires a partner
+            agreement and an administered exam.
+          </p>
+        </div>
+      )}
+      {passed && !result.simulated && (
         <div className="rounded-lg border border-gold/30 bg-gold/5 p-6 text-center">
           <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.25em] text-gold">
             LingoPure × TrackTest

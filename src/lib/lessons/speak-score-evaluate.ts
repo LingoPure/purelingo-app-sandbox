@@ -28,7 +28,7 @@ import {
   type Baselines,
 } from "@/lib/scoring/baselines";
 import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
-import type { AnySkillKey } from "@/lib/scoring/rubric";
+import { RUBRIC_VERSION, type AnySkillKey } from "@/lib/scoring/rubric";
 
 export type SubmitInput = {
   lessonId: string;
@@ -114,6 +114,8 @@ export async function submitSpeakScore(
       score: s.score,
       target: baselinesAny[s.skill] ?? FLAT_FALLBACK_TARGET,
       source: "lesson",
+      model: ANTHROPIC_MODEL,
+      rubricVersion: RUBRIC_VERSION,
     }))
   );
 

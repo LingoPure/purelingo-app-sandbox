@@ -12,25 +12,33 @@
  *
  * Skill → recommendation mapping (six PRIMARY dimensions only — the two
  * supporting measures, business_vocabulary/presentation_delivery, are not
- * looped over here; see ISS-048 / rubric.ts):
+ * looped over here; see ISS-048 / rubric.ts).
  *
- *   speaking         → speak_score (Claude-evaluated 90-second monologue)
- *   listening        → ClassIn class (no micro-lesson generator yet)
- *   writing          → email_sprint
- *   reading          → email_sprint  (the rubric's reading dimension)
- *   grammar          → ClassIn class (no micro-lesson generator yet)
- *   live_interaction → ClassIn class (no micro-lesson generator yet)
+ * Three-tier modality ladder, not a flat skill→kind map (locked 2026-10):
+ * live tutors introduce new material and give personalised coaching;
+ * AI-voice drills/reinforces something already introduced; self-paced
+ * lessons are everything else. So the four VOICE-NATIVE skills default to
+ * `ai_voice` and only escalate to a live `class` once the gap is wide
+ * enough that drilling alone won't close it — the same escalation
+ * philosophy CLASS_RECOMMEND_GAP already applies to micro-lesson skills,
+ * just one rung earlier on the ladder for skills where that rung exists:
  *
- * For any skill with gap > 200, ALSO recommend a teacher-led class
- * regardless of whether a micro-lesson exists — that's spec-aligned
- * "remediation needs human in the loop" logic.
+ *   speaking         → ai_voice, escalates to class past AI_VOICE_TO_CLASS_GAP
+ *   listening        → ai_voice, escalates to class past AI_VOICE_TO_CLASS_GAP
+ *   writing          → email_sprint (not voice-native — no ai_voice tier)
+ *   reading          → email_sprint (not voice-native — no ai_voice tier)
+ *   grammar          → ai_voice, escalates to class past AI_VOICE_TO_CLASS_GAP
+ *   live_interaction → ai_voice, escalates to class past AI_VOICE_TO_CLASS_GAP
+ *
+ * For a written (micro_lesson) skill with gap > CLASS_RECOMMEND_GAP, ALSO
+ * recommend a teacher-led class on top — unchanged from before.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SKILL_KEYS, SKILL_LABELS, type SkillKey } from "@/lib/scoring/rubric";
 import { loadBaselinesForStudent } from "@/lib/scoring/baselines";
 
-export type RecommendationKind = "micro_lesson" | "class";
+export type RecommendationKind = "micro_lesson" | "ai_voice" | "class";
 export type Priority = "critical" | "recommended" | "optional";
 export type MicroLessonType = "email_sprint" | "speak_score";
 
@@ -53,24 +61,25 @@ export type PlanRecommendation = {
 };
 
 /**
- * For each skill the student is below baseline on, what we recommend.
- * Multiple skills can map to the same lesson type — the consolidation
- * step below collapses duplicates so we don't recommend "email_sprint"
- * three times in a row.
+ * For each skill the student is below baseline on, what we recommend as
+ * the DEFAULT (lowest) rung of its modality ladder. Multiple micro_lesson
+ * skills can map to the same lesson type — the consolidation step below
+ * collapses those duplicates so we don't recommend "email_sprint" three
+ * times in a row. ai_voice/class recommendations stay per-skill.
  */
 const SKILL_TO_RECOMMENDATION: Record<
   SkillKey,
   | { kind: "micro_lesson"; lessonType: MicroLessonType; title: string }
+  | { kind: "ai_voice"; title: string }
   | { kind: "class"; title: string }
 > = {
   speaking: {
-    kind: "micro_lesson",
-    lessonType: "speak_score",
-    title: "Speaking sprint — 90-second monologue",
+    kind: "ai_voice",
+    title: "AI voice practice — drill fluency and delivery",
   },
   listening: {
-    kind: "class",
-    title: "Live class — listening comprehension drills",
+    kind: "ai_voice",
+    title: "AI voice practice — listening comprehension drills",
   },
   writing: {
     kind: "micro_lesson",
@@ -83,17 +92,21 @@ const SKILL_TO_RECOMMENDATION: Record<
     title: "Email sprint — practise reading subtext",
   },
   grammar: {
-    kind: "class",
-    title: "Live class — grammar accuracy coaching",
+    kind: "ai_voice",
+    title: "AI voice practice — grammar accuracy reps",
   },
   live_interaction: {
-    kind: "class",
-    title: "Live class — real-time conversation drills",
+    kind: "ai_voice",
+    title: "AI voice practice — real-time conversation reps",
   },
 };
 
 const CRITICAL_GAP_THRESHOLD = 100;
 const CLASS_RECOMMEND_GAP = 200;
+/** Same value/philosophy as CLASS_RECOMMEND_GAP, applied one rung earlier
+ *  on the ladder: past this gap, reinforcement alone won't close it — the
+ *  skill needs new material or personalised coaching, i.e. a live tutor. */
+const AI_VOICE_TO_CLASS_GAP = 200;
 
 type CanonicalScoreRow = {
   skill: SkillKey;
@@ -140,8 +153,11 @@ export async function generateLessonPlan(
         map.kind === "micro_lesson"
           ? buildMicroLesson(skill, score, baseline, baseline, map, "optional",
               "No score yet — try a quick lesson to seed your profile.")
-          : buildClass(skill, score, baseline, baseline, map.title, "optional",
-              "No score yet — book a class to start gathering signal.")
+          : map.kind === "ai_voice"
+            ? buildAiVoice(skill, score, baseline, baseline, map.title, "optional",
+                "No score yet — try a quick practice session to seed your profile.")
+            : buildClass(skill, score, baseline, baseline, map.title, "optional",
+                "No score yet — book a class to start gathering signal.")
       );
       continue;
     }
@@ -167,6 +183,18 @@ export async function generateLessonPlan(
           }`
         )
       );
+    } else if (map.kind === "ai_voice") {
+      recs.push(
+        buildAiVoice(
+          skill,
+          score,
+          baseline,
+          gap,
+          map.title,
+          priority,
+          `Gap of ${gap} below the ${baseline} role baseline. Short, repeated AI voice drills are the fastest way to close a gap this size — available any time, not just on a schedule.`
+        )
+      );
     } else {
       recs.push(
         buildClass(
@@ -176,14 +204,17 @@ export async function generateLessonPlan(
           gap,
           map.title,
           priority,
-          `Gap of ${gap} below baseline. Listening is best worked on with a teacher who can vary accent and pace.`
+          `Gap of ${gap} below baseline — wide enough that this needs a live tutor's personalised coaching, not just drilling.`
         )
       );
     }
 
     // Big-gap escalation: recommend a teacher-led class on TOP of the
-    // micro-lesson when the gap is too wide for self-serve practice
-    // alone to close.
+    // lower rung when the gap is too wide for that rung alone to close —
+    // written skills escalate from micro_lesson, voice-native skills
+    // escalate from ai_voice. Same philosophy, two different gap
+    // constants (currently equal in value, kept separate so they can be
+    // tuned independently once real completion data exists).
     if (gap >= CLASS_RECOMMEND_GAP && map.kind === "micro_lesson") {
       recs.push(
         buildClass(
@@ -194,6 +225,19 @@ export async function generateLessonPlan(
           `Live class — focused ${SKILL_LABELS[skill].toLowerCase()} coaching`,
           "recommended",
           `Gap of ${gap} is wide enough that a one-on-one class will accelerate the micro-lessons.`
+        )
+      );
+    }
+    if (gap >= AI_VOICE_TO_CLASS_GAP && map.kind === "ai_voice") {
+      recs.push(
+        buildClass(
+          skill,
+          score,
+          baseline,
+          gap,
+          `Live class — focused ${SKILL_LABELS[skill].toLowerCase()} coaching`,
+          "recommended",
+          `Gap of ${gap} is wide enough that drilling alone won't close it — this needs a live tutor to introduce new approaches, not just reinforce existing ones.`
         )
       );
     }
@@ -241,6 +285,33 @@ function buildMicroLesson(
     title: map.title,
     rationale,
     ctaHref: `/lessons?start=${map.lessonType}&focus=${skill}`,
+    priority,
+  };
+}
+
+function buildAiVoice(
+  skill: SkillKey,
+  score: number | null,
+  baseline: number,
+  gap: number,
+  title: string,
+  priority: Priority,
+  rationale: string
+): PlanRecommendation {
+  return {
+    skill,
+    skillLabel: SKILL_LABELS[skill],
+    gap,
+    score,
+    baseline,
+    kind: "ai_voice",
+    title,
+    rationale,
+    // source=plan marks this as curriculum-recommended, not the student's
+    // own on-demand initiative — see /practice and usage-cap.ts: a
+    // recommended session doesn't count against the daily on-demand cap,
+    // since the curriculum engine already paces how many of these exist.
+    ctaHref: `/practice?skill=${skill}&source=plan`,
     priority,
   };
 }

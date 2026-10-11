@@ -55,6 +55,10 @@ export const SessionScoresSchema = z.object({
 
 export type SessionScoresOutput = z.infer<typeof SessionScoresSchema>;
 
+/** Bump whenever SESSION_SYSTEM_PROMPT's text changes. Threaded into
+ *  gap_scores.prompt_version (migration 0061) alongside RUBRIC_VERSION. */
+export const SESSION_PROMPT_VERSION = "1.0.0";
+
 export const SESSION_SYSTEM_PROMPT = `You are LingoPure's post-class scoring engine. Your job is to read a transcript of a live ClassIn lesson between a B2B Vietnamese / Southeast Asian student and their English coach, and update the student's gap profile with anything new the lesson revealed.
 
 You are not assessing the lesson. You are not assessing the coach. You are scoring the STUDENT's demonstrated ability — and only the sub-skills the lesson actually exercised. Leave the others null.

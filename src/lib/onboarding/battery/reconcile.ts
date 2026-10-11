@@ -26,13 +26,16 @@ import {
 } from "@/lib/scoring/baselines";
 import { setCanonicalGapScore } from "@/lib/scoring/set-canonical";
 import { sendBatteryCompleteReport } from "./report";
-import type { AnySkillKey } from "@/lib/scoring/rubric";
+import { RUBRIC_VERSION, type AnySkillKey } from "@/lib/scoring/rubric";
 
 export async function reconcileBatteryScore(
   supabase: SupabaseClient,
   studentId: string,
   taskType: TaskType,
-  battery: { score: number; cefr_band: string; evidence: string }
+  battery: { score: number; cefr_band: string; evidence: string },
+  /** out.scoring_model from scoreTaskResponse — e.g. "claude-sonnet-4-6:battery:v1"
+   *  or "deterministic:battery:v1" (vocab_cloze has no model call). */
+  scoringModel?: string
 ): Promise<void> {
   const skill = TASK_SKILL[taskType];
   const baselines = await loadBaselinesForStudent(supabase, studentId);
@@ -47,6 +50,8 @@ export async function reconcileBatteryScore(
     score: battery.score,
     target: baselinesAny[skill] ?? FLAT_FALLBACK_TARGET,
     source: "battery_task",
+    model: scoringModel,
+    rubricVersion: RUBRIC_VERSION,
   });
 
   // Fire-and-track the battery-complete report email. Best-effort: it

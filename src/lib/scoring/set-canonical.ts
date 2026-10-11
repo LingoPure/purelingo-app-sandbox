@@ -27,7 +27,8 @@ export type GapScoreSource =
   | "session"
   | "exam"
   | "voice_transcript"
-  | "battery_task";
+  | "battery_task"
+  | "ai_voice_tutor";
 
 export type CanonicalWrite = {
   studentId: string;
@@ -36,6 +37,14 @@ export type CanonicalWrite = {
   score: number;
   target: number;
   source: GapScoreSource;
+  /** Provenance (migration 0061) — model/prompt/rubric version that
+   *  produced this score. Optional so a caller that genuinely has no
+   *  model (none exist today, but a future non-LLM writer might) doesn't
+   *  have to fabricate one; omitted provenance is recorded as null, never
+   *  guessed. */
+  model?: string;
+  promptVersion?: string;
+  rubricVersion?: string;
 };
 
 /**
@@ -72,6 +81,9 @@ export async function setCanonicalGapScore(
         target: args.target,
         source: args.source,
         is_canonical: true,
+        model: args.model ?? null,
+        prompt_version: args.promptVersion ?? null,
+        rubric_version: args.rubricVersion ?? null,
       },
       { onConflict: "student_id,skill,source" }
     );
@@ -109,6 +121,9 @@ export async function setCanonicalGapScore(
         score: args.score,
         target: args.target,
         source: args.source,
+        model: args.model ?? null,
+        prompt_version: args.promptVersion ?? null,
+        rubric_version: args.rubricVersion ?? null,
       });
     if (historyErr) {
       console.error(`gap_score_history insert failed: ${historyErr.message}`);

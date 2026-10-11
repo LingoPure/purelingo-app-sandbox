@@ -306,12 +306,15 @@ function buildPhases(
       r.kind === "micro_lesson" && r.lessonType != null
   );
   const classRecs = actionableRecs.filter((r) => r.kind === "class");
+  const aiVoiceRecs = actionableRecs.filter((r) => r.kind === "ai_voice");
   const anyCriticalClass = classRecs.some((r) => r.priority === "critical");
   const anySpeakingFocus = actionableRecs.some(
     (r) => r.skill === "speaking" || r.skill === "live_interaction"
   );
   const priorityRecSkillLabels = Array.from(
-    new Set([...microLessonRecs, ...classRecs].map((r) => r.skillLabel.toLowerCase()))
+    new Set(
+      [...microLessonRecs, ...aiVoiceRecs, ...classRecs].map((r) => r.skillLabel.toLowerCase())
+    )
   );
   const skillList = priorityRecSkillLabels.length > 0 ? priorityRecSkillLabels.join(", ") : "your priority skills";
 
@@ -322,7 +325,7 @@ function buildPhases(
 
     if (useGenericSample) {
       activities.push({ type: "Email sprints", frequency: "3× per week", skill: "writing" });
-      activities.push({ type: "Speak & score", frequency: "2× per week", skill: "speaking" });
+      activities.push({ type: "AI voice practice", frequency: "2× per week", skill: "speaking" });
       if (!isFirst || phaseCount === 1) {
         activities.push({ type: "Live tutor session", frequency: "1× per week", skill: "all" });
       }
@@ -333,6 +336,13 @@ function buildPhases(
       for (const rec of microLessonRecs) {
         activities.push({
           type: MICRO_LESSON_ACTIVITY_LABEL[rec.lessonType],
+          frequency: frequencyLabel(rec.priority),
+          skill: rec.skill,
+        });
+      }
+      for (const rec of aiVoiceRecs) {
+        activities.push({
+          type: "AI voice practice",
           frequency: frequencyLabel(rec.priority),
           skill: rec.skill,
         });

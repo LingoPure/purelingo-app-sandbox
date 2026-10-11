@@ -23,7 +23,7 @@ import {
   FLAT_FALLBACK_TARGET,
 } from "@/lib/scoring/baselines";
 import { setCanonicalGapScores } from "@/lib/scoring/set-canonical";
-import type { AnySkillKey } from "@/lib/scoring/rubric";
+import { RUBRIC_VERSION, type AnySkillKey } from "@/lib/scoring/rubric";
 
 export type SubmitInput = {
   lessonId: string;
@@ -94,6 +94,8 @@ export async function submitEmailSprint(
       score: sub.score,
       target: baselinesAny[skill] ?? FLAT_FALLBACK_TARGET,
       source: "lesson",
+      model: ANTHROPIC_MODEL,
+      rubricVersion: RUBRIC_VERSION,
     }))
   );
 
