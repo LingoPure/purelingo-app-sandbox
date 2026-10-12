@@ -15,7 +15,7 @@ import {
   compilePlanPrompt,
   compilePlanFirstMessage,
 } from "@/lib/plan/plan-delivery";
-import { sendPlanReportEmail } from "@/lib/email/plan-report";
+import { sendPlanReadyEmailOnce } from "@/lib/email/plan-report";
 
 export async function GET() {
   const supabase = await createClient();
@@ -35,7 +35,19 @@ export async function GET() {
     // Fire the "your sample programme is ready" email exactly once (ISS-064/065).
     // Best-effort: a failed/duplicate send must never break rendering the plan
     // the student is actively looking at right now.
-    void sendPlanReadyEmailOnce(supabase, user.id, plan).catch((err) => {
+    //
+    // NOTE: this GET route isn't actually called by the real student path —
+    // the /plan page calls buildPlan() directly and the voice session uses
+    // POST /api/plan/session — so the email send is ALSO wired directly into
+    // plan/page.tsx (the path that's actually hit). Kept here too in case a
+    // future consumer calls this route as documented.
+    const h = await headers();
+    const origin =
+      h.get("origin") ??
+      (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
+        ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
+        : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
+    void sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
       console.error("[plan/delivery] plan-report email failed:", err);
     });
 
@@ -51,42 +63,6 @@ export async function GET() {
       { error: err instanceof Error ? err.message : "Plan generation failed" },
       { status: 500 }
     );
-  }
-}
-
-async function sendPlanReadyEmailOnce(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  studentId: string,
-  plan: Awaited<ReturnType<typeof buildPlan>>
-): Promise<void> {
-  const { data: student } = await supabase
-    .from("students")
-    .select("email, plan_report_sent_at")
-    .eq("id", studentId)
-    .maybeSingle();
-  const row = student as { email?: string | null; plan_report_sent_at?: string | null } | null;
-  if (!row?.email || row.plan_report_sent_at) return;
-
-  const h = await headers();
-  const origin =
-    h.get("origin") ??
-    (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
-      ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
-      : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
-
-  const result = await sendPlanReportEmail({
-    to: row.email,
-    firstName: plan.firstName,
-    role: plan.role,
-    currentLevel: plan.currentLevel,
-    targetLevel: plan.targetLevel,
-    origin,
-  });
-  if (result.ok) {
-    await supabase
-      .from("students")
-      .update({ plan_report_sent_at: new Date().toISOString() })
-      .eq("id", studentId);
   }
 }
 

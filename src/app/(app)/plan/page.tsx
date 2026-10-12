@@ -1,7 +1,9 @@
 // @explanatory-header-exempt — assessment result page; header intent is obvious from content
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan } from "@/lib/plan/plan-delivery";
+import { sendPlanReadyEmailOnce } from "@/lib/email/plan-report";
 import { PlanDelivery } from "./plan-delivery";
 
 /**
@@ -25,6 +27,20 @@ export default async function PlanPage() {
   if (!user) redirect("/login");
 
   const plan = await buildPlan(supabase, user.id);
+
+  // Fire the "your sample programme is ready" email exactly once (ISS-064/065).
+  // This is the ACTUAL page a student reaches — the plan is rendered right
+  // below regardless of whether this send succeeds, fails, or has already
+  // fired for this student (fire-and-forget, best-effort, never blocks render).
+  const h = await headers();
+  const origin =
+    h.get("origin") ??
+    (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
+      ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
+      : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
+  void sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
+    console.error("[plan/page] plan-report email failed:", err);
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8">

@@ -9,6 +9,8 @@
  * once per student, guarded by students.plan_report_sent_at (0059).
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 
 function escapeHtml(s: string): string {
@@ -27,6 +29,10 @@ export async function sendPlanReportEmail(opts: {
   currentLevel: string;
   targetLevel: string;
   origin: string;
+  /** Temporary — cc while confirming the send is actually firing on the
+   *  real path. Remove once confirmed; a proper per-plan admin notification
+   *  is a separate, later piece of work. */
+  cc?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
@@ -101,6 +107,7 @@ export async function sendPlanReportEmail(opts: {
       body: JSON.stringify({
         from: FROM_ADDRESS,
         to: opts.to,
+        ...(opts.cc?.length ? { cc: opts.cc } : {}),
         subject: `Your sample programme is ready — LingoPure`,
         html,
         text,
@@ -113,5 +120,48 @@ export async function sendPlanReportEmail(opts: {
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Temporary — cc'd while confirming the send actually fires on the real
+ *  student path (it previously didn't: ISS-064/065 was fixed inside an
+ *  API route nothing on the real /plan page ever called). Remove this cc
+ *  once confirmed; a real per-plan admin notification is separate, later
+ *  work the operator asked for explicitly, not a default behaviour. */
+const TEMP_CONFIRMATION_CC = ["mcmdennis@gmail.com"];
+
+/**
+ * Fire the "your sample programme is ready" email exactly once per student,
+ * guarded by students.plan_report_sent_at. Best-effort: a failed/duplicate
+ * send must never break the caller's own page render.
+ */
+export async function sendPlanReadyEmailOnce(
+  supabase: SupabaseClient,
+  studentId: string,
+  plan: { firstName: string; role: string; currentLevel: string; targetLevel: string },
+  origin: string
+): Promise<void> {
+  const { data: student } = await supabase
+    .from("students")
+    .select("email, plan_report_sent_at")
+    .eq("id", studentId)
+    .maybeSingle();
+  const row = student as { email?: string | null; plan_report_sent_at?: string | null } | null;
+  if (!row?.email || row.plan_report_sent_at) return;
+
+  const result = await sendPlanReportEmail({
+    to: row.email,
+    firstName: plan.firstName,
+    role: plan.role,
+    currentLevel: plan.currentLevel,
+    targetLevel: plan.targetLevel,
+    origin,
+    cc: TEMP_CONFIRMATION_CC,
+  });
+  if (result.ok) {
+    await supabase
+      .from("students")
+      .update({ plan_report_sent_at: new Date().toISOString() })
+      .eq("id", studentId);
   }
 }
