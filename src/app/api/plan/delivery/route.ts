@@ -8,6 +8,7 @@
 
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { resolvePlanAgentId } from "@/lib/plan/resolve-plan-agent";
 import {
@@ -47,9 +48,11 @@ export async function GET() {
       (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
         ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
         : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
-    void sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
-      console.error("[plan/delivery] plan-report email failed:", err);
-    });
+    waitUntil(
+      sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
+        console.error("[plan/delivery] plan-report email failed:", err);
+      })
+    );
 
     return NextResponse.json({
       plan,

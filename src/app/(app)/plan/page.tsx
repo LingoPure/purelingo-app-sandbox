@@ -1,6 +1,7 @@
 // @explanatory-header-exempt — assessment result page; header intent is obvious from content
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { waitUntil } from "@vercel/functions";
 import { createClient } from "@/lib/supabase/server";
 import { buildPlan } from "@/lib/plan/plan-delivery";
 import { sendPlanReadyEmailOnce } from "@/lib/email/plan-report";
@@ -31,16 +32,24 @@ export default async function PlanPage() {
   // Fire the "your sample programme is ready" email exactly once (ISS-064/065).
   // This is the ACTUAL page a student reaches — the plan is rendered right
   // below regardless of whether this send succeeds, fails, or has already
-  // fired for this student (fire-and-forget, best-effort, never blocks render).
+  // fired for this student (best-effort, never blocks render). Uses
+  // waitUntil rather than a bare un-awaited promise: on Vercel's serverless
+  // runtime, a fire-and-forget promise can be killed the moment the response
+  // is sent, since nothing told the platform to keep the function alive for
+  // it — exactly the trap that silently dropped this same email the first
+  // time it was wired up (ISS-064/065's original fix lived in a route
+  // nothing called; this is the second way "fixed" can still not fire).
   const h = await headers();
   const origin =
     h.get("origin") ??
     (h.get("x-forwarded-proto") && h.get("x-forwarded-host")
       ? `${h.get("x-forwarded-proto")}://${h.get("x-forwarded-host")}`
       : `https://${h.get("host") ?? "purelingo-app-sandbox.vercel.app"}`);
-  void sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
-    console.error("[plan/page] plan-report email failed:", err);
-  });
+  waitUntil(
+    sendPlanReadyEmailOnce(supabase, user.id, plan, origin).catch((err) => {
+      console.error("[plan/page] plan-report email failed:", err);
+    })
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8">
