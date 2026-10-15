@@ -29,10 +29,6 @@ export async function sendPlanReportEmail(opts: {
   currentLevel: string;
   targetLevel: string;
   origin: string;
-  /** Temporary — cc while confirming the send is actually firing on the
-   *  real path. Remove once confirmed; a proper per-plan admin notification
-   *  is a separate, later piece of work. */
-  cc?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
@@ -107,7 +103,6 @@ export async function sendPlanReportEmail(opts: {
       body: JSON.stringify({
         from: FROM_ADDRESS,
         to: opts.to,
-        ...(opts.cc?.length ? { cc: opts.cc } : {}),
         subject: `Your sample programme is ready — LingoPure`,
         html,
         text,
@@ -122,13 +117,6 @@ export async function sendPlanReportEmail(opts: {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
-
-/** Temporary — cc'd while confirming the send actually fires on the real
- *  student path (it previously didn't: ISS-064/065 was fixed inside an
- *  API route nothing on the real /plan page ever called). Remove this cc
- *  once confirmed; a real per-plan admin notification is separate, later
- *  work the operator asked for explicitly, not a default behaviour. */
-const TEMP_CONFIRMATION_CC = ["mcmdennis@gmail.com"];
 
 /**
  * Fire the "your sample programme is ready" email exactly once per student,
@@ -156,7 +144,6 @@ export async function sendPlanReadyEmailOnce(
     currentLevel: plan.currentLevel,
     targetLevel: plan.targetLevel,
     origin,
-    cc: TEMP_CONFIRMATION_CC,
   });
   if (result.ok) {
     await supabase
