@@ -10,6 +10,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SkillProfile, PlanPhase } from "@/lib/plan/plan-delivery";
 
 const FROM_ADDRESS = "LingoPure <noreply@lingopure.com>";
 
@@ -22,6 +23,55 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function skillRowsHtml(skills: SkillProfile[]): string {
+  return skills
+    .map((s) => {
+      const detail = s.assessed
+        ? `${s.score}/1000${s.lp18Band ? ` · ${escapeHtml(s.lp18Band)}` : ""} — role gap ${s.roleFloorGap}, target gap ${s.targetGap}`
+        : "Not yet assessed";
+      return `<tr><td style="padding:4px 0;color:#0d1117;font-size:13px;">${escapeHtml(s.label)}</td><td style="padding:4px 0;color:#444d56;font-size:13px;text-align:right;">${detail}</td></tr>`;
+    })
+    .join("");
+}
+
+function skillLinesText(skills: SkillProfile[]): string {
+  return skills
+    .map((s) =>
+      s.assessed
+        ? `  - ${s.label}: ${s.score}/1000${s.lp18Band ? ` (${s.lp18Band})` : ""} — role gap ${s.roleFloorGap}, target gap ${s.targetGap}`
+        : `  - ${s.label}: not yet assessed`
+    )
+    .join("\n");
+}
+
+function phasesHtml(phases: PlanPhase[]): string {
+  return phases
+    .map(
+      (p, idx) => `
+        <tr><td style="padding:14px 28px 2px;">
+          <p style="margin:0;color:#0a2540;font-size:14px;font-weight:600;">${idx + 1}. ${escapeHtml(p.name)} <span style="color:#8fa3b1;font-weight:400;">(${escapeHtml(p.weeks)})</span></p>
+          <ul style="margin:6px 0 4px;padding-left:18px;color:#0d1117;font-size:13px;line-height:1.6;">
+            ${p.activities.map((a) => `<li>${escapeHtml(a.type)} — ${escapeHtml(a.frequency)}${a.skill !== "varies" && a.skill !== "all" ? ` (${escapeHtml(a.skill)})` : ""}</li>`).join("")}
+          </ul>
+          <p style="margin:0;color:#6e777d;font-size:12px;line-height:1.5;">${escapeHtml(p.rationale)}</p>
+        </td></tr>`
+    )
+    .join("");
+}
+
+function phasesText(phases: PlanPhase[]): string {
+  return phases
+    .map(
+      (p, idx) =>
+        `${idx + 1}. ${p.name} (${p.weeks})\n` +
+        p.activities
+          .map((a) => `   - ${a.type} — ${a.frequency}${a.skill !== "varies" && a.skill !== "all" ? ` (${a.skill})` : ""}`)
+          .join("\n") +
+        `\n   Why: ${p.rationale}`
+    )
+    .join("\n\n");
+}
+
 export async function sendPlanReportEmail(opts: {
   to: string;
   firstName: string;
@@ -29,6 +79,10 @@ export async function sendPlanReportEmail(opts: {
   currentLevel: string;
   targetLevel: string;
   origin: string;
+  skills: SkillProfile[];
+  supportingSkills: SkillProfile[];
+  phases: PlanPhase[];
+  totalWeeks: number;
   /** Operator wants to see every generated programme until confident the
    *  personalisation engine is producing correct output. Standing cc, not a
    *  one-off confirmation measure — remove only when told to. */
@@ -39,6 +93,7 @@ export async function sendPlanReportEmail(opts: {
 
   const firstName = escapeHtml(opts.firstName);
   const role = escapeHtml(opts.role);
+  const allSkills = [...opts.skills, ...opts.supportingSkills];
 
   const html = `<!doctype html>
 <html>
@@ -61,7 +116,15 @@ export async function sendPlanReportEmail(opts: {
             aiming for <strong>${escapeHtml(opts.targetLevel)}</strong>.
           </p>
         </td></tr>
-        <tr><td style="padding:10px 28px 0;">
+        <tr><td style="padding:14px 28px 4px;">
+          <p style="margin:0 0 6px;color:#0a2540;font-size:14px;font-weight:600;">Your scores (out of 1000)</p>
+          <table width="100%" cellspacing="0" cellpadding="0" style="border-top:1px solid #ede8dc;">${skillRowsHtml(allSkills)}</table>
+        </td></tr>
+        <tr><td style="padding:16px 28px 0;">
+          <p style="margin:0;color:#0a2540;font-size:14px;font-weight:600;">Sample ${opts.totalWeeks}-week programme</p>
+        </td></tr>
+        ${phasesHtml(opts.phases)}
+        <tr><td style="padding:14px 28px 0;">
           <p style="margin:0;color:#0d1117;font-size:14px;line-height:1.6;">
             <strong>This is a preview, not an active programme</strong> — nothing has
             been booked or charged. If it looks like something you or your team
@@ -87,6 +150,12 @@ export async function sendPlanReportEmail(opts: {
     `Hi ${opts.firstName},`,
     ``,
     `You just finished a free self-assessment, and we've put together what a personalised English programme could look like for your role as ${opts.role} — you're currently around ${opts.currentLevel}, aiming for ${opts.targetLevel}.`,
+    ``,
+    `YOUR SCORES (out of 1000)`,
+    skillLinesText(allSkills),
+    ``,
+    `SAMPLE ${opts.totalWeeks}-WEEK PROGRAMME`,
+    phasesText(opts.phases),
     ``,
     `This is a preview, not an active programme — nothing has been booked or charged. If it looks like something you or your team would use for real, the next step is a quick call.`,
     ``,
@@ -137,7 +206,16 @@ const OPERATOR_REVIEW_CC = ["dennis@corporateaisolutions.com"];
 export async function sendPlanReadyEmailOnce(
   supabase: SupabaseClient,
   studentId: string,
-  plan: { firstName: string; role: string; currentLevel: string; targetLevel: string },
+  plan: {
+    firstName: string;
+    role: string;
+    currentLevel: string;
+    targetLevel: string;
+    skills: SkillProfile[];
+    supportingSkills: SkillProfile[];
+    phases: PlanPhase[];
+    totalWeeks: number;
+  },
   origin: string
 ): Promise<void> {
   const { data: student } = await supabase
@@ -154,6 +232,10 @@ export async function sendPlanReadyEmailOnce(
     role: plan.role,
     currentLevel: plan.currentLevel,
     targetLevel: plan.targetLevel,
+    skills: plan.skills,
+    supportingSkills: plan.supportingSkills,
+    phases: plan.phases,
+    totalWeeks: plan.totalWeeks,
     origin,
     cc: OPERATOR_REVIEW_CC,
   });
