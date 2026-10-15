@@ -29,6 +29,10 @@ export async function sendPlanReportEmail(opts: {
   currentLevel: string;
   targetLevel: string;
   origin: string;
+  /** Operator wants to see every generated programme until confident the
+   *  personalisation engine is producing correct output. Standing cc, not a
+   *  one-off confirmation measure — remove only when told to. */
+  cc?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
@@ -103,6 +107,7 @@ export async function sendPlanReportEmail(opts: {
       body: JSON.stringify({
         from: FROM_ADDRESS,
         to: opts.to,
+        ...(opts.cc?.length ? { cc: opts.cc } : {}),
         subject: `Your sample programme is ready — LingoPure`,
         html,
         text,
@@ -117,6 +122,12 @@ export async function sendPlanReportEmail(opts: {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+/** Dennis wants visibility into every generated programme while he confirms
+ *  the personalisation engine is producing correct output — a standing
+ *  review cc, not the earlier one-off delivery-confirmation measure. Uses
+ *  the canonical operator sender address, not a personal inbox. */
+const OPERATOR_REVIEW_CC = ["dennis@corporateaisolutions.com"];
 
 /**
  * Fire the "your sample programme is ready" email exactly once per student,
@@ -144,6 +155,7 @@ export async function sendPlanReadyEmailOnce(
     currentLevel: plan.currentLevel,
     targetLevel: plan.targetLevel,
     origin,
+    cc: OPERATOR_REVIEW_CC,
   });
   if (result.ok) {
     await supabase
