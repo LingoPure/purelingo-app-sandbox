@@ -18,6 +18,7 @@
     "test:scoring": "tsx --test tests/scoring/*.test.ts",
     "test:lessons": "tsx --test tests/lessons/*.test.ts",
     "test:classin": "tsx --test tests/classin/*.test.ts",
+    "test:nudges": "tsx --test tests/nudges/*.test.ts",
     "test:org:db": "bash scripts/org-db-verify.sh",
     "test:hr:integration": "bash scripts/hr-integration-test.sh",
     "test:hr:lift": "bash scripts/hr-lift-dryrun.sh",

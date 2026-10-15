@@ -11,6 +11,7 @@ import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
 import { scoreVoiceTutorSession } from "@/lib/scoring/score-voice-tutor";
 import { awardXp } from "@/lib/gamification/award";
+import { createOrSupersedeProgrammeSnapshot } from "@/lib/plan/programme-snapshot";
 import { ariaMemoryExtractor } from "@/lib/onboarding/aria-memory";
 import { resolveVoiceTutorAgentId } from "@/lib/voice-tutor/resolve-agent";
 import type { AnySkillKey } from "@/lib/scoring/rubric";
@@ -569,6 +570,18 @@ export async function POST(request: NextRequest) {
       });
       // Award gamification XP for completing the discovery session.
       await awardXp(userId, "discoveryComplete", supabase);
+
+      // Snapshot the gap-driven programme now that real gap_scores exist —
+      // the stable target the nudge cron's cadence rule measures activity
+      // against. Best-effort: a snapshot failure must not fail discovery.
+      const snapshotResult = await createOrSupersedeProgrammeSnapshot(supabase, userId);
+      if (!snapshotResult.ok) {
+        console.error(
+          `[convai/webhook] programme snapshot failed for ${userId}:`,
+          snapshotResult.error
+        );
+      }
+
       console.log(
         `[convai/webhook] scored ${userId} — overall ${result.scores.overall_cefr}, ` +
           `target ${result.scores.target_level}, ` +

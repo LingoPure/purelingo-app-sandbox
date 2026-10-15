@@ -12,6 +12,24 @@ export type CohortSnapshot = {
   students: SnapshotStudent[];
 };
 
+export type ProgrammeSkillTarget = {
+  skill: string;
+  label: string;
+  kind: "micro_lesson" | "ai_voice" | "class";
+  timesPerWeek: number;
+  ctaHref: string;
+};
+
+export type ProgrammeSnapshotInfo = {
+  committedAt: string; // ISO
+  totalWeeks: number;
+  /** Union of every phase's skill_targets — cadence targets apply across
+   *  the whole programme, not per phase (see programme-snapshot.ts). */
+  skillTargets: ProgrammeSkillTarget[];
+  kickoffNudgeSentAt: string | null;
+  lastCadenceNudgeWeek: number | null;
+};
+
 export type SnapshotStudent = {
   id: string;
   email: string | null;
@@ -22,7 +40,27 @@ export type SnapshotStudent = {
   streak_days: number | null;
   last_active_date: string | null; // "YYYY-MM-DD"
   nextClassAt: string | null; // ISO timestamp
+  /** null until the student has an active programme_snapshots row. */
+  programme: ProgrammeSnapshotInfo | null;
+  /** Completions in the personal programme-week that JUST ended (not the
+   *  current partial week), keyed by `targetKey()` — (kind, skill), NOT
+   *  skill alone. A skill can carry both an `ai_voice` target (drill with
+   *  Aria) and a `class` target (live tutor) at once — Shamini's actual
+   *  live_interaction gap does exactly this — and the two are tracked in
+   *  completely different tables (ai_voice_tutor_sessions vs
+   *  classin_sessions). Keying by skill alone would let a voice drill
+   *  silently satisfy a class target that was never attended. Null unless
+   *  a week boundary for THIS student's own committedAt falls on `today`
+   *  — see the cron's data-loading step, which only computes this when
+   *  relevant. */
+  lastCompletedWeekByTarget: Record<string, number> | null;
 };
+
+/** The one key format for matching activity to a target — (kind, skill),
+ *  not skill alone (see lastCompletedWeekByTarget's doc comment). */
+export function targetKey(t: { kind: string; skill: string }): string {
+  return `${t.kind}:${t.skill}`;
+}
 
 export type NudgeCandidate = {
   studentId: string;
@@ -31,6 +69,10 @@ export type NudgeCandidate = {
   type: string;
   subject: string;
   body: string;
+  /** Deep-link for the email's CTA button. Omit to fall back to /dashboard
+   *  (every existing rule's current behaviour, unchanged). */
+  ctaHref?: string;
+  ctaLabel?: string;
 };
 
 export type NudgeRule = (snapshot: CohortSnapshot) => NudgeCandidate[];
@@ -155,12 +197,110 @@ export const classTomorrow: NudgeRule = ({ today, students }) => {
     });
 };
 
+/**
+ * `programme_kickoff`: fires exactly once, the first time a student has an
+ * active programme snapshot and hasn't been kickoff-nudged yet. Points at
+ * the first non-optional skill target's own CTA, not a generic /dashboard
+ * link — "here's your real first action," not "go explore."
+ */
+export const programmeKickoff: NudgeRule = ({ students }) => {
+  return students
+    .filter((s) => s.email && s.programme && !s.programme.kickoffNudgeSentAt)
+    .map((s) => {
+      const first = s.programme!.skillTargets[0];
+      return {
+        studentId: s.id,
+        rule: "programme_kickoff",
+        channel: "email" as const,
+        type: "kickoff",
+        subject: `Your programme starts now${s.name ? `, ${firstName(s.name)}` : ""}`,
+        body: first
+          ? `Your gap-driven programme is ready. First up: ${first.label} — aim for ${first.timesPerWeek}× this week.`
+          : `Your gap-driven programme is ready — open your dashboard to see what's first.`,
+        ctaHref: first?.ctaHref,
+        ctaLabel: first ? "Start now →" : undefined,
+      };
+    });
+};
+
+/**
+ * Which personal programme-week just closed, if any — pure function of
+ * `committedAt` and `today`, shared by `programmeCadenceBehind` (decides
+ * whether to fire) and the nudge cron (decides which date range to query
+ * micro_lessons/classin_sessions for, and what to write back after a
+ * send). One formula, not two copies that could drift apart.
+ *
+ * A full personal week just closed when `today` is exactly day 7, 14,
+ * 21, ... after `committedAt`'s date. Returns null on any other day.
+ */
+export function weekJustEndedFor(committedAt: string, today: string): number | null {
+  const startDate = committedAt.slice(0, 10);
+  const daysSinceStart = daysBetween(startDate, today);
+  if (daysSinceStart <= 0 || daysSinceStart % 7 !== 0) return null;
+  return daysSinceStart / 7;
+}
+
+/**
+ * `programme_cadence_behind`: fires once per student per personal
+ * programme-week that just ended, when at least one non-class skill target
+ * was under-met. Class-kind shortfalls get "check your schedule" copy,
+ * never "you're behind" — the student doesn't control teacher assignment
+ * for auto-scheduled classes (classin/scheduling.ts).
+ */
+export const programmeCadenceBehind: NudgeRule = ({ today, students }) => {
+  return students
+    .filter((s) => s.email && s.programme && s.lastCompletedWeekByTarget != null)
+    .flatMap((s) => {
+      const programme = s.programme!;
+      const weekJustEnded = weekJustEndedFor(programme.committedAt, today);
+      if (weekJustEnded == null) return [];
+      if (weekJustEnded > programme.totalWeeks) return []; // programme has run its course
+      if (
+        programme.lastCadenceNudgeWeek != null &&
+        weekJustEnded <= programme.lastCadenceNudgeWeek
+      ) {
+        return []; // already evaluated/nudged for this week
+      }
+
+      const shortfalls = programme.skillTargets.filter(
+        (t) => (s.lastCompletedWeekByTarget![targetKey(t)] ?? 0) < t.timesPerWeek
+      );
+      if (shortfalls.length === 0) return [];
+
+      const classShortfalls = shortfalls.filter((t) => t.kind === "class");
+      const otherShortfalls = shortfalls.filter((t) => t.kind !== "class");
+
+      const parts: string[] = [];
+      if (otherShortfalls.length > 0) {
+        const names = otherShortfalls.map((t) => t.label).join(", ");
+        parts.push(`Last week's target for ${names} wasn't quite met.`);
+      }
+      if (classShortfalls.length > 0) {
+        parts.push(`Check your schedule with your coach for upcoming classes.`);
+      }
+
+      const cand: NudgeCandidate = {
+        studentId: s.id,
+        rule: "programme_cadence_behind",
+        channel: "email" as const,
+        type: "cadence",
+        subject: `Keeping pace with your programme${s.name ? `, ${firstName(s.name)}` : ""}`,
+        body: parts.join(" "),
+        ctaHref: otherShortfalls[0]?.ctaHref,
+        ctaLabel: otherShortfalls[0] ? "Catch up →" : undefined,
+      };
+      return [cand];
+    });
+};
+
 /** All rules in evaluation order. Earlier rules win on conflict. */
 export const ALL_RULES: NudgeRule[] = [
   classTomorrow,
+  programmeKickoff,
   streakAtRisk,
   streakBroken,
   certPushable,
+  programmeCadenceBehind,
   inactivity5d,
 ];
 

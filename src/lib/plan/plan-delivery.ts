@@ -263,15 +263,39 @@ function splitWeeks(totalWeeks: number, count: number): { start: number; end: nu
   return ranges;
 }
 
+/**
+ * The one numeric mapping from recommendation priority to a weekly target —
+ * shared so the sales-preview email's display text and the persisted
+ * programme snapshot's cadence targets can never drift against each other.
+ */
+export const PRIORITY_TIMES_PER_WEEK: Record<PlanRecommendation["priority"], number> = {
+  critical: 3,
+  recommended: 2,
+  optional: 1,
+};
+
 function frequencyLabel(priority: PlanRecommendation["priority"]): string {
-  switch (priority) {
-    case "critical":
-      return "3× per week";
-    case "recommended":
-      return "2× per week";
-    default:
-      return "1× per week";
-  }
+  return `${PRIORITY_TIMES_PER_WEEK[priority]}× per week`;
+}
+
+/**
+ * Week-range + display name for each phase of a totalWeeks-long programme —
+ * the same phaseCountFor/phaseNamesFor/splitWeeks math buildPhases() uses,
+ * exposed so a persisted snapshot's phase windows stay identical to what
+ * the sales-preview page showed, without re-deriving the per-phase activity
+ * text (which varies with first/last-phase special cases this doesn't need).
+ */
+export function computePhaseWindows(
+  totalWeeks: number
+): { name: string; weekStart: number; weekEnd: number }[] {
+  const phaseCount = phaseCountFor(totalWeeks);
+  const names = phaseNamesFor(phaseCount);
+  const ranges = splitWeeks(totalWeeks, phaseCount);
+  return ranges.map(({ start, end }, idx) => ({
+    name: names[idx],
+    weekStart: start,
+    weekEnd: end,
+  }));
 }
 
 const MICRO_LESSON_ACTIVITY_LABEL: Record<MicroLessonType, string> = {

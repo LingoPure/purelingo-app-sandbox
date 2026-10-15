@@ -16,8 +16,32 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { evaluateAllRules, type SnapshotStudent } from "@/lib/nudges/rules";
+import {
+  evaluateAllRules,
+  weekJustEndedFor,
+  targetKey,
+  type ProgrammeSnapshotInfo,
+  type SnapshotStudent,
+} from "@/lib/nudges/rules";
 import { sendNudgeEmail } from "@/lib/nudges/email";
+
+type ProgrammeSnapshotRow = {
+  id: string;
+  student_id: string;
+  committed_at: string;
+  total_weeks: number;
+  phases: {
+    skill_targets: {
+      skill: string;
+      label: string;
+      kind: "micro_lesson" | "ai_voice" | "class";
+      times_per_week: number;
+      cta_href: string;
+    }[];
+  }[];
+  kickoff_nudge_sent_at: string | null;
+  last_cadence_nudge_week: number | null;
+};
 
 function adminClient() {
   const url =
@@ -58,8 +82,9 @@ async function runNudgeTick() {
   const supabase = adminClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  // 1. Gather data — students + their next scheduled class + average score.
-  const [studentsRes, scoresRes, classesRes] = await Promise.all([
+  // 1. Gather data — students + their next scheduled class + average score +
+  //    their active programme snapshot (if any).
+  const [studentsRes, scoresRes, classesRes, snapshotsRes] = await Promise.all([
     supabase
       .from("students")
       .select(
@@ -70,6 +95,12 @@ async function runNudgeTick() {
       .from("classin_sessions")
       .select("student_id, scheduled_at, status")
       .in("status", ["scheduled", "live"]),
+    supabase
+      .from("programme_snapshots")
+      .select(
+        "id, student_id, committed_at, total_weeks, phases, kickoff_nudge_sent_at, last_cadence_nudge_week"
+      )
+      .eq("status", "active"),
   ]);
 
   if (studentsRes.error) {
@@ -77,6 +108,84 @@ async function runNudgeTick() {
       { error: studentsRes.error.message },
       { status: 500 }
     );
+  }
+  if (snapshotsRes.error) {
+    return NextResponse.json(
+      { error: snapshotsRes.error.message },
+      { status: 500 }
+    );
+  }
+
+  const snapshotRows = (snapshotsRes.data ?? []) as unknown as ProgrammeSnapshotRow[];
+  const snapshotByStudent = new Map<string, ProgrammeSnapshotRow>(
+    snapshotRows.map((r) => [r.student_id, r])
+  );
+
+  // For every student whose personal programme-week just closed, pull their
+  // completions in that exact window — from THREE separate tables, one per
+  // target kind, keyed by targetKey() (kind:skill), never skill alone. A
+  // skill can carry both an ai_voice target (drilling with Aria,
+  // ai_voice_tutor_sessions, status='complete' — not 'completed') and a
+  // class target (classin_sessions, status='completed') at once; merging
+  // them under one skill-keyed counter would let a voice drill silently
+  // satisfy a class target that was never attended. A manually-scheduled
+  // demo class with no focus_skill (migration 0063) can't be attributed to
+  // a skill and is dropped — it was never a cadence target to begin with.
+  const weeklyActivityByStudent = new Map<string, Record<string, number>>();
+  for (const row of snapshotRows) {
+    const weekJustEnded = weekJustEndedFor(row.committed_at, today);
+    if (weekJustEnded == null) continue;
+
+    const windowStartMs =
+      new Date(row.committed_at).getTime() + (weekJustEnded - 1) * 7 * 86_400_000;
+    const windowEndMs = windowStartMs + 7 * 86_400_000;
+    const windowStart = new Date(windowStartMs).toISOString();
+    const windowEnd = new Date(windowEndMs).toISOString();
+
+    const [lessonsRes, voiceSessionsRes, classesInWindowRes] = await Promise.all([
+      supabase
+        .from("micro_lessons")
+        .select("skill_focus")
+        .eq("student_id", row.student_id)
+        .eq("status", "completed")
+        .gte("completed_at", windowStart)
+        .lt("completed_at", windowEnd),
+      supabase
+        .from("ai_voice_tutor_sessions")
+        .select("target_skill")
+        .eq("student_id", row.student_id)
+        .eq("status", "complete")
+        .gte("completed_at", windowStart)
+        .lt("completed_at", windowEnd),
+      supabase
+        .from("classin_sessions")
+        .select("focus_skill")
+        .eq("student_id", row.student_id)
+        .eq("status", "completed")
+        .gte("scheduled_at", windowStart)
+        .lt("scheduled_at", windowEnd),
+    ]);
+
+    const byTarget: Record<string, number> = {};
+    for (const l of lessonsRes.data ?? []) {
+      const skill = (l as { skill_focus: string | null }).skill_focus;
+      if (!skill) continue;
+      const key = targetKey({ kind: "micro_lesson", skill });
+      byTarget[key] = (byTarget[key] ?? 0) + 1;
+    }
+    for (const v of voiceSessionsRes.data ?? []) {
+      const skill = (v as { target_skill: string | null }).target_skill;
+      if (!skill) continue;
+      const key = targetKey({ kind: "ai_voice", skill });
+      byTarget[key] = (byTarget[key] ?? 0) + 1;
+    }
+    for (const c of classesInWindowRes.data ?? []) {
+      const skill = (c as { focus_skill: string | null }).focus_skill;
+      if (!skill) continue;
+      const key = targetKey({ kind: "class", skill });
+      byTarget[key] = (byTarget[key] ?? 0) + 1;
+    }
+    weeklyActivityByStudent.set(row.student_id, byTarget);
   }
 
   const avgByStudent = new Map<string, number>();
@@ -103,10 +212,29 @@ async function runNudgeTick() {
 
   const snapshotStudents: SnapshotStudent[] = (studentsRes.data ?? []).map(
     (s) => {
-      const sum = avgByStudent.get(s.id as string) ?? 0;
-      const cnt = countByStudent.get(s.id as string) ?? 0;
+      const id = s.id as string;
+      const sum = avgByStudent.get(id) ?? 0;
+      const cnt = countByStudent.get(id) ?? 0;
+      const snapshotRow = snapshotByStudent.get(id);
+      const programme: ProgrammeSnapshotInfo | null = snapshotRow
+        ? {
+            committedAt: snapshotRow.committed_at,
+            totalWeeks: snapshotRow.total_weeks,
+            // Every phase carries the same skill_targets by design (see
+            // programme-snapshot.ts) — phases[0] is the full set.
+            skillTargets: (snapshotRow.phases[0]?.skill_targets ?? []).map((t) => ({
+              skill: t.skill,
+              label: t.label,
+              kind: t.kind,
+              timesPerWeek: t.times_per_week,
+              ctaHref: t.cta_href,
+            })),
+            kickoffNudgeSentAt: snapshotRow.kickoff_nudge_sent_at,
+            lastCadenceNudgeWeek: snapshotRow.last_cadence_nudge_week,
+          }
+        : null;
       return {
-        id: s.id as string,
+        id,
         email: (s.email as string | null) ?? null,
         name: (s.name as string | null) ?? null,
         target_level: (s.target_level as string | null) ?? null,
@@ -114,7 +242,9 @@ async function runNudgeTick() {
         averageScore: cnt > 0 ? Math.round(sum / cnt) : null,
         streak_days: (s.streak_days as number | null) ?? 0,
         last_active_date: (s.last_active_date as string | null) ?? null,
-        nextClassAt: nextClassByStudent.get(s.id as string) ?? null,
+        nextClassAt: nextClassByStudent.get(id) ?? null,
+        programme,
+        lastCompletedWeekByTarget: weeklyActivityByStudent.get(id) ?? null,
       };
     }
   );
@@ -179,6 +309,8 @@ async function runNudgeTick() {
       to: student.email,
       subject: cand.subject,
       body: cand.body,
+      ctaHref: cand.ctaHref,
+      ctaLabel: cand.ctaLabel,
     });
     if (result.ok) {
       await supabase
@@ -186,6 +318,28 @@ async function runNudgeTick() {
         .update({ delivery_status: "sent", sent_at: new Date().toISOString() })
         .eq("id", row?.id);
       sent += 1;
+
+      // One-time markers so these two rules don't re-fire. Written back
+      // only on a confirmed send, same posture as delivery_status above.
+      if (cand.rule === "programme_kickoff") {
+        await supabase
+          .from("programme_snapshots")
+          .update({ kickoff_nudge_sent_at: new Date().toISOString() })
+          .eq("student_id", cand.studentId)
+          .eq("status", "active");
+      } else if (cand.rule === "programme_cadence_behind") {
+        const snapshotRow = snapshotByStudent.get(cand.studentId);
+        const weekJustEnded = snapshotRow
+          ? weekJustEndedFor(snapshotRow.committed_at, today)
+          : null;
+        if (weekJustEnded != null) {
+          await supabase
+            .from("programme_snapshots")
+            .update({ last_cadence_nudge_week: weekJustEnded })
+            .eq("student_id", cand.studentId)
+            .eq("status", "active");
+        }
+      }
     } else {
       console.warn(`[nudges/cron] send failed for ${student.email}: ${result.error}`);
       await supabase

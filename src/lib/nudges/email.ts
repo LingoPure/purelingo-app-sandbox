@@ -15,11 +15,16 @@ export async function sendNudgeEmail(input: {
   to: string;
   subject: string;
   body: string;
+  /** Deep-link for the CTA button. Omit to fall back to /dashboard. */
+  ctaHref?: string;
+  ctaLabel?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
+  const ctaHref = input.ctaHref ? `${APP_URL}${input.ctaHref}` : `${APP_URL}/dashboard`;
+  const ctaLabel = input.ctaLabel ?? "Open LingoPure →";
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -31,8 +36,8 @@ export async function sendNudgeEmail(input: {
         from: FROM_ADDRESS,
         to: input.to,
         subject: input.subject,
-        html: htmlTemplate(input.subject, input.body),
-        text: `${input.body}\n\n${APP_URL}/dashboard`,
+        html: htmlTemplate(input.subject, input.body, ctaHref, ctaLabel),
+        text: `${input.body}\n\n${ctaHref}`,
       }),
     });
     if (!r.ok) {
@@ -48,7 +53,7 @@ export async function sendNudgeEmail(input: {
   }
 }
 
-function htmlTemplate(subject: string, body: string): string {
+function htmlTemplate(subject: string, body: string, ctaHref: string, ctaLabel: string): string {
   return `<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#f3f6fb;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#0d1117;">
@@ -63,7 +68,7 @@ function htmlTemplate(subject: string, body: string): string {
           <p style="margin:0;color:#0d1117;font-size:14px;line-height:1.6;">${escapeHtml(body)}</p>
         </td></tr>
         <tr><td style="padding:0 28px 28px;">
-          <a href="${APP_URL}/dashboard" style="display:inline-block;background:#0a2540;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:500;">Open LingoPure →</a>
+          <a href="${ctaHref}" style="display:inline-block;background:#0a2540;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:500;">${escapeHtml(ctaLabel)}</a>
         </td></tr>
         <tr><td style="padding:14px 28px;background:#f3f6fb;border-top:1px solid #ede8dc;color:#8fa3b1;font-size:11px;line-height:1.5;">
           You're receiving this because you have an active LingoPure account. Nudges help you keep your lesson streak on track.
