@@ -1,10 +1,15 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   SUPPORTED_LANGUAGES,
   type LanguageCode,
 } from "@/lib/i18n/dictionary";
+
+/** Sentinel option value for "+ Create new role" in the Role select — never
+ *  a real role id, so it can't collide with one. */
+const CREATE_NEW_ROLE = "__create_new_role__";
 
 type Role = { id: string; name: string };
 type StaffPick = {
@@ -50,6 +55,8 @@ export function InviteClient({
    *  haven't had a language stamped yet. */
   defaultNativeLanguage: LanguageCode;
 }) {
+  const router = useRouter();
+
   // "" = "Add new" (free-form). Anything else = id of an existing
   // student → name/email lock to their record, role/target/lang prefill
   // but remain editable so admin can reassign before sending.
@@ -260,7 +267,15 @@ export function InviteClient({
           >
             <select
               value={roleId}
-              onChange={(e) => setRoleId(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === CREATE_NEW_ROLE) {
+                  // Navigate away to create the role; the admin re-opens
+                  // this form afterwards and the new role will be listed.
+                  router.push("/employer/roles/new");
+                  return;
+                }
+                setRoleId(e.target.value);
+              }}
               className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
               required
             >
@@ -269,6 +284,7 @@ export function InviteClient({
                   {r.name}
                 </option>
               ))}
+              <option value={CREATE_NEW_ROLE}>+ Create new role…</option>
             </select>
           </Field>
           <Field
