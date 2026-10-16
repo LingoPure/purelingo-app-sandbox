@@ -55,12 +55,22 @@ export default async function PlanPage() {
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8">
       <header className="space-y-2">
         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Your sample programme
+          {plan.isRealProgramme ? "Your programme is ready" : "Your sample programme"}
         </h1>
         <p className="max-w-prose text-sm text-slate-600 sm:text-base">
-          {plan.firstName}, here&apos;s how you did, what it means for your role
-          as {plan.role}, and what a personalised programme could look like to
-          close the gap. This is a free preview — nothing here has been booked.
+          {plan.isRealProgramme ? (
+            <>
+              {plan.firstName}, here&apos;s how you did, what it means for your
+              role as {plan.role}, and the personalised programme built to
+              close the gap.
+            </>
+          ) : (
+            <>
+              {plan.firstName}, here&apos;s how you did, what it means for your role
+              as {plan.role}, and what a personalised programme could look like to
+              close the gap. This is a free preview — nothing here has been booked.
+            </>
+          )}
         </p>
       </header>
 
@@ -70,11 +80,12 @@ export default async function PlanPage() {
           Sit down with Aria
         </h2>
         <p className="mt-1 max-w-prose text-sm text-slate-600">
-          Aria will walk you through your results and the rationale behind
-          each area, and show you what this sample programme could look like.
+          {plan.isRealProgramme
+            ? "Aria will walk you through your results and the rationale behind each area, and get you ready to start your programme."
+            : "Aria will walk you through your results and the rationale behind each area, and show you what this sample programme could look like."}
         </p>
         <div className="mt-4">
-          <PlanDelivery />
+          <PlanDelivery isRealProgramme={plan.isRealProgramme} />
         </div>
       </section>
 
@@ -210,14 +221,14 @@ export default async function PlanPage() {
       {/* Programme phases */}
       <section aria-label="Programme" className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-900">
-          Sample {plan.totalWeeks}-week programme
+          {plan.isRealProgramme ? `${plan.totalWeeks}-week programme` : `Sample ${plan.totalWeeks}-week programme`}
         </h2>
         {plan.currentLevel === "N/A" && (
           <p className="max-w-prose rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             You haven&apos;t completed your assessment yet, so this is a generic
-            sample based on typical requirements for your role — not scores of
-            your own. Finish the assessment to see a programme personalised to
-            your results.
+            {plan.isRealProgramme ? " illustration" : " sample"} based on typical requirements for
+            your role — not scores of your own. Finish the assessment to see a
+            programme personalised to your results.
           </p>
         )}
         {plan.phases.map((phase, idx) => (
@@ -267,10 +278,10 @@ export default async function PlanPage() {
           {plan.nextStepStatement}
         </p>
         <a
-          href="/book-a-demo"
+          href={plan.isRealProgramme ? "/dashboard" : "/book-a-demo"}
           className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-lg bg-emerald-700 px-5 text-sm font-semibold text-white hover:bg-emerald-800"
         >
-          Book a call
+          {plan.isRealProgramme ? "Start your programme" : "Book a call"}
         </a>
       </section>
     </div>

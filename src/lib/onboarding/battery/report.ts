@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TASK_SKILL } from "./types";
 import { sendBatteryReportEmail } from "@/lib/email/battery-report";
+import { employerHasAdmin } from "@/lib/employer/auth";
 
 const BATTERY_SKILLS = Array.from(new Set(Object.values(TASK_SKILL)));
 
@@ -58,6 +59,7 @@ export async function sendBatteryCompleteReport(
     if (student.battery_report_sent_at) return; // already mailed
 
     let company: string | null = null;
+    let isRealProgramme = false;
     if (student.employer_id) {
       const { data: employer } = await supabase
         .from("employers")
@@ -65,6 +67,7 @@ export async function sendBatteryCompleteReport(
         .eq("id", student.employer_id)
         .maybeSingle();
       company = ((employer as { name?: string } | null)?.name) ?? null;
+      isRealProgramme = await employerHasAdmin(student.employer_id as string);
     }
 
     const skills = Array.from(new Set(scored.map((s) => s.skill)))
@@ -82,6 +85,7 @@ export async function sendBatteryCompleteReport(
       company,
       origin: await appOrigin(),
       skills,
+      isRealProgramme,
     });
 
     if (mail.ok) {

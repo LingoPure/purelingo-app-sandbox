@@ -19,7 +19,7 @@ type PlanSession = {
  * VoiceWidget with the compiled plan prompt + first message, then record
  * commitment to the /api/plan/delivery endpoint.
  */
-export function PlanDelivery() {
+export function PlanDelivery({ isRealProgramme }: { isRealProgramme: boolean }) {
   const router = useRouter();
   const [session, setSession] = useState<PlanSession | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +80,14 @@ export function PlanDelivery() {
     router.push("/book-a-demo");
   };
 
+  const startProgramme = async () => {
+    // Record commitment (best-effort — a failed write must never block
+    // getting into the dashboard) then take the student straight to their
+    // own learner platform so they can begin.
+    await recordCommitment(true).catch(() => {});
+    router.push("/dashboard");
+  };
+
   if (error) {
     return (
       <div className="mx-auto max-w-lg rounded-xl border border-red-200 bg-red-50 p-6 text-center">
@@ -95,7 +103,9 @@ export function PlanDelivery() {
           role="status"
           className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-800"
         >
-          ✓ Interest recorded — taking you to book a call.
+          {isRealProgramme
+            ? "✓ Great — taking you to your dashboard to get started."
+            : "✓ Interest recorded — taking you to book a call."}
         </div>
       )}
       {commitState === "declined" && (
@@ -103,8 +113,9 @@ export function PlanDelivery() {
           role="status"
           className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800"
         >
-          No problem — your sample programme stays available on your dashboard
-          whenever you want to revisit it.
+          {isRealProgramme
+            ? "No problem — your programme stays on your dashboard whenever you're ready to start."
+            : "No problem — your sample programme stays available on your dashboard whenever you want to revisit it."}
         </div>
       )}
 
@@ -137,7 +148,9 @@ export function PlanDelivery() {
             onReady={(controls) => {
               controlsRef.current = controls;
               controls.sendContextualUpdate(
-                "The student has just completed their assessment. You are presenting a free sample programme and inviting them to book a call if they're interested — this is not an enrolment and you should not ask for a commitment. Do not re-run the assessment."
+                isRealProgramme
+                  ? "The student has just completed their assessment. You are presenting their real, personalised programme — this is the actual plan they'll follow, not a preview. Encourage them to start. Do not re-run the assessment."
+                  : "The student has just completed their assessment. You are presenting a free sample programme and inviting them to book a call if they're interested — this is not an enrolment and you should not ask for a commitment. Do not re-run the assessment."
               );
             }}
             onDisconnect={() => {
@@ -151,11 +164,11 @@ export function PlanDelivery() {
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <button
           type="button"
-          onClick={bookACall}
+          onClick={isRealProgramme ? startProgramme : bookACall}
           disabled={committing || !session}
           className="min-h-[44px] w-full rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {committing ? "Saving…" : "Book a call"}
+          {committing ? "Saving…" : isRealProgramme ? "Start your programme" : "Book a call"}
         </button>
         <button
           type="button"

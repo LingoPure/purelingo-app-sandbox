@@ -1,10 +1,14 @@
 /**
  * Battery-complete report email (Resend).
  *
- * The "taste → report → book a demo" bridge: a learner who finishes the
- * Phase 0b battery (voice discovery + 4 tasks) receives a compact personal
- * report — their LP-18 profile across the four battery skills — plus a
- * Book-a-demo CTA so their organisation can explore the full service.
+ * Two audiences, branched on `isRealProgramme`:
+ *  - Real (employer-admin-created learner): their full personalised
+ *    programme is being assembled next — the CTA points them on to it,
+ *    not at a demo booking.
+ *  - Demo (public self-setup path): the "taste → report → book a demo"
+ *    bridge — a compact personal report (LP-18 profile across the four
+ *    battery skills) plus a Book-a-demo CTA so a prospective employer can
+ *    explore the full service.
  */
 
 import { scoreToLp18 } from "@/lib/scoring/rubric";
@@ -46,9 +50,12 @@ export async function sendBatteryReportEmail(opts: {
   company?: string | null;
   origin: string;
   skills: ReportSkill[];
+  /** Real employer-created learner vs the public demo path — see plan-report.ts. */
+  isRealProgramme: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
+  const real = opts.isRealProgramme;
 
   const greeting = opts.name ? `Hi ${escapeHtml(opts.name)},` : "Hi there,";
   const companyLine = opts.company
@@ -104,10 +111,10 @@ export async function sendBatteryReportEmail(opts: {
           </table>
         </td></tr>
         <tr><td style="padding:18px 28px 10px;">
-          <a href="${escapeHtml(opts.origin)}/book-a-demo" style="display:inline-block;background:#c8973a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:6px;">Book a demo — see LingoPure for your team</a>
+          <a href="${escapeHtml(opts.origin)}${real ? "/plan" : "/book-a-demo"}" style="display:inline-block;background:#c8973a;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 22px;border-radius:6px;">${real ? "Continue to your programme" : "Book a demo — see LingoPure for your team"}</a>
         </td></tr>
         <tr><td style="padding:0 28px 18px;">
-          <p style="margin:0;color:#6e777d;font-size:12px;line-height:1.5;">A short walkthrough of the full service: conversation practice, the 2K intelligence journey, curriculum, teacher-led sessions and team reporting.</p>
+          <p style="margin:0;color:#6e777d;font-size:12px;line-height:1.5;">${real ? "Your full personalised programme is being put together next — you'll see it as soon as it's ready." : "A short walkthrough of the full service: conversation practice, the 2K intelligence journey, curriculum, teacher-led sessions and team reporting."}</p>
         </td></tr>
         <tr><td style="padding:14px 28px;background:#f3f6fb;border-top:1px solid #ede8dc;color:#8fa3b1;font-size:11px;line-height:1.5;">
           Questions? Reach us at info@lingopure.com.
@@ -130,7 +137,9 @@ export async function sendBatteryReportEmail(opts: {
     `Overall band: ${overallBand.band}`,
     bandLines,
     ``,
-    `Book a demo — see LingoPure for your team: ${opts.origin}/book-a-demo`,
+    real
+      ? `Continue to your programme: ${opts.origin}/plan`
+      : `Book a demo — see LingoPure for your team: ${opts.origin}/book-a-demo`,
     ``,
     `— LingoPure`,
   ].join("\n");

@@ -31,6 +31,7 @@ import { isLanguageCode, type LanguageCode } from "@/lib/i18n/dictionary";
 import { BilingualText } from "@/components/i18n/bilingual-text";
 import { tierForTarget } from "@/lib/gamification/rules";
 import { getDict } from "@/lib/i18n";
+import { employerHasAdmin } from "@/lib/employer/auth";
 
 /** The six PRIMARY, CEFR-mapped dimensions — the radar + headline bars. */
 const SKILLS = SKILL_KEYS.map((key) => ({ key, label: SKILL_LABELS[key] }));
@@ -104,7 +105,7 @@ export default async function DashboardPage() {
     supabase
       .from("students")
       .select(
-        "id, name, discovery_status, target_level, xp, streak_days, native_language"
+        "id, name, discovery_status, target_level, xp, streak_days, native_language, employer_id"
       )
       .eq("id", user!.id)
       .maybeSingle(),
@@ -154,6 +155,11 @@ export default async function DashboardPage() {
   ]);
 
   const student = studentResult.data;
+  const studentEmployerId = (student as { employer_id?: string | null } | null)
+    ?.employer_id;
+  const isRealProgramme = studentEmployerId
+    ? await employerHasAdmin(studentEmployerId)
+    : false;
   const scores = (scoresResult.data ?? []) as ScoreRow[];
   const profile = (sessionResult.data?.profile_json ?? null) as ProfileJson | null;
   const scoreMap = new Map<string, ScoreRow>(scores.map((s) => [s.skill, s]));
@@ -534,19 +540,19 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold text-emerald-900">
-                Your sample programme is ready
+                {isRealProgramme ? "Your programme is ready" : "Your sample programme is ready"}
               </h2>
               <p className="mt-1 max-w-prose text-sm text-emerald-800">
-                Sit down with Aria to walk through your scores, the rationale,
-                and a free preview of what a personalised programme could
-                look like — no commitment needed.
+                {isRealProgramme
+                  ? "Sit down with Aria to walk through your scores, the rationale, and your personalised programme — then get started."
+                  : "Sit down with Aria to walk through your scores, the rationale, and a free preview of what a personalised programme could look like — no commitment needed."}
               </p>
             </div>
             <Link
               href="/plan"
               className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
             >
-              View sample programme
+              {isRealProgramme ? "View your programme" : "View sample programme"}
             </Link>
           </div>
         </section>

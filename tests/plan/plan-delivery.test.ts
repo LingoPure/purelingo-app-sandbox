@@ -112,10 +112,34 @@ test("compilePlanPrompt embeds the plan's actual totalWeeks, not a hardcoded 16"
     phases: [],
     totalWeeks: 10,
     nextStepStatement: "x",
+    isRealProgramme: false,
   };
   const prompt = compilePlanPrompt(plan);
   assert.match(prompt, /THE SAMPLE PROGRAMME \(10 weeks\)/);
   assert.doesNotMatch(prompt, /16 weeks/);
+});
+
+test("compilePlanPrompt drops the sample/book-a-call framing for a real employer-created learner", () => {
+  const plan = {
+    studentName: "Test Student",
+    firstName: "Test",
+    role: "Sales",
+    employer: "Acme",
+    currentLevel: "B1",
+    currentLp18: null,
+    targetLevel: "B2",
+    skills: [skill({ assessed: true, score: 700, targetGap: 200 })],
+    supportingSkills: [],
+    recommendations: [] as PlanRecommendation[],
+    phases: [],
+    totalWeeks: 10,
+    nextStepStatement: "x",
+    isRealProgramme: true,
+  };
+  const prompt = compilePlanPrompt(plan);
+  assert.match(prompt, /THE PROGRAMME \(10 weeks\)/);
+  assert.doesNotMatch(prompt, /FREE SAMPLE/);
+  assert.doesNotMatch(prompt, /free preview, not an enrolment/i);
 });
 
 test("compilePlanFirstMessage embeds the plan's actual totalWeeks", () => {
@@ -133,10 +157,33 @@ test("compilePlanFirstMessage embeds the plan's actual totalWeeks", () => {
     phases: [],
     totalWeeks: 22,
     nextStepStatement: "x",
+    isRealProgramme: false,
   };
   const msg = compilePlanFirstMessage(plan);
   assert.match(msg, /sample 22-week/);
   assert.doesNotMatch(msg, /16-week/);
+});
+
+test("compilePlanFirstMessage drops the word 'sample' for a real employer-created learner", () => {
+  const plan = {
+    studentName: "Test Student",
+    firstName: "Test",
+    role: "Sales",
+    employer: "Acme",
+    currentLevel: "B1",
+    currentLp18: null,
+    targetLevel: "B2",
+    skills: [],
+    supportingSkills: [],
+    recommendations: [] as PlanRecommendation[],
+    phases: [],
+    totalWeeks: 22,
+    nextStepStatement: "x",
+    isRealProgramme: true,
+  };
+  const msg = compilePlanFirstMessage(plan);
+  assert.match(msg, /22-week/);
+  assert.doesNotMatch(msg, /sample/i);
 });
 
 test("compilePlanPrompt never asks for a commitment (ISS-064/065 regression)", () => {
@@ -154,6 +201,7 @@ test("compilePlanPrompt never asks for a commitment (ISS-064/065 regression)", (
     phases: [],
     totalWeeks: 16,
     nextStepStatement: "x",
+    isRealProgramme: false,
   };
   const prompt = compilePlanPrompt(plan);
   assert.doesNotMatch(prompt, /get a genuine commitment/i);

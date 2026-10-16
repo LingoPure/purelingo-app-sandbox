@@ -63,6 +63,34 @@ export async function loadEmployerAdmin(
 }
 
 /**
+ * Does this employer have a real employer_admins row — i.e. is it an
+ * actual company account (staff were invited by an admin) rather than a
+ * self-setup walk-up (a prospective ICP exploring the demo path, who
+ * self-provisions an org/role/baseline with nobody administering it)?
+ *
+ * This is the one signal that distinguishes the two legitimate /onboarding
+ * paths: an employer with no admin row can ONLY have been created by
+ * self-setup, since the real path (employer-admin staff invite) always
+ * creates the employer_admins row first. Used to decide whether a
+ * student's plan/battery-report/dashboard copy should be the real
+ * generated programme or the "preview — book a call" marketing framing.
+ */
+export async function employerHasAdmin(employerId: string): Promise<boolean> {
+  const svc = adminSupabase();
+  const { data, error } = await svc
+    .from("employer_admins")
+    .select("employer_id")
+    .eq("employer_id", employerId)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.error("[employer-auth] employerHasAdmin lookup failed:", error.message);
+    return false;
+  }
+  return data != null;
+}
+
+/**
  * API-route guard. Returns the admin row on success, or a NextResponse
  * (401 / 403) on failure that the caller should return immediately.
  *

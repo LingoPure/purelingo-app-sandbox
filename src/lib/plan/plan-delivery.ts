@@ -32,6 +32,7 @@ import {
   type PlanRecommendation,
   type MicroLessonType,
 } from "@/lib/lessons/plan-generator";
+import { employerHasAdmin } from "@/lib/employer/auth";
 
 export type SkillProfile = {
   skill: AnySkillKey;
@@ -72,6 +73,15 @@ export type PlanData = {
   phases: PlanPhase[];
   totalWeeks: number;
   nextStepStatement: string;
+  /**
+   * True when this student's employer has a real admin — i.e. this is the
+   * actual programme a real employer-created learner needs, not the
+   * public demo path's preview (a prospective ICP self-provisioned via
+   * /onboarding's self-setup with nobody administering the org). Drives
+   * whether plan/battery copy presents this as a real plan to start or a
+   * sample to book a call about.
+   */
+  isRealProgramme: boolean;
 };
 
 /**
@@ -105,6 +115,7 @@ export async function buildPlan(
       .maybeSingle();
     roleName = role?.name ?? roleName;
   }
+  let isRealProgramme = false;
   if (student?.employer_id) {
     const { data: emp } = await supabase
       .from("employers")
@@ -112,6 +123,7 @@ export async function buildPlan(
       .eq("id", student.employer_id)
       .maybeSingle();
     employerName = emp?.name ?? employerName;
+    isRealProgramme = await employerHasAdmin(student.employer_id);
   }
 
   // 2. Load canonical gap scores
@@ -182,12 +194,16 @@ export async function buildPlan(
     recommendations,
     phases,
     totalWeeks,
-    // ISS-064/065: this is a free sample, not something the student has
-    // enrolled in — the copy must never imply a commitment was made.
-    nextStepStatement:
-      `This is a preview of what a personalised ${phases.length}-phase, ${totalWeeks}-week ` +
-      `programme could look like to reach ${targetLevel} for your role as ${roleName}. ` +
-      `Nothing has been booked — if this looks useful, the next step is a quick call.`,
+    isRealProgramme,
+    // ISS-064/065 framing (free sample, book a call) applies ONLY to the
+    // public demo path (self-setup, no employer admin) — a real
+    // employer-created learner gets their actual programme, start now.
+    nextStepStatement: isRealProgramme
+      ? `Here's your personalised ${phases.length}-phase, ${totalWeeks}-week programme to reach ` +
+        `${targetLevel} for your role as ${roleName}. Time to get started.`
+      : `This is a preview of what a personalised ${phases.length}-phase, ${totalWeeks}-week ` +
+        `programme could look like to reach ${targetLevel} for your role as ${roleName}. ` +
+        `Nothing has been booked — if this looks useful, the next step is a quick call.`,
   };
 }
 
@@ -447,7 +463,11 @@ export function compilePlanPrompt(plan: PlanData): string {
     .map((r) => `- ${r.title} (${r.skillLabel}: ${r.rationale})`)
     .join("\n");
 
-  return `You are Aria, LingoPure's learning consultant. You've just finished assessing ${plan.studentName} — you know their scores, their gaps, and what they need. Now you're sitting down with them to walk through what a personalised programme could look like. This is a FREE SAMPLE — nothing has been booked or charged, and your job is not to close them into a programme. It's to show them the value clearly enough that they want to book a call to talk about the real thing.
+  const roleIntro = plan.isRealProgramme
+    ? `You are Aria, LingoPure's learning consultant. You've just finished assessing ${plan.studentName} — you know their scores, their gaps, and what they need. Now you're sitting down with them to walk through THEIR REAL, PERSONALISED PROGRAMME — this is the actual plan they'll follow, not a preview. Your job is to make sure they understand their gaps, feel good about the plan, and are ready to start.`
+    : `You are Aria, LingoPure's learning consultant. You've just finished assessing ${plan.studentName} — you know their scores, their gaps, and what they need. Now you're sitting down with them to walk through what a personalised programme could look like. This is a FREE SAMPLE — nothing has been booked or charged, and your job is not to close them into a programme. It's to show them the value clearly enough that they want to book a call to talk about the real thing.`;
+
+  return `${roleIntro}
 
 ## WHO YOU'RE TALKING TO
 
@@ -465,11 +485,11 @@ ${skillSummary}
 You've assessed their English across 6 skill dimensions. Your job now is to:
 1. Acknowledge where they are — be specific about what's strong and what needs work
 2. Explain WHY certain gaps matter for their specific role (${plan.role})
-3. Present the sample programme clearly — phases, activities, timeline
-4. Invite them to book a call if this looks useful — never push for a yes/no commitment
-5. Close warmly — remind them this is a preview and there's a real person to talk to next
+3. Present the ${plan.isRealProgramme ? "programme" : "sample programme"} clearly — phases, activities, timeline
+4. ${plan.isRealProgramme ? "Make sure they're ready to start — this is their real plan" : "Invite them to book a call if this looks useful — never push for a yes/no commitment"}
+5. ${plan.isRealProgramme ? "Close warmly — they know what's next and when to begin" : "Close warmly — remind them this is a preview and there's a real person to talk to next"}
 
-## THE SAMPLE PROGRAMME (${plan.totalWeeks} weeks)
+## THE ${plan.isRealProgramme ? "PROGRAMME" : "SAMPLE PROGRAMME"} (${plan.totalWeeks} weeks)
 
 ${phaseSummary}
 
@@ -482,20 +502,30 @@ ${priorityItems}
 1. **Open warmly** — greet by first name, remind them the assessment is done, you have their results
 2. **Share scores first** — walk through each skill, starting with strengths, then gaps. Be encouraging but honest. Use their actual numbers.
 3. **Connect to their role** — explain why specific gaps matter for ${plan.role} at ${plan.employer}. Make it real.
-4. **Present the sample programme** — walk through each phase, what they'd do, how often, and why each piece matters for their gaps. Be clear this is a preview of what's possible, not something they're enrolled in.
+${
+  plan.isRealProgramme
+    ? `4. **Present the programme** — walk through each phase, what they'd do, how often, and why each piece matters for their gaps. This is their actual plan, not a preview.
+5. **Invite them to start** — "This is your programme — your first session is the best place to begin. You can start right from your dashboard."
+6. **If they have questions**, answer them directly — this is the real thing, so be concrete about what happens next.
+7. **Close warmly** — "You're at ${plan.currentLevel}, aiming for ${plan.targetLevel} for your role. Let's get started."`
+    : `4. **Present the sample programme** — walk through each phase, what they'd do, how often, and why each piece matters for their gaps. Be clear this is a preview of what's possible, not something they're enrolled in.
 5. **Invite the next step** — "This is just a sample of what a real programme could look like for you. If it looks useful, the next step is a quick call with the team to talk through the details — no pressure either way."
 6. **If they have questions**, answer briefly but don't oversell — redirect to booking a call for anything specific to their situation.
-7. **Close warmly** — "You're at ${plan.currentLevel}, aiming for ${plan.targetLevel} for your role. Hope this gave you a useful picture of what's possible."
+7. **Close warmly** — "You're at ${plan.currentLevel}, aiming for ${plan.targetLevel} for your role. Hope this gave you a useful picture of what's possible."`
+}
 
-${noneAssessedYet ? "## IMPORTANT — NO SCORES YET\n\nThis student hasn't completed their assessment, so every skill above is unassessed. Say so plainly early on — this sample programme is a generic illustration based on typical requirements for their role, not something built from their own results. Encourage them to finish the assessment to get a version personalised to their actual scores.\n" : ""}
+${noneAssessedYet ? `## IMPORTANT — NO SCORES YET\n\nThis student hasn't completed their assessment, so every skill above is unassessed. Say so plainly early on — this ${plan.isRealProgramme ? "programme" : "sample programme"} is a generic illustration based on typical requirements for their role, not something built from their own results. Encourage them to finish the assessment to get a version personalised to their actual scores.\n` : ""}
 ## RULES
 
 - Be warm and professional — you're a consultant, not a teacher
 - Use their name naturally (not every sentence)
 - Reference their ACTUAL scores, not vague estimates${noneAssessedYet ? " — if none exist yet, say so, don't invent them" : ""}
-- Be specific about the sample programme — week-by-week, activity-by-frequency
-- Never ask for a commitment or a yes/no decision — this is a free preview, not an enrolment
-- Invite them to book a call if they're interested — don't push if they're not
+- Be specific about the ${plan.isRealProgramme ? "programme" : "sample programme"} — week-by-week, activity-by-frequency
+${
+  plan.isRealProgramme
+    ? "- This is their real, active programme — it's fine to talk about starting it and what commitment looks like\n- Encourage them to begin, but don't be pushy about exact timing"
+    : "- Never ask for a commitment or a yes/no decision — this is a free preview, not an enrolment\n- Invite them to book a call if they're interested — don't push if they're not"
+}
 - Keep the whole conversation to about 5 minutes
 - If the student asks questions about specific lessons, answer briefly but redirect to the programme overview
 - Never invent scores or estimates — use only the numbers provided above`;
@@ -506,11 +536,13 @@ ${noneAssessedYet ? "## IMPORTANT — NO SCORES YET\n\nThis student hasn't compl
  * Short and warm — sets the context and invites them in.
  */
 export function compilePlanFirstMessage(plan: PlanData): string {
+  const programmeClause = plan.isRealProgramme
+    ? `then walk you through your ${plan.totalWeeks}-week programme to reach ${plan.targetLevel}`
+    : `then show you a sample ${plan.totalWeeks}-week programme for what it could look like to reach ${plan.targetLevel}`;
   return (
     `${plan.firstName}, welcome back. You've just finished your discovery session and ` +
     `assessment exercises — I've got all your results right here. ` +
     `I'm going to walk you through your scores, explain what they mean for your role ` +
-    `as ${plan.role} at ${plan.employer}, and then show you a sample ${plan.totalWeeks}-week ` +
-    `programme for what it could look like to reach ${plan.targetLevel}. Ready to see how you did?`
+    `as ${plan.role} at ${plan.employer}, and ${programmeClause}. Ready to see how you did?`
   );
 }
