@@ -194,21 +194,29 @@ export async function POST(request: NextRequest) {
     body.nativeLanguage ?? employerDefaultLang ?? null;
 
   // 4. Pre-stamp the students row with employer + role + name + target +
-  //    native language. handle_new_user creates the row on invite
-  //    acceptance; if the user already existed the row's already there.
+  //    native language. handle_new_user creates the row for a BRAND NEW
+  //    auth user, so a plain UPDATE is enough there — but an existing
+  //    auth.users account whose students row no longer exists (deleted,
+  //    e.g. a prior test account cleaned up) matches zero rows on UPDATE
+  //    and fails silently, leaving the invitee with no employer_id and no
+  //    role, which routes them into the self-setup/demo flow instead of
+  //    the real one. Upsert so a missing row is created, not skipped.
   const { error: studentErr } = await supabase
     .from("students")
-    .update({
-      name: body.name,
-      email,
-      employer_id: employerId,
-      role_id: body.roleId,
-      target_level: body.targetLevel,
-      ...(resolvedNativeLanguage
-        ? { native_language: resolvedNativeLanguage }
-        : {}),
-    })
-    .eq("id", userId);
+    .upsert(
+      {
+        id: userId,
+        name: body.name,
+        email,
+        employer_id: employerId,
+        role_id: body.roleId,
+        target_level: body.targetLevel,
+        ...(resolvedNativeLanguage
+          ? { native_language: resolvedNativeLanguage }
+          : {}),
+      },
+      { onConflict: "id" }
+    );
   if (studentErr) {
     return NextResponse.json({ error: studentErr.message }, { status: 500 });
   }
