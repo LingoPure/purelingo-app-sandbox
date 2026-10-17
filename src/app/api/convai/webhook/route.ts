@@ -9,6 +9,7 @@ import {
 } from "@caistech/elevenlabs-convai";
 import { createClient } from "@supabase/supabase-js";
 import { scoreDiscoverySession } from "@/lib/scoring/score-discovery";
+import { scoreRoleDiscoverySession } from "@/lib/roles/score-role-discovery";
 import { scoreVoiceTutorSession } from "@/lib/scoring/score-voice-tutor";
 import { awardXp } from "@/lib/gamification/award";
 import { createOrSupersedeProgrammeSnapshot } from "@/lib/plan/programme-snapshot";
@@ -277,6 +278,139 @@ async function handleVoiceTutorPostCall(payload: PostCallPayload) {
   return NextResponse.json({ ok: true });
 }
 
+const ROLE_DISCOVERY_AGENT_ID = process.env.ELEVENLABS_ROLE_DISCOVERY_AGENT_ID ?? "";
+
+/**
+ * Role-discovery post-call: an employer admin just finished describing a
+ * role to Aria. Resolve the admin via the same generic convai_voice_bindings
+ * table every other agent uses (written by /api/convai/bind from the
+ * authenticated browser at connect — no new bind route needed), then find
+ * the pending role_discovery_sessions row for that admin — "most recent
+ * pending row for this person", the same simplification
+ * handleVoiceTutorPostCall already uses, for the same reason: ElevenLabs
+ * never hands a server tool the conversation id at dynamic-variable-fill
+ * time, so there is nothing more precise to match on, and a session
+ * connects within seconds of being created in practice.
+ */
+async function handleRoleDiscoveryPostCall(payload: PostCallPayload) {
+  const supabase = adminSupabase();
+  const conversationId = payload.data.conversation_id;
+
+  const { data: binding } = await supabase
+    .from("convai_voice_bindings")
+    .select("user_id")
+    .eq("elevenlabs_conversation_id", conversationId)
+    .maybeSingle();
+  const adminUserId = binding?.user_id ?? null;
+
+  if (!adminUserId) {
+    console.warn(
+      "[convai/webhook:role-discovery] no bound admin — ignoring",
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "no_admin" });
+  }
+
+  const { data: sessionRow } = await supabase
+    .from("role_discovery_sessions")
+    .select("id, role_id")
+    .eq("admin_user_id", adminUserId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!sessionRow) {
+    console.warn(
+      "[convai/webhook:role-discovery] no pending session row for",
+      adminUserId,
+      conversationId
+    );
+    return NextResponse.json({ ok: true, ignored: "no_pending_session" });
+  }
+
+  const { id: sessionId, role_id: roleId } = sessionRow as {
+    id: string;
+    role_id: string;
+  };
+
+  const startMs = payload.data.metadata.start_time_unix_secs * 1000;
+  const endMs =
+    (payload.data.metadata.end_time_unix_secs ??
+      payload.data.metadata.start_time_unix_secs +
+        payload.data.metadata.call_duration_secs) * 1000;
+  const done = payload.data.status === "done";
+
+  await supabase
+    .from("role_discovery_sessions")
+    .update({
+      elevenlabs_conversation_id: conversationId,
+      status: done ? "complete" : "failed",
+      started_at: new Date(startMs).toISOString(),
+      completed_at: new Date(endMs).toISOString(),
+    })
+    .eq("id", sessionId);
+
+  // Persist the transcript for later admin review/audit — same generic
+  // persistence every other agent gets, scoring skipped on failure.
+  const messages = payload.data.transcript.map((t) => ({
+    role: (t.role === "agent" ? "assistant" : "user") as "user" | "assistant",
+    content: t.message,
+    timestamp: new Date(startMs + t.time_in_call_secs * 1000).toISOString(),
+  }));
+  const persistResult = await handlePostCallWebhook(
+    supabase,
+    {
+      elevenlabsAgentId: payload.data.agent_id,
+      conversationId,
+      userId: adminUserId,
+      topic:
+        payload.data.analysis?.transcript_summary?.slice(0, 80) ??
+        "Role-discovery interview",
+      status: done ? "completed" : "abandoned",
+      startedAt: new Date(startMs).toISOString(),
+      endedAt: new Date(endMs).toISOString(),
+      durationSecs: payload.data.metadata.call_duration_secs,
+      terminationReason: payload.data.metadata.termination_reason,
+      summary: payload.data.analysis?.transcript_summary,
+      messages,
+    },
+    TABLES
+  );
+  if (!persistResult.success) {
+    console.warn("[convai/webhook:role-discovery] persist skipped:", {
+      error: persistResult.error,
+      conversationId,
+    });
+  }
+
+  if (!done) {
+    return NextResponse.json({ ok: true, scored: false, reason: "call_not_done" });
+  }
+
+  try {
+    const transcript = payload.data.transcript.map((t) => ({
+      role: t.role,
+      message: t.message,
+    }));
+    await scoreRoleDiscoverySession(supabase, { roleId, conversationId, transcript });
+    await supabase
+      .from("role_discovery_sessions")
+      .update({ scored_at: new Date().toISOString() })
+      .eq("id", sessionId);
+    console.log(
+      `[convai/webhook:role-discovery] scored role ${roleId} (session ${sessionId})`
+    );
+  } catch (err) {
+    console.error(
+      "[convai/webhook:role-discovery] scoring failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
 async function handleInvestorMorganPostCall(payload: PostCallPayload) {
   const supabase = adminSupabase();
   const conversationId = payload.data.conversation_id;
@@ -420,6 +554,12 @@ export async function POST(request: NextRequest) {
   const voiceTutorAgentId = await resolveVoiceTutorAgentId();
   if (voiceTutorAgentId && payload.data.agent_id === voiceTutorAgentId) {
     return handleVoiceTutorPostCall(payload);
+  }
+
+  // Role-discovery agent: an admin interviewing about a role, never a
+  // student's own assessment.
+  if (ROLE_DISCOVERY_AGENT_ID && payload.data.agent_id === ROLE_DISCOVERY_AGENT_ID) {
+    return handleRoleDiscoveryPostCall(payload);
   }
 
   const conversationId = payload.data.conversation_id;

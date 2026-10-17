@@ -39,6 +39,10 @@ export type RoleDetail = {
   isArchived: boolean;
   baselines: RoleBaselines;
   assignedStudents: AssignedStudent[];
+  /** Per-skill rationale from the voice/text role-discovery interview, when
+   *  the role was defined that way (roles.profile_json.skill_rationale).
+   *  Null for manually-created or preset roles with no interview behind them. */
+  skillRationale: Partial<Record<SkillKey, string>> | null;
 };
 
 const DEFAULT_BASELINE = 700;
@@ -133,7 +137,7 @@ export async function loadRoleDetail(
   const [roleRes, baselinesRes, studentsRes] = await Promise.all([
     supabase
       .from("roles")
-      .select("id, employer_id, name, description, is_archived")
+      .select("id, employer_id, name, description, is_archived, profile_json")
       .eq("id", roleId)
       .eq("employer_id", employerId)
       .maybeSingle(),
@@ -158,6 +162,7 @@ export async function loadRoleDetail(
         name: string;
         description: string | null;
         is_archived: boolean;
+        profile_json: { skill_rationale?: Partial<Record<SkillKey, string>> } | null;
       }
     | null;
   if (!role) return null;
@@ -177,5 +182,6 @@ export async function loadRoleDetail(
     isArchived: role.is_archived,
     baselines,
     assignedStudents: studentsRes.data ?? [],
+    skillRationale: role.profile_json?.skill_rationale ?? null,
   };
 }

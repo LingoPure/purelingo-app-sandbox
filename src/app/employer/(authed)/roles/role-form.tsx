@@ -30,6 +30,9 @@ export type RoleFormProps = {
   initialDescription?: string | null;
   initialBaselines: RoleBaselines;
   initialIsArchived?: boolean;
+  /** Per-skill rationale from a role-discovery interview — shown instead of
+   *  the generic SKILL_HINT when present, since it's specific to THIS role. */
+  rationaleBySkill?: Partial<Record<SkillKey, string>> | null;
 };
 
 export function RoleForm({
@@ -39,6 +42,7 @@ export function RoleForm({
   initialDescription = "",
   initialBaselines,
   initialIsArchived = false,
+  rationaleBySkill = null,
 }: RoleFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -156,7 +160,7 @@ export function RoleForm({
             <BaselineField
               key={skill}
               label={SKILL_LABEL[skill] ?? skill}
-              hint={SKILL_HINT[skill]}
+              hint={rationaleBySkill?.[skill] ?? SKILL_HINT[skill]}
               value={baselines[skill]}
               onChange={(v) => setBaseline(skill, v)}
             />

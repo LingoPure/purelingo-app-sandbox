@@ -43,6 +43,7 @@ export default async function EditRolePage({
         initialDescription={role.description}
         initialBaselines={role.baselines}
         initialIsArchived={role.isArchived}
+        rationaleBySkill={role.skillRationale}
       />
 
       <section className="rounded-lg border border-cream bg-paper p-6">
