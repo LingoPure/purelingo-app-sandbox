@@ -1,6 +1,6 @@
 // @explanatory-header-exempt — auth surface (login / signup / password flows are self-explanatory by web convention)
 import Link from "next/link";
-import { loadRolesIndex } from "@/lib/employer/roles-data";
+import { loadRolesIndex, loadPublishedTemplates } from "@/lib/employer/roles-data";
 import { loadEmployerStaffPicks } from "@/lib/employer/data";
 import { adminSupabase } from "@/lib/employer/data";
 import { requireEmployerAdmin } from "@/lib/employer/auth";
@@ -36,8 +36,9 @@ export default async function InviteStaffPage() {
   }
   const employerId = auth.admin.employerId;
 
-  const [roles, picks, defaultLang] = await Promise.all([
+  const [roles, templates, picks, defaultLang] = await Promise.all([
     loadRolesIndex(employerId),
+    loadPublishedTemplates(employerId),
     loadEmployerStaffPicks(employerId),
     loadEmployerDefaultLang(employerId),
   ]);
@@ -59,7 +60,7 @@ export default async function InviteStaffPage() {
         </p>
       </div>
 
-      {roles.length === 0 ? (
+      {roles.length === 0 && templates.length === 0 ? (
         <section className="rounded-lg border border-dashed border-cream bg-paper p-8 text-center">
           <p className="text-sm text-coral">
             No roles configured yet.{" "}
@@ -72,6 +73,7 @@ export default async function InviteStaffPage() {
       ) : (
         <InviteClient
           roles={roles.map((r) => ({ id: r.id, name: r.name }))}
+          templates={templates}
           existingStaff={picks}
           defaultNativeLanguage={defaultLang}
         />

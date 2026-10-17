@@ -43,6 +43,19 @@ export type RoleDetail = {
    *  the role was defined that way (roles.profile_json.skill_rationale).
    *  Null for manually-created or preset roles with no interview behind them. */
   skillRationale: Partial<Record<SkillKey, string>> | null;
+  /** Platform template-sharing state (migration 0066) — see publish-template-card.tsx. */
+  templateStatus: "private" | "pending_review" | "published";
+  sanitizedDescription: string | null;
+};
+
+/** One published role template, as shown to an OTHER employer deciding
+ *  whether to adopt it (staff-invite dropdown + the role-templates catalog).
+ *  Never exposes the source employer's identity or its raw `description` —
+ *  only the sanitized, cross-employer-safe copy (migration 0066). */
+export type PublishedTemplate = {
+  id: string;
+  name: string;
+  sanitizedDescription: string | null;
 };
 
 const DEFAULT_BASELINE = 700;
@@ -137,7 +150,9 @@ export async function loadRoleDetail(
   const [roleRes, baselinesRes, studentsRes] = await Promise.all([
     supabase
       .from("roles")
-      .select("id, employer_id, name, description, is_archived, profile_json")
+      .select(
+        "id, employer_id, name, description, is_archived, profile_json, template_status, sanitized_description"
+      )
       .eq("id", roleId)
       .eq("employer_id", employerId)
       .maybeSingle(),
@@ -163,6 +178,8 @@ export async function loadRoleDetail(
         description: string | null;
         is_archived: boolean;
         profile_json: { skill_rationale?: Partial<Record<SkillKey, string>> } | null;
+        template_status: "private" | "pending_review" | "published";
+        sanitized_description: string | null;
       }
     | null;
   if (!role) return null;
@@ -183,5 +200,33 @@ export async function loadRoleDetail(
     baselines,
     assignedStudents: studentsRes.data ?? [],
     skillRationale: role.profile_json?.skill_rationale ?? null,
+    templateStatus: role.template_status,
+    sanitizedDescription: role.sanitized_description,
   };
+}
+
+/**
+ * Published role templates from OTHER employers — the catalog a staff-invite
+ * Role dropdown offers to adopt from (platform admin punch-list item 3:
+ * "every role across every employer"). Deliberately returns only
+ * sanitized_description, never the source employer's name or its raw
+ * description — see PublishedTemplate's doc comment.
+ */
+export async function loadPublishedTemplates(
+  excludeEmployerId: string
+): Promise<PublishedTemplate[]> {
+  const supabase = adminSupabase();
+  const { data, error } = await supabase
+    .from("roles")
+    .select("id, name, sanitized_description")
+    .eq("template_status", "published")
+    .neq("employer_id", excludeEmployerId)
+    .order("name", { ascending: true })
+    .returns<{ id: string; name: string; sanitized_description: string | null }[]>();
+  if (error) throw new Error(`published templates lookup failed: ${error.message}`);
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    sanitizedDescription: r.sanitized_description,
+  }));
 }

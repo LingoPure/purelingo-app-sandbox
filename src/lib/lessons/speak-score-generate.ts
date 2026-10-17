@@ -40,6 +40,15 @@ export async function generateSpeakScorePrompt(
       ? `Role at employer: ${ctx.roleName}`
       : "Role at employer: (unassigned — calibrate to a generic mid-career B2B Vietnamese context)",
     ctx.roleDescription ? `Role description: ${ctx.roleDescription}` : null,
+    ctx.roleProfile?.responsibilities.length
+      ? `Role key responsibilities: ${ctx.roleProfile.responsibilities.join("; ")}`
+      : null,
+    ctx.roleProfile?.vocabularyDomain.length
+      ? `Role vocabulary domain: ${ctx.roleProfile.vocabularyDomain.join(", ")}`
+      : null,
+    ctx.roleProfile?.notesForLessonPlanner
+      ? `Role lesson-planning notes (from the employer's own role definition): ${ctx.roleProfile.notesForLessonPlanner}`
+      : null,
     "",
     `Personal target level (aspiration): ${ctx.targetLevel}`,
     "",

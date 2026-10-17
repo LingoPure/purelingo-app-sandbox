@@ -11,7 +11,13 @@ import {
  *  a real role id, so it can't collide with one. */
 const CREATE_NEW_ROLE = "__create_new_role__";
 
+/** Sentinel PREFIX for "adopt this published template" options — followed
+ *  by the template's role id. Never a real role id on its own, so it can't
+ *  collide with one; stripped off before the adopt API call. */
+const ADOPT_TEMPLATE_PREFIX = "__adopt_template__:";
+
 type Role = { id: string; name: string };
+type Template = { id: string; name: string; sanitizedDescription: string | null };
 type StaffPick = {
   id: string;
   name: string | null;
@@ -44,11 +50,15 @@ function isLanguageCode(value: string | null | undefined): value is LanguageCode
 }
 
 export function InviteClient({
-  roles,
+  roles: initialRoles,
+  templates,
   existingStaff,
   defaultNativeLanguage,
 }: {
   roles: Role[];
+  /** Published templates from OTHER employers — adopting one clones it
+   *  into this employer's own roster (POST /api/employer/roles/adopt). */
+  templates: Template[];
   existingStaff: StaffPick[];
   /** Employer-level seed for the language picker — used when no
    *  existing employee is selected and as fallback for picks that
@@ -56,6 +66,12 @@ export function InviteClient({
   defaultNativeLanguage: LanguageCode;
 }) {
   const router = useRouter();
+
+  // Local copy so an adopted template can be appended without a full
+  // server round-trip — router.refresh() still runs after a successful
+  // adopt to keep the server-rendered roles list (e.g. the roles index
+  // page, visited next) in sync.
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
 
   // "" = "Add new" (free-form). Anything else = id of an existing
   // student → name/email lock to their record, role/target/lang prefill
@@ -69,6 +85,8 @@ export function InviteClient({
     defaultNativeLanguage
   );
   const [isPending, startTransition] = useTransition();
+  const [isAdopting, setIsAdopting] = useState(false);
+  const [adoptError, setAdoptError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -170,6 +188,30 @@ export function InviteClient({
     });
   }
 
+  async function adoptTemplate(templateId: string) {
+    setAdoptError(null);
+    setIsAdopting(true);
+    try {
+      const res = await fetch("/api/employer/roles/adopt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateRoleId: templateId }),
+      });
+      const data: { ok?: boolean; role?: Role; error?: string } = await res
+        .json()
+        .catch(() => ({}));
+      if (!res.ok || !data.ok || !data.role) {
+        setAdoptError(data.error ?? `Couldn't adopt that role (${res.status})`);
+        return;
+      }
+      setRoles((prev) => [...prev, data.role!]);
+      setRoleId(data.role.id);
+      router.refresh();
+    } finally {
+      setIsAdopting(false);
+    }
+  }
+
   async function copyLink() {
     if (!outcome || !outcome.ok || !outcome.actionLink) return;
     try {
@@ -262,28 +304,50 @@ export function InviteClient({
             hint={
               isExistingPicked
                 ? "Change to reassign this employee to a different role baseline."
-                : undefined
+                : isAdopting
+                  ? "Adopting template…"
+                  : adoptError ?? undefined
             }
           >
             <select
               value={roleId}
+              disabled={isAdopting}
               onChange={(e) => {
-                if (e.target.value === CREATE_NEW_ROLE) {
+                const value = e.target.value;
+                if (value === CREATE_NEW_ROLE) {
                   // Navigate away to create the role; the admin re-opens
                   // this form afterwards and the new role will be listed.
                   router.push("/employer/roles/new");
                   return;
                 }
-                setRoleId(e.target.value);
+                if (value.startsWith(ADOPT_TEMPLATE_PREFIX)) {
+                  void adoptTemplate(value.slice(ADOPT_TEMPLATE_PREFIX.length));
+                  return;
+                }
+                setRoleId(value);
               }}
-              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none"
+              className="w-full rounded-md border border-cream bg-mist/30 px-3 py-2 text-sm text-ink focus:border-navy focus:outline-none disabled:opacity-60"
               required
             >
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
+              {roles.length === 0 && <option value="">Select a role…</option>}
+              {roles.length > 0 && (
+                <optgroup label="Your roles">
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {templates.length > 0 && (
+                <optgroup label="Published templates — adopt into your roster">
+                  {templates.map((t) => (
+                    <option key={t.id} value={`${ADOPT_TEMPLATE_PREFIX}${t.id}`}>
+                      {t.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
               <option value={CREATE_NEW_ROLE}>+ Create new role…</option>
             </select>
           </Field>

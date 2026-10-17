@@ -8,6 +8,35 @@ export const discoveryOutcome = z.object({
   confidence_score: z.number().min(0).max(10),
 });
 
+/** Shape of roles.profile_json — see score-role-discovery.ts (voice interview)
+ *  and preset-role-profiles.ts (the 9 built-ins) for what writes it. */
+type RoleProfileJson = {
+  responsibilities?: string[];
+  vocabulary_domain?: string[];
+  notes_for_lesson_planner?: string;
+};
+
+/**
+ * Compresses roles.profile_json into one line for {{role_profile_detail}} —
+ * null/empty profile_json (most roles today — only presets + voice-
+ * interviewed roles have one) becomes "", which the prompt's own "treat
+ * empty as not pre-briefed" rule already handles correctly.
+ */
+function formatRoleProfileDetail(profile: RoleProfileJson | null | undefined): string {
+  if (!profile) return "";
+  const parts: string[] = [];
+  if (profile.responsibilities?.length) {
+    parts.push(`Key responsibilities: ${profile.responsibilities.join("; ")}.`);
+  }
+  if (profile.vocabulary_domain?.length) {
+    parts.push(`Vocabulary domains: ${profile.vocabulary_domain.join(", ")}.`);
+  }
+  if (profile.notes_for_lesson_planner) {
+    parts.push(profile.notes_for_lesson_planner);
+  }
+  return parts.join(" ");
+}
+
 /**
  * Aria persona definition — the CLIENT-SAFE half of the discovery agent.
  *
@@ -123,14 +152,18 @@ export const ariaDiscoveryConfig: {
 
     let roleName = "";
     let roleDescription = "";
+    let roleProfileDetail = "";
     if (student?.role_id) {
       const { data: role } = await admin
         .from("roles")
-        .select("name, description")
+        .select("name, description, profile_json")
         .eq("id", student.role_id)
         .maybeSingle();
       roleName = (role?.name as string | undefined) ?? "";
       roleDescription = (role?.description as string | undefined) ?? "";
+      roleProfileDetail = formatRoleProfileDetail(
+        role?.profile_json as RoleProfileJson | null | undefined
+      );
     }
 
     let employerName = "";
@@ -167,6 +200,7 @@ export const ariaDiscoveryConfig: {
       native_language: nativeLanguageName,
       role_name: roleName,
       role_description: roleDescription,
+      role_profile_detail: roleProfileDetail,
       target_level: targetLevel,
       employer_name: employerName,
     };

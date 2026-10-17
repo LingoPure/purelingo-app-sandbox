@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { RoleForm } from "../role-form";
 import { loadRoleDetail } from "@/lib/employer/roles-data";
 import { requireEmployerAdmin } from "@/lib/employer/auth";
+import { PublishTemplateCard } from "./publish-template-card";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,13 @@ export default async function EditRolePage({
         initialBaselines={role.baselines}
         initialIsArchived={role.isArchived}
         rationaleBySkill={role.skillRationale}
+      />
+
+      <PublishTemplateCard
+        roleId={role.id}
+        roleName={role.name}
+        templateStatus={role.templateStatus}
+        initialSanitizedDescription={role.sanitizedDescription}
       />
 
       <section className="rounded-lg border border-cream bg-paper p-6">

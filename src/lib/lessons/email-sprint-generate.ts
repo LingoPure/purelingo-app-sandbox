@@ -35,9 +35,18 @@ export type StudentContext = {
   /** Role name + description (or null if unassigned). */
   roleName: string | null;
   roleDescription: string | null;
+  /** Structured role profile from a voice-discovery interview or the preset
+   *  backfill (roles.profile_json) — null for roles never run through either. */
+  roleProfile: RoleProfileDetail | null;
   /** Pulled from discovery_sessions.profile_json — the rich role context. */
   summary: string | null;
   recentScenario: string | null;
+};
+
+export type RoleProfileDetail = {
+  responsibilities: string[];
+  vocabularyDomain: string[];
+  notesForLessonPlanner: string | null;
 };
 
 export async function loadStudentContext(
@@ -94,12 +103,13 @@ export async function loadStudentContext(
   // Load role meta + baselines in parallel (only if assigned).
   let roleName: string | null = null;
   let roleDescription: string | null = null;
+  let roleProfile: RoleProfileDetail | null = null;
   let baselines: Baselines;
   if (roleId) {
     const [roleRes, baselineRes] = await Promise.all([
       supabase
         .from("roles")
-        .select("name, description")
+        .select("name, description, profile_json")
         .eq("id", roleId)
         .maybeSingle(),
       loadBaselinesForRole(supabase, roleId),
@@ -109,6 +119,22 @@ export async function loadStudentContext(
     roleDescription =
       (roleRes.data as { description?: string | null } | null)?.description ??
       null;
+    const profileJson = (
+      roleRes.data as {
+        profile_json?: {
+          responsibilities?: string[];
+          vocabulary_domain?: string[];
+          notes_for_lesson_planner?: string;
+        } | null;
+      } | null
+    )?.profile_json;
+    roleProfile = profileJson
+      ? {
+          responsibilities: profileJson.responsibilities ?? [],
+          vocabularyDomain: profileJson.vocabulary_domain ?? [],
+          notesForLessonPlanner: profileJson.notes_for_lesson_planner ?? null,
+        }
+      : null;
     baselines = baselineRes;
   } else {
     baselines = Object.fromEntries(
@@ -124,6 +150,7 @@ export async function loadStudentContext(
     baselines,
     roleName,
     roleDescription,
+    roleProfile,
     summary: profile?.summary ?? null,
     recentScenario: lastContent?.prompt?.scenario ?? null,
   };
@@ -145,6 +172,15 @@ export async function generateEmailSprintPrompt(
       ? `Role at employer: ${ctx.roleName}`
       : "Role at employer: (unassigned — calibrate to a generic mid-career B2B Vietnamese context)",
     ctx.roleDescription ? `Role description: ${ctx.roleDescription}` : null,
+    ctx.roleProfile?.responsibilities.length
+      ? `Role key responsibilities: ${ctx.roleProfile.responsibilities.join("; ")}`
+      : null,
+    ctx.roleProfile?.vocabularyDomain.length
+      ? `Role vocabulary domain: ${ctx.roleProfile.vocabularyDomain.join(", ")}`
+      : null,
+    ctx.roleProfile?.notesForLessonPlanner
+      ? `Role lesson-planning notes (from the employer's own role definition): ${ctx.roleProfile.notesForLessonPlanner}`
+      : null,
     "",
     `Personal target level (aspiration): ${ctx.targetLevel}`,
     "",
